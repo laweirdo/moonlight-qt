@@ -990,10 +990,21 @@ int main(int argc, char *argv[])
     QQmlApplicationEngine engine;
     QString initialView;
     bool hasGUI = true;
+    bool tokenProofMode = false;
 
     switch (commandLineParserResult) {
     case GlobalCommandLineParser::NormalStartRequested:
-        initialView = "qrc:/gui/PcView.qml";
+        // Debug hook: MOONLIGHT_TOKEN_PROOF=1 boots straight into the Bulan token
+        // proof sheet instead of the PC grid. The sheet is not reachable from
+        // normal navigation. On Steam Deck, set the Launch Options to:
+        //     MOONLIGHT_TOKEN_PROOF=1 %command%
+        if (!qEnvironmentVariableIsEmpty("MOONLIGHT_TOKEN_PROOF")) {
+            initialView = "qrc:/gui/TokenProof.qml";
+            tokenProofMode = true;
+        }
+        else {
+            initialView = "qrc:/gui/PcView.qml";
+        }
         break;
     case GlobalCommandLineParser::StreamRequested:
         {
@@ -1038,7 +1049,10 @@ int main(int argc, char *argv[])
 
     if (hasGUI) {
         engine.rootContext()->setContextProperty("initialView", initialView);
-        engine.rootContext()->setContextProperty("runConfigChecks", commandLineParserResult == GlobalCommandLineParser::NormalStartRequested);
+        // Suppress the startup warning dialogs in token proof mode -- they would
+        // otherwise open modally on top of the sheet.
+        engine.rootContext()->setContextProperty("runConfigChecks",
+                                                 commandLineParserResult == GlobalCommandLineParser::NormalStartRequested && !tokenProofMode);
 
         // Load the main.qml file
         engine.load(QUrl(QStringLiteral("qrc:/gui/main.qml")));

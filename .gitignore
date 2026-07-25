@@ -7,3 +7,24 @@ build/
 libs/
 config.tests/*/.qmake.stash
 config.tests/*/Makefile
+
+# --- qmake / build output (macOS local builds) -----------------------------
+# qmake generates these next to the sources rather than in build/, so they
+# cannot be covered by the build/ rule above.
+.qmake.cache
+.qmake.stash
+Makefile
+Makefile.Debug
+Makefile.Release
+release/
+debug/
+*.o
+*.a
+config.log
+app/Moonlight.app/
+app/qml_qmlcache.qrc
+
+# The macOS build rewrites app/Info.plist in place (VERSION -> the real version
+# number) and leaves a sed backup behind. The backup is pure noise; the
+# in-place edit to the tracked plist has to be reverted by hand before commit.
+*.plist-e

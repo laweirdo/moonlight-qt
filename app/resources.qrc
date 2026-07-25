@@ -79,6 +79,16 @@
         <file>languages/qml_pt_BR.qm</file>
         <file>languages/qml_pt_BR.ts</file>
     </qresource>
+    <!-- Bulan design system faces. Both SIL OFL 1.1, which permits bundling in a
+         GPLv3 binary; the licence text ships alongside as the OFL requires. -->
+    <qresource prefix="/fonts">
+        <file alias="Inter-Regular.ttf">fonts/Inter-Regular.ttf</file>
+        <file alias="Inter-Medium.ttf">fonts/Inter-Medium.ttf</file>
+        <file alias="Inter-SemiBold.ttf">fonts/Inter-SemiBold.ttf</file>
+        <file alias="Fraunces-Regular.ttf">fonts/Fraunces-Regular.ttf</file>
+        <file alias="OFL-Inter.txt">fonts/OFL-Inter.txt</file>
+        <file alias="OFL-Fraunces.txt">fonts/OFL-Fraunces.txt</file>
+    </qresource>
     <qresource prefix="/data">
         <file alias="gamecontrollerdb.txt">SDL_GameControllerDB/gamecontrollerdb.txt</file>
         <file alias="ModeSeven.ttf">ModeSeven.ttf</file>
