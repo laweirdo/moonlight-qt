@@ -2,6 +2,8 @@ import QtQuick 2.9
 import QtQuick.Controls 2.2
 import QtQuick.Layouts 1.3
 
+import Bulan 1.0
+
 import ComputerModel 1.0
 
 import ComputerManager 1.0
@@ -15,8 +17,8 @@ CenteredGridView {
     id: pcGrid
     focus: true
     activeFocusOnTab: true
-    topMargin: 20
-    bottomMargin: 5
+    topMargin: Bulan.spaceLg
+    bottomMargin: Bulan.spaceSm
     cellWidth: 310; cellHeight: 330;
     objectName: qsTr("Computers")
 
@@ -98,7 +100,8 @@ CenteredGridView {
             elide: Label.ElideRight
             text: StreamingPreferences.enableMdns ? qsTr("Searching for compatible hosts on your local network...")
                                                   : qsTr("Automatic PC discovery is disabled. Add your PC manually.")
-            font.pointSize: 20
+            font.pixelSize: Bulan.sizeBodyLg
+            color: Bulan.textSecondary
             verticalAlignment: Text.AlignVCenter
             wrapMode: Text.Wrap
         }
@@ -115,12 +118,16 @@ CenteredGridView {
         Image {
             id: pcIcon
             anchors.horizontalCenter: parent.horizontalCenter
+            anchors.top: parent.top
+            anchors.topMargin: Bulan.spaceXl
             source: "qrc:/res/desktop_windows-48px.svg"
+            opacity: model.online ? 0.55 : 0.28
             sourceSize {
                 width: 200
                 height: 200
             }
         }
+
 
         Image {
             // TODO: Tooltip
@@ -154,7 +161,11 @@ CenteredGridView {
             width: parent.width
             anchors.top: pcIcon.bottom
             anchors.bottom: parent.bottom
-            font.pointSize: 36
+            anchors.bottomMargin: Bulan.spaceLg
+            font.family: Bulan.familyDisplay
+            font.pixelSize: Bulan.sizeTitle
+            font.letterSpacing: Bulan.trackingTitle
+            color: Bulan.textPrimary
             horizontalAlignment: Text.AlignHCenter
             wrapMode: Text.Wrap
             elide: Text.ElideRight

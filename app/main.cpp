@@ -935,6 +935,9 @@ int main(int argc, char *argv[])
     qputenv("SDL_VIDEO_X11_WMCLASS", "com.moonlight_stream.Moonlight");
 
     // Register our C++ types for QML
+    // Bulan design system tokens, available app-wide as `import Bulan 1.0`.
+    qmlRegisterSingletonType(QUrl(QStringLiteral("qrc:/gui/Bulan.qml")), "Bulan", 1, 0, "Bulan");
+
     qmlRegisterType<ComputerModel>("ComputerModel", 1, 0, "ComputerModel");
     qmlRegisterType<AppModel>("AppModel", 1, 0, "AppModel");
     qmlRegisterUncreatableType<Session>("Session", 1, 0, "Session", "Session cannot be created from QML");
@@ -975,7 +978,7 @@ int main(int argc, char *argv[])
 
     // These are defaults that we allow the user to override
     if (!qEnvironmentVariableIsSet("QT_QUICK_CONTROLS_MATERIAL_ACCENT")) {
-        qputenv("QT_QUICK_CONTROLS_MATERIAL_ACCENT", "Purple");
+        qputenv("QT_QUICK_CONTROLS_MATERIAL_ACCENT", "#FFD9A0");  // Bulan accentPrimary
     }
     if (!qEnvironmentVariableIsSet("QT_QUICK_CONTROLS_MATERIAL_VARIANT")) {
         qputenv("QT_QUICK_CONTROLS_MATERIAL_VARIANT", "Dense");
@@ -984,7 +987,7 @@ int main(int argc, char *argv[])
         // Qt 6.9 began to use a different shade of Material.Indigo when we use a dark theme
         // (which is all the time). The new color looks washed out, so manually specify the
         // old primary color unless the user overrides it themselves.
-        qputenv("QT_QUICK_CONTROLS_MATERIAL_PRIMARY", "#3F51B5");
+        qputenv("QT_QUICK_CONTROLS_MATERIAL_PRIMARY", "#171B33");  // Bulan bgSurface
     }
 
     QQmlApplicationEngine engine;
@@ -1004,6 +1007,13 @@ int main(int argc, char *argv[])
         }
         else {
             initialView = "qrc:/gui/PcView.qml";
+        }
+
+        // Debug hook: MOONLIGHT_INITIAL_VIEW=qrc:/gui/SettingsView.qml boots
+        // straight to a given screen, so a single view can be captured without
+        // navigating to it. Ignored when unset.
+        if (!qEnvironmentVariableIsEmpty("MOONLIGHT_INITIAL_VIEW")) {
+            initialView = QString::fromUtf8(qgetenv("MOONLIGHT_INITIAL_VIEW"));
         }
         break;
     case GlobalCommandLineParser::StreamRequested:
@@ -1049,6 +1059,9 @@ int main(int argc, char *argv[])
 
     if (hasGUI) {
         engine.rootContext()->setContextProperty("initialView", initialView);
+        // See the Loader in main.qml. Empty unless MOONLIGHT_SCREENSHOT is set.
+        engine.rootContext()->setContextProperty("screenshotPath",
+                                                 QString::fromUtf8(qgetenv("MOONLIGHT_SCREENSHOT")));
         // Suppress the startup warning dialogs in token proof mode -- they would
         // otherwise open modally on top of the sheet.
         engine.rootContext()->setContextProperty("runConfigChecks",

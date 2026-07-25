@@ -2,6 +2,8 @@ import QtQuick 2.9
 import QtQuick.Controls 2.2
 import QtQuick.Controls.Material 2.2
 
+import Bulan 1.0
+
 import AppModel 1.0
 import ComputerManager 1.0
 import SdlGamepadKeyNavigation 1.0
@@ -193,7 +195,10 @@ CenteredGridView {
             sourceComponent: Label {
                 id: appNameText
                 text: model.name
-                font.pointSize: 22
+                font.family: Bulan.familyDisplay
+                font.pixelSize: Bulan.sizeBody
+                font.letterSpacing: Bulan.trackingTitle
+                color: Bulan.textPrimary
                 leftPadding: 20
                 rightPadding: 20
                 verticalAlignment: Text.AlignVCenter
@@ -339,7 +344,7 @@ CenteredGridView {
 
         Label {
             text: qsTr("This computer doesn't seem to have any applications or some applications are hidden")
-            font.pointSize: 20
+            font.pixelSize: Bulan.sizeBodyLg
             verticalAlignment: Text.AlignVCenter
             wrapMode: Text.Wrap
         }

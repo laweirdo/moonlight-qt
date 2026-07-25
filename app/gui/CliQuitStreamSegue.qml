@@ -4,6 +4,8 @@ import QtQuick.Controls 2.2
 import ComputerManager 1.0
 import Session 1.0
 
+import Bulan 1.0
+
 Item {
     function onSearchingComputer() {
         stageLabel.text = qsTr("Establishing connection to PC...")
@@ -41,7 +43,7 @@ Item {
             id: stageLabel
             height: stageSpinner.height
             text: stageText
-            font.pointSize: 20
+            font.pixelSize: Bulan.sizeBodyLg
             verticalAlignment: Text.AlignVCenter
 
             wrapMode: Text.Wrap

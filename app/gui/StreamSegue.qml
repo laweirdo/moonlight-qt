@@ -6,6 +6,8 @@ import SdlGamepadKeyNavigation 1.0
 import Session 1.0
 import SystemProperties 1.0
 
+import Bulan 1.0
+
 Item {
     property Session session
     property string appName
@@ -222,7 +224,7 @@ Item {
             id: stageLabel
             height: stageSpinner.height
             text: stageText
-            font.pointSize: 20
+            font.pixelSize: Bulan.sizeBodyLg
             verticalAlignment: Text.AlignVCenter
 
             wrapMode: Text.Wrap
@@ -234,7 +236,7 @@ Item {
         anchors.bottom: parent.bottom
         anchors.bottomMargin: 50
         anchors.horizontalCenter: parent.horizontalCenter
-        font.pointSize: 18
+        font.pixelSize: Bulan.sizeBody
         verticalAlignment: Text.AlignVCenter
 
         wrapMode: Text.Wrap

@@ -3,6 +3,8 @@ import QtQuick.Controls 2.2
 import QtQuick.Layouts 1.2
 import QtQuick.Window 2.2
 
+import Bulan 1.0
+
 import StreamingPreferences 1.0
 import ComputerManager 1.0
 import SdlGamepadKeyNavigation 1.0
@@ -103,8 +105,8 @@ Flickable {
             id: basicSettingsGroupBox
             width: (parent.width - (parent.leftPadding + parent.rightPadding))
             padding: 12
-            title: "<font color=\"skyblue\">" + qsTr("Basic Settings") + "</font>"
-            font.pointSize: 12
+            title: "<font color=\"" + Bulan.accentPrimary + "\">" + qsTr("Basic Settings") + "</font>"
+            font.pixelSize: Bulan.sizeLabel
 
             Column {
                 anchors.fill: parent
@@ -114,7 +116,7 @@ Flickable {
                     width: parent.width
                     id: resFPStitle
                     text: qsTr("Resolution and FPS")
-                    font.pointSize: 12
+                    font.pixelSize: Bulan.sizeLabel
                     wrapMode: Text.Wrap
                 }
 
@@ -122,7 +124,7 @@ Flickable {
                     width: parent.width
                     id: resFPSdesc
                     text: qsTr("Setting values too high for your PC or network connection may cause lag, stuttering, or errors.")
-                    font.pointSize: 9
+                    font.pixelSize: Bulan.sizeCaption
                     wrapMode: Text.Wrap
                 }
 
@@ -670,7 +672,7 @@ Flickable {
                     width: parent.width
                     id: bitrateTitle
                     text: qsTr("Video bitrate:")
-                    font.pointSize: 12
+                    font.pixelSize: Bulan.sizeLabel
                     wrapMode: Text.Wrap
                 }
 
@@ -678,7 +680,7 @@ Flickable {
                     width: parent.width
                     id: bitrateDesc
                     text: qsTr("Lower the bitrate on slower connections. Raise the bitrate to increase image quality.")
-                    font.pointSize: 9
+                    font.pixelSize: Bulan.sizeCaption
                     wrapMode: Text.Wrap
                 }
 
@@ -730,7 +732,7 @@ Flickable {
                     width: parent.width
                     id: windowModeTitle
                     text: qsTr("Display mode")
-                    font.pointSize: 12
+                    font.pixelSize: Bulan.sizeLabel
                     wrapMode: Text.Wrap
                     visible: SystemProperties.hasDesktopEnvironment
                 }
@@ -820,7 +822,7 @@ Flickable {
                         id: vsyncCheck
                         hoverEnabled: true
                         text: qsTr("V-Sync")
-                        font.pointSize:  12
+                        font.pixelSize: Bulan.sizeLabel
                         checked: StreamingPreferences.enableVsync
                         onCheckedChanged: {
                             StreamingPreferences.enableVsync = checked
@@ -836,7 +838,7 @@ Flickable {
                         id: framePacingCheck
                         hoverEnabled: true
                         text: qsTr("Frame pacing")
-                        font.pointSize:  12
+                        font.pixelSize: Bulan.sizeLabel
                         enabled: StreamingPreferences.enableVsync
                         checked: StreamingPreferences.enableVsync && StreamingPreferences.framePacing
                         onCheckedChanged: {
@@ -853,7 +855,7 @@ Flickable {
                     id: enableHdr
                     width: parent.width
                     text: qsTr("Enable HDR")
-                    font.pointSize: 12
+                    font.pixelSize: Bulan.sizeLabel
 
                     enabled: SystemProperties.supportsHdr
                     checked: enabled && StreamingPreferences.enableHdr
@@ -879,8 +881,8 @@ Flickable {
             id: audioSettingsGroupBox
             width: (parent.width - (parent.leftPadding + parent.rightPadding))
             padding: 12
-            title: "<font color=\"skyblue\">" + qsTr("Audio Settings") + "</font>"
-            font.pointSize: 12
+            title: "<font color=\"" + Bulan.accentPrimary + "\">" + qsTr("Audio Settings") + "</font>"
+            font.pixelSize: Bulan.sizeLabel
 
             Column {
                 anchors.fill: parent
@@ -890,7 +892,7 @@ Flickable {
                     width: parent.width
                     id: resAudioTitle
                     text: qsTr("Audio configuration")
-                    font.pointSize: 12
+                    font.pixelSize: Bulan.sizeLabel
                     wrapMode: Text.Wrap
                 }
 
@@ -937,7 +939,7 @@ Flickable {
                     id: audioPcCheck
                     width: parent.width
                     text: qsTr("Mute host PC speakers while streaming")
-                    font.pointSize: 12
+                    font.pixelSize: Bulan.sizeLabel
                     checked: !StreamingPreferences.playAudioOnHost
                     onCheckedChanged: {
                         StreamingPreferences.playAudioOnHost = !checked
@@ -953,7 +955,7 @@ Flickable {
                     id: muteOnFocusLossCheck
                     width: parent.width
                     text: qsTr("Mute audio stream when Moonlight is not the active window")
-                    font.pointSize: 12
+                    font.pixelSize: Bulan.sizeLabel
                     visible: SystemProperties.hasDesktopEnvironment
                     checked: StreamingPreferences.muteOnFocusLoss
                     onCheckedChanged: {
@@ -972,8 +974,8 @@ Flickable {
             id: hostSettingsGroupBox
             width: (parent.width - (parent.leftPadding + parent.rightPadding))
             padding: 12
-            title: "<font color=\"skyblue\">" + qsTr("Host Settings") + "</font>"
-            font.pointSize: 12
+            title: "<font color=\"" + Bulan.accentPrimary + "\">" + qsTr("Host Settings") + "</font>"
+            font.pixelSize: Bulan.sizeLabel
 
             Column {
                 anchors.fill: parent
@@ -983,7 +985,7 @@ Flickable {
                     id: optimizeGameSettingsCheck
                     width: parent.width
                     text: qsTr("Optimize game settings for streaming")
-                    font.pointSize:  12
+                    font.pixelSize: Bulan.sizeLabel
                     checked: StreamingPreferences.gameOptimizations
                     onCheckedChanged: {
                         StreamingPreferences.gameOptimizations = checked
@@ -994,7 +996,7 @@ Flickable {
                     id: quitAppAfter
                     width: parent.width
                     text: qsTr("Quit app on host PC after ending stream")
-                    font.pointSize: 12
+                    font.pixelSize: Bulan.sizeLabel
                     checked: StreamingPreferences.quitAppAfter
                     onCheckedChanged: {
                         StreamingPreferences.quitAppAfter = checked
@@ -1012,8 +1014,8 @@ Flickable {
             id: uiSettingsGroupBox
             width: (parent.width - (parent.leftPadding + parent.rightPadding))
             padding: 12
-            title: "<font color=\"skyblue\">" + qsTr("UI Settings") + "</font>"
-            font.pointSize: 12
+            title: "<font color=\"" + Bulan.accentPrimary + "\">" + qsTr("UI Settings") + "</font>"
+            font.pixelSize: Bulan.sizeLabel
 
             Column {
                 anchors.fill: parent
@@ -1023,7 +1025,7 @@ Flickable {
                     width: parent.width
                     id: languageTitle
                     text: qsTr("Language")
-                    font.pointSize: 12
+                    font.pixelSize: Bulan.sizeLabel
                     wrapMode: Text.Wrap
                 }
 
@@ -1201,7 +1203,7 @@ Flickable {
                     width: parent.width
                     id: uiDisplayModeTitle
                     text: qsTr("GUI display mode")
-                    font.pointSize: 12
+                    font.pixelSize: Bulan.sizeLabel
                     wrapMode: Text.Wrap
                     visible: SystemProperties.hasDesktopEnvironment
                 }
@@ -1255,7 +1257,7 @@ Flickable {
                     id: connectionWarningsCheck
                     width: parent.width
                     text: qsTr("Show connection quality warnings")
-                    font.pointSize: 12
+                    font.pixelSize: Bulan.sizeLabel
                     checked: StreamingPreferences.connectionWarnings
                     onCheckedChanged: {
                         StreamingPreferences.connectionWarnings = checked
@@ -1266,7 +1268,7 @@ Flickable {
                     id: configurationWarningsCheck
                     width: parent.width
                     text: qsTr("Show configuration warnings")
-                    font.pointSize: 12
+                    font.pixelSize: Bulan.sizeLabel
                     checked: StreamingPreferences.configurationWarnings
                     onCheckedChanged: {
                         StreamingPreferences.configurationWarnings = checked
@@ -1278,7 +1280,7 @@ Flickable {
                     id: discordPresenceCheck
                     width: parent.width
                     text: qsTr("Discord Rich Presence integration")
-                    font.pointSize: 12
+                    font.pixelSize: Bulan.sizeLabel
                     checked: StreamingPreferences.richPresence
                     onCheckedChanged: {
                         StreamingPreferences.richPresence = checked
@@ -1294,7 +1296,7 @@ Flickable {
                     id: keepAwakeCheck
                     width: parent.width
                     text: qsTr("Keep the display awake while streaming")
-                    font.pointSize: 12
+                    font.pixelSize: Bulan.sizeLabel
                     checked: StreamingPreferences.keepAwake
                     onCheckedChanged: {
                         StreamingPreferences.keepAwake = checked
@@ -1321,8 +1323,8 @@ Flickable {
             id: inputSettingsGroupBox
             width: (parent.width - (parent.leftPadding + parent.rightPadding))
             padding: 12
-            title: "<font color=\"skyblue\">" + qsTr("Input Settings") + "</font>"
-            font.pointSize: 12
+            title: "<font color=\"" + Bulan.accentPrimary + "\">" + qsTr("Input Settings") + "</font>"
+            font.pixelSize: Bulan.sizeLabel
 
             Column {
                 anchors.fill: parent
@@ -1333,7 +1335,7 @@ Flickable {
                     hoverEnabled: true
                     width: parent.width
                     text: qsTr("Optimize mouse for remote desktop instead of games")
-                    font.pointSize:  12
+                    font.pixelSize: Bulan.sizeLabel
                     checked: StreamingPreferences.absoluteMouseMode
                     onCheckedChanged: {
                         StreamingPreferences.absoluteMouseMode = checked
@@ -1355,7 +1357,7 @@ Flickable {
                         id: captureSysKeysCheck
                         hoverEnabled: true
                         text: qsTr("Capture system keyboard shortcuts")
-                        font.pointSize: 12
+                        font.pixelSize: Bulan.sizeLabel
                         enabled: SystemProperties.hasDesktopEnvironment
                         checked: StreamingPreferences.captureSysKeysMode !== StreamingPreferences.CSK_OFF || !SystemProperties.hasDesktopEnvironment
 
@@ -1427,7 +1429,7 @@ Flickable {
                     hoverEnabled: true
                     width: parent.width
                     text: qsTr("Use touchscreen as a virtual trackpad")
-                    font.pointSize:  12
+                    font.pixelSize: Bulan.sizeLabel
                     checked: !StreamingPreferences.absoluteTouchMode
                     onCheckedChanged: {
                         StreamingPreferences.absoluteTouchMode = !checked
@@ -1444,7 +1446,7 @@ Flickable {
                     hoverEnabled: true
                     width: parent.width
                     text: qsTr("Swap left and right mouse buttons")
-                    font.pointSize:  12
+                    font.pixelSize: Bulan.sizeLabel
                     checked: StreamingPreferences.swapMouseButtons
                     onCheckedChanged: {
                         StreamingPreferences.swapMouseButtons = checked
@@ -1456,7 +1458,7 @@ Flickable {
                     hoverEnabled: true
                     width: parent.width
                     text: qsTr("Reverse mouse scrolling direction")
-                    font.pointSize: 12
+                    font.pixelSize: Bulan.sizeLabel
                     checked: StreamingPreferences.reverseScrollDirection
                     onCheckedChanged: {
                         StreamingPreferences.reverseScrollDirection = checked
@@ -1469,8 +1471,8 @@ Flickable {
             id: gamepadSettingsGroupBox
             width: (parent.width - (parent.leftPadding + parent.rightPadding))
             padding: 12
-            title: "<font color=\"skyblue\">" + qsTr("Gamepad Settings") + "</font>"
-            font.pointSize: 12
+            title: "<font color=\"" + Bulan.accentPrimary + "\">" + qsTr("Gamepad Settings") + "</font>"
+            font.pixelSize: Bulan.sizeLabel
 
             Column {
                 anchors.fill: parent
@@ -1480,7 +1482,7 @@ Flickable {
                     id: swapFaceButtonsCheck
                     width: parent.width
                     text: qsTr("Swap A/B and X/Y gamepad buttons")
-                    font.pointSize: 12
+                    font.pixelSize: Bulan.sizeLabel
                     checked: StreamingPreferences.swapFaceButtons
                     onCheckedChanged: {
                         StreamingPreferences.swapFaceButtons = checked
@@ -1496,7 +1498,7 @@ Flickable {
                     id: singleControllerCheck
                     width: parent.width
                     text: qsTr("Force gamepad #1 always connected")
-                    font.pointSize:  12
+                    font.pixelSize: Bulan.sizeLabel
                     checked: !StreamingPreferences.multiController
                     onCheckedChanged: {
                         StreamingPreferences.multiController = !checked
@@ -1514,7 +1516,7 @@ Flickable {
                     hoverEnabled: true
                     width: parent.width
                     text: qsTr("Enable mouse control with gamepads by holding the 'Start' button")
-                    font.pointSize: 12
+                    font.pixelSize: Bulan.sizeLabel
                     checked: StreamingPreferences.gamepadMouse
                     onCheckedChanged: {
                         StreamingPreferences.gamepadMouse = checked
@@ -1525,7 +1527,7 @@ Flickable {
                     id: backgroundGamepadCheck
                     width: parent.width
                     text: qsTr("Process gamepad input when Moonlight is in the background")
-                    font.pointSize: 12
+                    font.pixelSize: Bulan.sizeLabel
                     visible: SystemProperties.hasDesktopEnvironment
                     checked: StreamingPreferences.backgroundGamepad
                     onCheckedChanged: {
@@ -1544,8 +1546,8 @@ Flickable {
             id: advancedSettingsGroupBox
             width: (parent.width - (parent.leftPadding + parent.rightPadding))
             padding: 12
-            title: "<font color=\"skyblue\">" + qsTr("Advanced Settings") + "</font>"
-            font.pointSize: 12
+            title: "<font color=\"" + Bulan.accentPrimary + "\">" + qsTr("Advanced Settings") + "</font>"
+            font.pixelSize: Bulan.sizeLabel
 
             Column {
                 anchors.fill: parent
@@ -1555,7 +1557,7 @@ Flickable {
                     width: parent.width
                     id: resVDSTitle
                     text: qsTr("Video decoder")
-                    font.pointSize: 12
+                    font.pixelSize: Bulan.sizeLabel
                     wrapMode: Text.Wrap
                 }
 
@@ -1603,7 +1605,7 @@ Flickable {
                     width: parent.width
                     id: resVCCTitle
                     text: qsTr("Video codec")
-                    font.pointSize: 12
+                    font.pixelSize: Bulan.sizeLabel
                     wrapMode: Text.Wrap
                 }
 
@@ -1660,7 +1662,7 @@ Flickable {
                     width: parent.width
                     id: rendererTitle
                     text: qsTr("Renderer")
-                    font.pointSize: 12
+                    font.pixelSize: Bulan.sizeLabel
                     wrapMode: Text.Wrap
                     visible: SystemProperties.isDarwin
                 }
@@ -1716,7 +1718,7 @@ Flickable {
                     id: enableYUV444
                     width: parent.width
                     text: qsTr("Enable YUV 4:4:4")
-                    font.pointSize: 12
+                    font.pixelSize: Bulan.sizeLabel
 
                     checked: StreamingPreferences.enableYUV444
                     onCheckedChanged: {
@@ -1746,7 +1748,7 @@ Flickable {
                     id: unlockBitrate
                     width: parent.width
                     text: qsTr("Unlock bitrate limit (Experimental)")
-                    font.pointSize: 12
+                    font.pixelSize: Bulan.sizeLabel
 
                     checked: StreamingPreferences.unlockBitrate
                     onCheckedChanged: {
@@ -1765,7 +1767,7 @@ Flickable {
                     id: enableMdns
                     width: parent.width
                     text: qsTr("Automatically find PCs on the local network (Recommended)")
-                    font.pointSize: 12
+                    font.pixelSize: Bulan.sizeLabel
                     checked: StreamingPreferences.enableMdns
                     onCheckedChanged: {
                         // This is called on init, so only do the work if we've
@@ -1786,7 +1788,7 @@ Flickable {
                     id: detectNetworkBlocking
                     width: parent.width
                     text: qsTr("Automatically detect blocked connections (Recommended)")
-                    font.pointSize: 12
+                    font.pixelSize: Bulan.sizeLabel
                     checked: StreamingPreferences.detectNetworkBlocking
                     onCheckedChanged: {
                         StreamingPreferences.detectNetworkBlocking = checked
@@ -1797,7 +1799,7 @@ Flickable {
                     id: showPerformanceOverlay
                     width: parent.width
                     text: qsTr("Show performance stats while streaming")
-                    font.pointSize: 12
+                    font.pixelSize: Bulan.sizeLabel
                     checked: StreamingPreferences.showPerformanceOverlay
                     onCheckedChanged: {
                         StreamingPreferences.showPerformanceOverlay = checked

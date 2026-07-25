@@ -4,6 +4,7 @@ import QtQuick.Layouts 1.3
 import QtQuick.Window 2.2
 import QtQuick.Controls.Material 2.2
 
+import Bulan 1.0
 import ComputerManager 1.0
 import AutoUpdateChecker 1.0
 import StreamingPreferences 1.0
@@ -20,16 +21,39 @@ ApplicationWindow {
 
     id: window
     width: 1280
-    height: 600
+    height: 800
+
+    // --- Bulan design system ------------------------------------------------
+    // Faces are bundled static instances (see resources.qrc). Loading them here
+    // makes them available to every view in the app.
+    FontLoader { source: "qrc:/fonts/Inter-Regular.ttf" }
+    FontLoader { source: "qrc:/fonts/Inter-Medium.ttf" }
+    FontLoader { source: "qrc:/fonts/Inter-SemiBold.ttf" }
+    FontLoader { source: "qrc:/fonts/Fraunces-Regular.ttf" }
+
+    // Inherited by every child control unless overridden.
+    font.family: Bulan.familyUi
+    font.pixelSize: Bulan.sizeLabel
+
+    // Drive the Material style from the tokens so stock controls (buttons,
+    // combo boxes, switches, dialogs, scrollbars) come out in Bulan colours
+    // without restyling each one by hand.
+    Material.theme: Material.Dark
+    Material.background: Bulan.bgBase
+    Material.foreground: Bulan.textPrimary
+    Material.accent: Bulan.accentPrimary
+    Material.primary: Bulan.bgSurface
+
+    color: Bulan.gradientBaseTop
+
 
     // This function runs prior to creation of the initial StackView item
     function doEarlyInit() {
         // Override the background color to Material 2 colors for Qt 6.5+
         // in order to improve contrast between GFE's placeholder box art
         // and the background of the app grid.
-        if (SystemProperties.usesMaterial3Theme) {
-            Material.background = "#303030"
-        }
+        // Upstream forces a grey here for Material 3; Bulan sets its own
+        // ground above, so leave it alone.
 
         SdlGamepadKeyNavigation.enable()
     }
@@ -106,10 +130,58 @@ ApplicationWindow {
         }
     }
 
+    // Debug hook: MOONLIGHT_SCREENSHOT=<path> grabs the window once the UI has
+    // settled and exits. Lets the design be checked without Screen Recording
+    // permission. Inert unless the variable is set.
+    Timer {
+        // Phase 1: pin the window to the Deck's panel size, so the grab is laid
+        // out at the size the design targets rather than whatever the offscreen
+        // platform happened to pick.
+        interval: 2500
+        running: screenshotPath !== ""
+        onTriggered: {
+            window.showNormal()
+            window.width = 1280
+            window.height = 800
+            shotTimer.start()
+        }
+    }
+
+    Timer {
+        id: shotTimer
+        interval: 1500
+        onTriggered: {
+            // The window root is a QQuickRootItem with no QML engine, so it
+            // cannot be grabbed. Capture the content and the toolbar as two
+            // images instead.
+            var ok = stackView.grabToImage(function(res) {
+                res.saveToFile(screenshotPath)
+                toolBar.grabToImage(function(res2) {
+                    res2.saveToFile(screenshotPath.replace(".png", "-toolbar.png"))
+                    Qt.quit()
+                })
+            })
+            // grabToImage returns false if the item cannot be rendered; quit
+            // regardless so a failed grab never hangs the run.
+            if (!ok) {
+                console.log("screenshot: grabToImage refused")
+                Qt.quit()
+            }
+        }
+    }
+
     StackView {
         id: stackView
         anchors.fill: parent
         focus: true
+
+        // Vertical base gradient — sky into water — behind every page.
+        background: Rectangle {
+            gradient: Gradient {
+                GradientStop { position: 0.0; color: Bulan.gradientBaseTop }
+                GradientStop { position: 1.0; color: Bulan.gradientBaseBottom }
+            }
+        }
 
         Component.onCompleted: {
             // Perform our early initialization before constructing
@@ -235,25 +307,44 @@ ApplicationWindow {
 
     header: ToolBar {
         id: toolBar
-        height: 60
-        anchors.topMargin: 5
-        anchors.bottomMargin: 5
+        height: Bulan.targetRowHeight
+        anchors.topMargin: 0
+        anchors.bottomMargin: 0
+
+        // Transparent so the base gradient runs unbroken behind the chrome,
+        // with a single hairline to divide it from the content.
+        background: Rectangle {
+            // Match the top stop of the content gradient so the chrome and the
+            // content read as one continuous ground.
+            color: Bulan.gradientBaseTop
+            Rectangle {
+                anchors.bottom: parent.bottom
+                width: parent.width
+                height: 1
+                color: Bulan.hairline
+            }
+        }
 
         Label {
             id: titleLabel
             visible: toolBar.width > 700
             anchors.fill: parent
             text: stackView.currentItem.objectName
-            font.pointSize: 20
+            // The screen name is the one piece of display typography in the
+            // chrome, so it carries the Fraunces face.
+            font.family: Bulan.familyDisplay
+            font.pixelSize: Bulan.sizeTitle
+            font.letterSpacing: Bulan.trackingTitle
+            color: Bulan.textPrimary
             elide: Label.ElideRight
             horizontalAlignment: Qt.AlignHCenter
             verticalAlignment: Qt.AlignVCenter
         }
 
         RowLayout {
-            spacing: 10
-            anchors.leftMargin: 10
-            anchors.rightMargin: 10
+            spacing: Bulan.spaceSm
+            anchors.leftMargin: Bulan.spaceLg
+            anchors.rightMargin: Bulan.spaceLg
             anchors.fill: parent
 
             NavigableToolButton {
@@ -273,7 +364,10 @@ ApplicationWindow {
             // we need to ensure the toolbar controls don't collide
             Label {
                 id: titleRowLabel
-                font.pointSize: titleLabel.font.pointSize
+                font.family: Bulan.familyDisplay
+                font.pixelSize: Bulan.sizeTitle
+                font.letterSpacing: Bulan.trackingTitle
+                color: Bulan.textPrimary
                 elide: Label.ElideRight
                 horizontalAlignment: Qt.AlignHCenter
                 verticalAlignment: Qt.AlignVCenter
@@ -289,7 +383,8 @@ ApplicationWindow {
                 id: versionLabel
                 visible: stackView.currentItem instanceof SettingsView
                 text: qsTr("Version %1").arg(SystemProperties.versionString)
-                font.pointSize: 12
+                font.pixelSize: Bulan.sizeCaption
+                color: Bulan.textSecondary
                 horizontalAlignment: Qt.AlignRight
                 verticalAlignment: Qt.AlignVCenter
             }
