@@ -66,20 +66,10 @@ TOKENS = ["b1", "b2", "b3", "b4", "lb", "lt", "rb", "rt", "start", "select"]
 
 # Glyphs sourced from a different file than their own name.
 #
-# xinput_rt.svg shipped as an embedded base64 bitmap rather than vector art: it
-# does not scale and ignores the fill colour, rendering as a black box with black
-# lettering. ds_rt.svg, meanwhile, draws "RT" -- Xbox nomenclature that does not
-# belong in the PlayStation set at all -- as clean vector art. The export appears
-# to have put the Xbox trigger art in the PlayStation slot.
-#
-# So xinput_rt is taken from ds_rt, which is what it should have been. Delete the
-# entry once a proper vector xinput_rt is delivered.
-#
-# This leaves ds_rt still drawing "RT" where PlayStation wants "R2"; there is no
-# R2 art in the set to substitute, so it is reported instead of guessed at.
-SUBSTITUTIONS = {
-    ("xinput", "rt"): ("ds", "rt"),
-}
+# Empty: the re-exported art set has a real vector for every glyph, so nothing
+# needs borrowing. Kept because it is the right place for such a workaround if
+# one is ever needed again.
+SUBSTITUTIONS = {}
 
 BULAN_QML = os.path.normpath(os.path.join(REPO, "app", "gui", "Bulan.qml"))
 
@@ -88,12 +78,20 @@ FILL_TOKEN = "textPrimary"
 
 # Elements that carry actual artwork.
 #
-# <path> only, deliberately. Every <rect> in this art set is either the canvas
-# bounds (declared fill:none) or lives inside a <clipPath>, and filling the
-# latter makes Qt's SVG renderer paint the clip rectangle itself -- a solid
-# square covering the entire glyph. Verified across the set: no glyph draws any
-# part of its shape with a rect.
-ART_ELEMENTS = ("path",)
+# <rect> genuinely is artwork here: the three "start" glyphs draw their inner
+# bars with rects rather than paths, and leaving them out meant they kept the
+# black they default to. Every other rect in the set is the canvas bounds, which
+# declares fill:none and is skipped.
+#
+# This is only safe because normalise() strips <clipPath> and <defs> BEFORE
+# recolouring. A clip path's rect must never be given a fill -- Qt renders SVG
+# Tiny, does not honour clipPath, and would paint the clip rectangle as a solid
+# square over the whole glyph. Order matters; do not reorder those steps.
+#
+# The full list is deliberately broader than what this art set happens to use, so
+# a future re-export that reaches for a circle or a polygon does not silently
+# come out black.
+ART_ELEMENTS = ("path", "rect", "circle", "ellipse", "polygon", "polyline", "line")
 
 
 def read_token_colour(token):
@@ -241,9 +239,7 @@ def main():
     # Defects that cannot be fixed by transforming the art, so they are restated
     # on every run rather than living only in a commit message.
     print("  OUTSTANDING source-art issues:")
-    print("    ds_rt        draws \"RT\" (Xbox); PlayStation wants \"R2\" -- no R2 art to substitute")
-    print("    xinput_rt    original is an embedded bitmap; currently borrowing ds_rt's vector")
-    print("    deck_*       not supplied; falling back to the xinput set")
+    print("    deck_*   not supplied; falling back to the xinput set")
 
 
 if __name__ == "__main__":
