@@ -28,3 +28,6 @@ app/qml_qmlcache.qrc
 # number) and leaves a sed backup behind. The backup is pure noise; the
 # in-place edit to the tracked plist has to be reverted by hand before commit.
 *.plist-e
+# Untracked build output, not referenced by app.pro. Ignored so it cannot be
+# committed by accident alongside real work.
+app/Info.generated.plist
