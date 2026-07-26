@@ -73,8 +73,16 @@ SUBSTITUTIONS = {}
 
 BULAN_QML = os.path.normpath(os.path.join(REPO, "app", "gui", "Bulan.qml"))
 
-# Which design token the glyphs are drawn in.
-FILL_TOKEN = "textPrimary"
+# Tone variants. Each becomes a subdirectory of app/res/glyphs/ holding the whole
+# set drawn in that colour, and maps to ControllerGlyph's `tone` property.
+#
+# Two variants exist because the colour is baked in at import rather than tinted
+# at runtime (see the note at the top of this file). Adding a third tone is
+# adding a line here and re-running; it is not free, but it is trivial.
+VARIANTS = {
+    "unfocused": "textSecondary",
+    "focus":     "accentPrimary",
+}
 
 # Elements that carry actual artwork.
 #
@@ -179,8 +187,10 @@ def main():
 
     os.makedirs(OUT_DIR, exist_ok=True)
 
-    fill = read_token_colour(FILL_TOKEN)
-    print("fill colour: %s (Bulan.%s)" % (fill, FILL_TOKEN))
+    tones = {}
+    for tone, token in sorted(VARIANTS.items()):
+        tones[tone] = read_token_colour(token)
+        print("tone %-10s %s  (Bulan.%s)" % (tone, tones[tone], token))
 
     # Index the source directory by (family, token), tolerating stray whitespace.
     found = {}
@@ -213,14 +223,16 @@ def main():
             # shipping a glyph that behaves unlike its neighbours.
             if re.search(r"<image\b", raw):
                 raster.append(name)
-            out = normalise(raw, fill)
-            dest = os.path.join(OUT_DIR, "%s.svg" % name)
-            open(dest, "w", encoding="utf-8").write(out)
+            for tone, colour in tones.items():
+                tone_dir = os.path.join(OUT_DIR, tone)
+                os.makedirs(tone_dir, exist_ok=True)
+                open(os.path.join(tone_dir, "%s.svg" % name), "w",
+                     encoding="utf-8").write(normalise(raw, colour))
             if re.sub(r"\s+", "", os.path.splitext(srcname)[0]) != os.path.splitext(srcname)[0]:
                 renamed.append("%r -> %s.svg" % (srcname, name))
             written += 1
 
-    print("wrote %d glyphs to %s" % (written, OUT_DIR))
+    print("wrote %d glyphs x %d tones to %s" % (written, len(tones), OUT_DIR))
     if renamed:
         print("  whitespace stripped from filename:")
         for r in renamed:

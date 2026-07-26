@@ -52,6 +52,23 @@ Item {
 
     Atmosphere { anchors.fill: parent }
 
+    // The real HintBar, in situ, with this screen's own hint set.
+    HintBar {
+        id: previewBar
+        anchors.left: parent.left
+        anchors.right: parent.right
+        anchors.bottom: parent.bottom
+        leftHints: [
+            { action: "confirm",   label: qsTr("Connect"),  emphasis: true },
+            { action: "alternate", label: qsTr("Wake") },
+            { action: "options",   label: qsTr("Add a PC") }
+        ]
+        rightHints: [
+            { action: "start",  label: qsTr("Client Settings") },
+            { action: "select", label: qsTr("Host Settings") }
+        ]
+    }
+
     Column {
         anchors.fill: parent
         anchors.margins: Bulan.layoutScreenMarginY
@@ -132,7 +149,7 @@ Item {
                             anchors.centerIn: parent
                             width: glyphPx
                             height: glyphPx
-                            source: "qrc:/res/glyphs/" + famRow.famResolved + "_" + modelData.t + ".svg"
+                            source: "qrc:/res/glyphs/unfocused/" + famRow.famResolved + "_" + modelData.t + ".svg"
                             sourceSize.width: glyphPx
                             sourceSize.height: glyphPx
                             fillMode: Image.PreserveAspectFit
@@ -180,12 +197,22 @@ Item {
 
                     Column {
                         spacing: 3
-                        ControllerGlyph {
+                        Row {
                             anchors.horizontalCenter: parent.horizontalCenter
-                            action: modelData
-                            glyphSize: glyphPx
+                            spacing: 4
+                            ControllerGlyph {
+                                action: modelData
+                                tone: "unfocused"
+                                glyphSize: glyphPx
+                            }
+                            ControllerGlyph {
+                                action: modelData
+                                tone: "focus"
+                                glyphSize: glyphPx
+                            }
                         }
                         Text {
+                            anchors.horizontalCenter: parent.horizontalCenter
                             text: modelData
                             color: Bulan.textSecondary
                             font.family: Bulan.familyUi

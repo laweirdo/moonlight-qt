@@ -23,6 +23,7 @@
         <file>gui/Atmosphere.qml</file>
         <file>gui/ControllerGlyph.qml</file>
         <file>gui/GlyphProof.qml</file>
+        <file>gui/HintBar.qml</file>
         <file>gui/TokenProof.qml</file>
         <file>gui/BulanTokens.qml</file>
         <file>gui/SectionHeader.qml</file>

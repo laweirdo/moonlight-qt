@@ -54,16 +54,23 @@ Item {
     //   l2, r2     triggers
     property string action: "confirm"
 
-    // NOTE: there is no colour property. The art ships already filled with
-    // Bulan.textPrimary, baked in by scripts/import-controller-glyphs.py which
-    // reads that token out of Bulan.qml -- so the design system still owns the
-    // colour, but it is fixed at import time rather than bindable here.
+    // Colour, chosen from the tone variants that exist on disk rather than set as
+    // a colour. Valid values are the keys of VARIANTS in
+    // scripts/import-controller-glyphs.py:
     //
-    // Runtime tinting was tried and abandoned: a MultiEffect colorization pass
-    // renders nothing under QT_QPA_PLATFORM=offscreen, which is how this project
-    // screenshots its screens for review, and it pulls in a Qt module that then
-    // has to be present in the Flatpak. A second glyph colour therefore means
-    // generating a second variant rather than setting a property.
+    //   "unfocused"  Bulan.textSecondary  — the quiet default
+    //   "focus"      Bulan.accentPrimary  — moonglow amber, for the one hint that
+    //                                       is the screen's primary action
+    //
+    // It is a tone name and not a colour property because the art ships with the
+    // fill already baked in, by a script that reads those tokens out of Bulan.qml
+    // -- so the design system still owns the values, but they are fixed at import
+    // time. Runtime tinting was tried and abandoned: a MultiEffect colorization
+    // pass renders nothing under QT_QPA_PLATFORM=offscreen, which is how this
+    // project screenshots screens for review, and it pulls in a Qt module that
+    // would then have to exist inside the Flatpak. A third tone is a line in that
+    // script plus a re-run.
+    property string tone: "unfocused"
 
     property int glyphSize: Bulan.sizeBodyLg
 
@@ -110,7 +117,8 @@ Item {
     // Binding on glyphFamily, so hot-swapping a controller re-resolves the
     // source with no explicit refresh anywhere.
     readonly property string _source:
-        "qrc:/res/glyphs/" + SdlGamepadKeyNavigation.glyphFamily + "_" + _token + ".svg"
+        "qrc:/res/glyphs/" + root.tone + "/"
+        + SdlGamepadKeyNavigation.glyphFamily + "_" + _token + ".svg"
 
     Image {
         anchors.fill: parent
