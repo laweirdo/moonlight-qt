@@ -8,13 +8,79 @@
 
 #define AXIS_NAVIGATION_REPEAT_DELAY 150
 
+// -----------------------------------------------------------------------------
+// Controller glyph family detection
+//
+// The UI draws button glyphs matching whatever controller is physically in the
+// user's hands. This resolves the attached hardware to an asset-name prefix; see
+// app/res/glyphs/ and gui/ControllerGlyph.qml.
+//
+// IMPORTANT: this only ever changes which picture is drawn. SDL normalises every
+// controller to an Xbox-style layout by physical position, so the bottom face
+// button is SDL_CONTROLLER_BUTTON_A on every device regardless of what letter is
+// printed on it. Bindings are therefore identical across families and must not
+// be varied here -- a Nintendo pad shows a "B" glyph on the bottom button while
+// still reporting, and acting as, the confirm button.
+// -----------------------------------------------------------------------------
+
+// Valve. The Steam Deck's built-in controls have no SDL_GameControllerType of
+// their own (the enum in SDL 2.32 runs Xbox/PlayStation/Switch/Luna/Stadia/
+// Shield/Virtual and stops), so Valve hardware is identified by vendor ID
+// instead. SDL3 underneath does carry a Steam Deck HIDAPI driver and reports the
+// name "Steam Deck", but exposes no distinct type for it through the SDL2 API.
+#define USB_VENDOR_VALVE 0x28DE
+
+// Families with no art bundled yet resolve to one that has. Dropping real
+// deck_*.svg files into app/res/glyphs/ and deleting the "deck" line here is the
+// whole of what a future glyph delivery needs.
+static QString resolveGlyphFamily(const QString& family)
+{
+    if (family == QLatin1String("deck") || family == QLatin1String("fallback")) {
+        return QLatin1String("xinput");
+    }
+    return family;
+}
+
+static QString familyForController(SDL_GameController* gc)
+{
+    if (SDL_GameControllerGetVendor(gc) == USB_VENDOR_VALVE) {
+        return QLatin1String("deck");
+    }
+
+    switch (SDL_GameControllerGetType(gc)) {
+    case SDL_CONTROLLER_TYPE_XBOX360:
+    case SDL_CONTROLLER_TYPE_XBOXONE:
+        return QLatin1String("xinput");
+
+    case SDL_CONTROLLER_TYPE_PS3:
+    case SDL_CONTROLLER_TYPE_PS4:
+    case SDL_CONTROLLER_TYPE_PS5:
+        return QLatin1String("ds");
+
+    case SDL_CONTROLLER_TYPE_NINTENDO_SWITCH_PRO:
+    case SDL_CONTROLLER_TYPE_NINTENDO_SWITCH_JOYCON_LEFT:
+    case SDL_CONTROLLER_TYPE_NINTENDO_SWITCH_JOYCON_RIGHT:
+    case SDL_CONTROLLER_TYPE_NINTENDO_SWITCH_JOYCON_PAIR:
+        return QLatin1String("switch");
+
+    default:
+        // Includes UNKNOWN and the streaming-box types (Luna, Stadia, Shield)
+        // plus VIRTUAL, which is what Steam Input presents. None of them have
+        // their own art, and all of them use Xbox lettering in practice.
+        return QLatin1String("fallback");
+    }
+}
+
 SdlGamepadKeyNavigation::SdlGamepadKeyNavigation(StreamingPreferences* prefs)
     : m_Prefs(prefs),
       m_Enabled(false),
       m_UiNavMode(false),
       m_FirstPoll(false),
       m_HasFocus(false),
-      m_LastAxisNavigationEventTime(0)
+      m_LastAxisNavigationEventTime(0),
+      // Nothing attached yet. Xbox lettering is the neutral default, and is what
+      // "fallback" resolves to anyway.
+      m_GlyphFamily(QLatin1String("xinput"))
 {
     m_PollingTimer = new QTimer(this);
     connect(m_PollingTimer, &QTimer::timeout, this, &SdlGamepadKeyNavigation::onPollingTimerFired);
@@ -71,8 +137,37 @@ void SdlGamepadKeyNavigation::enable()
 
     m_Enabled = true;
 
+    // Pick up whatever was already attached before we opened. Without this the
+    // glyphs would stay on the default family until the first hotplug event.
+    refreshGlyphFamily();
+
     // Start the polling timer if the window is focused
     updateTimerState();
+}
+
+void SdlGamepadKeyNavigation::refreshGlyphFamily()
+{
+    QString family;
+
+    if (m_Gamepads.isEmpty()) {
+        family = QLatin1String("fallback");
+    }
+    else {
+        // Most recently attached controller wins. If someone has a pad plugged in
+        // and then picks up a different one, the one they just connected is the
+        // one they are about to use.
+        family = familyForController(m_Gamepads.last());
+    }
+
+    QString resolved = resolveGlyphFamily(family);
+    if (resolved != m_GlyphFamily) {
+        SDL_LogInfo(SDL_LOG_CATEGORY_APPLICATION,
+                    "Controller glyphs: %s -> %s",
+                    family.toUtf8().constData(),
+                    resolved.toUtf8().constData());
+        m_GlyphFamily = resolved;
+        emit glyphFamilyChanged();
+    }
 }
 
 void SdlGamepadKeyNavigation::disable()
@@ -199,6 +294,7 @@ void SdlGamepadKeyNavigation::onPollingTimerFired()
             break;
         }
         case SDL_CONTROLLERDEVICEADDED:
+        {
             SDL_GameController* gc = SDL_GameControllerOpen(event.cdevice.which);
             if (gc != nullptr) {
                 // SDL_CONTROLLERDEVICEADDED can be reported multiple times for the same
@@ -212,8 +308,31 @@ void SdlGamepadKeyNavigation::onPollingTimerFired()
                     // We already have this game controller open
                     SDL_GameControllerClose(gc);
                 }
+
+                // Swapping pads mid-session has to change the glyphs live.
+                refreshGlyphFamily();
             }
             break;
+        }
+        case SDL_CONTROLLERDEVICEREMOVED:
+        {
+            // For removal events 'which' is the instance ID, not a device index.
+            //
+            // Nothing handled this case before. The consequence was mild while
+            // m_Gamepads was only used for axis polling -- a closed controller
+            // reads as zero -- but it leaked the handle, and it would have left
+            // the glyphs showing a controller that had already been unplugged.
+            SDL_GameController* gc = SDL_GameControllerFromInstanceID(event.cdevice.which);
+            if (gc != nullptr) {
+                int idx = m_Gamepads.indexOf(gc);
+                if (idx >= 0) {
+                    m_Gamepads.removeAt(idx);
+                    SDL_GameControllerClose(gc);
+                    refreshGlyphFamily();
+                }
+            }
+            break;
+        }
         }
     }
 

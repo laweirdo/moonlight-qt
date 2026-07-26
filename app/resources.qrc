@@ -11,6 +11,36 @@
         <file>res/no_app_image.png</file>
         <file>res/atmosphere-grain.png</file>
         <file>res/atmosphere-vignette.png</file>
+        <file>res/glyphs/ds_b1.svg</file>
+        <file>res/glyphs/ds_b2.svg</file>
+        <file>res/glyphs/ds_b3.svg</file>
+        <file>res/glyphs/ds_b4.svg</file>
+        <file>res/glyphs/ds_lb.svg</file>
+        <file>res/glyphs/ds_lt.svg</file>
+        <file>res/glyphs/ds_rb.svg</file>
+        <file>res/glyphs/ds_rt.svg</file>
+        <file>res/glyphs/ds_select.svg</file>
+        <file>res/glyphs/ds_start.svg</file>
+        <file>res/glyphs/switch_b1.svg</file>
+        <file>res/glyphs/switch_b2.svg</file>
+        <file>res/glyphs/switch_b3.svg</file>
+        <file>res/glyphs/switch_b4.svg</file>
+        <file>res/glyphs/switch_lb.svg</file>
+        <file>res/glyphs/switch_lt.svg</file>
+        <file>res/glyphs/switch_rb.svg</file>
+        <file>res/glyphs/switch_rt.svg</file>
+        <file>res/glyphs/switch_select.svg</file>
+        <file>res/glyphs/switch_start.svg</file>
+        <file>res/glyphs/xinput_b1.svg</file>
+        <file>res/glyphs/xinput_b2.svg</file>
+        <file>res/glyphs/xinput_b3.svg</file>
+        <file>res/glyphs/xinput_b4.svg</file>
+        <file>res/glyphs/xinput_lb.svg</file>
+        <file>res/glyphs/xinput_lt.svg</file>
+        <file>res/glyphs/xinput_rb.svg</file>
+        <file>res/glyphs/xinput_rt.svg</file>
+        <file>res/glyphs/xinput_select.svg</file>
+        <file>res/glyphs/xinput_start.svg</file>
         <file>res/settings.svg</file>
         <file>res/arrow_left.svg</file>
         <file>res/question_mark.svg</file>
