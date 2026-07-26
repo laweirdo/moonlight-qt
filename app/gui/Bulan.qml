@@ -126,4 +126,48 @@ QtObject {
     readonly property bool atmosphereGradientEnabled: true
     readonly property bool atmosphereVignetteEnabled: true
     readonly property bool atmosphereGrainEnabled:    true
+
+    // --- Motion (creative brief §6) -------------------------------------------
+    // Durations and scales are the brief's stated values. Not in Figma: variables
+    // cannot express motion.
+    readonly property int  motionFocusMs:    140
+    readonly property int  motionPressMs:     80
+    readonly property real motionFocusScale: 1.04
+    readonly property real motionPressScale: 0.97
+
+    // "ease-out with barely-there overshoot". Easing.OutBack's own default is
+    // 1.70158, which overshoots by about 10% and reads as a bounce -- far more
+    // than the brief wants. 0.7 lands around 3%: enough to feel sprung, not
+    // enough to look playful about it. The brief gives no number, so this is the
+    // one motion value here that is interpretation rather than transcription.
+    readonly property real motionOvershoot:  0.7
+
+    // Screen transition, brief §6. Unused as yet -- no screen transition has been
+    // built -- but stated here so the value does not get invented twice.
+    readonly property int  motionTransitionMs: 220
+
+    // --- Host carousel --------------------------------------------------------
+    // Proportions measured off the design mockup at 1280x800: the focused tile is
+    // a little over a quarter of the panel width, and its neighbours are just
+    // under two thirds of its size.
+    // Focused tile diameter before the 1.04 focus scale is applied: the mockup's
+    // focused circle measures ~337px at 1280x800, and 337 / 1.04 is 324.
+    readonly property int  hostTileSize:           324
+    readonly property real hostTileNeighbourScale: 0.64
+
+    // Horizontal distance from the focused tile's centre to a neighbour's centre.
+    // Measured off the mockup, where it leaves ~86px of clear ground between the
+    // focused edge and the neighbour edge. A path starting at x=0 would centre the
+    // first neighbour on the screen edge and cut half of it off.
+    readonly property int  hostTileSpread:         338
+
+    // Neighbours sit lower than the focused tile, which is what gives the row its
+    // gentle arc rather than reading as three circles on a rule. Also measured off
+    // the mockup.
+    readonly property int  hostTileNeighbourDrop:   75
+
+    // Peak alpha of the warm halo behind the focused tile. The brief's ambient
+    // radial glow is 3-6%; a focus halo is the foreground case of the same
+    // effect and carries more weight, matching the existing card focus bloom.
+    readonly property real focusBloomOpacity: 0.22
 }

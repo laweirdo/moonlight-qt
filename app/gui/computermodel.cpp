@@ -42,6 +42,9 @@ QVariant ComputerModel::data(const QModelIndex& index, int role) const
         return computer->state == NvComputer::CS_UNKNOWN;
     case ServerSupportedRole:
         return computer->isSupportedServerVersion;
+    case AddressRole:
+        // Without the port: this is shown to the user, not dialled.
+        return computer->activeAddress.address();
     case DetailsRole: {
         QString state, pairState;
 
@@ -110,6 +113,7 @@ QHash<int, QByteArray> ComputerModel::roleNames() const
     names[StatusUnknownRole] = "statusUnknown";
     names[ServerSupportedRole] = "serverSupported";
     names[DetailsRole] = "details";
+    names[AddressRole] = "address";
 
     return names;
 }

@@ -218,8 +218,15 @@ ApplicationWindow {
 
         // This is a keypress we've reserved for letting the
         // SdlGamepadKeyNavigation object tell us to show settings
-        // when Menu is consumed by a focused control.
+        // when Menu is consumed by a focused control. Start sends it.
         Keys.onHangupPressed: {
+            settingsButton.clicked()
+        }
+
+        // Y, which used to share Key_Hangup with Start. Handled here too so Y
+        // still opens settings on every screen that does not claim it first --
+        // the host carousel claims it for Wake.
+        Keys.onCallPressed: {
             settingsButton.clicked()
         }
     }

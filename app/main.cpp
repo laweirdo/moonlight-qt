@@ -1006,7 +1006,10 @@ int main(int argc, char *argv[])
             tokenProofMode = true;
         }
         else {
-            initialView = "qrc:/gui/PcView.qml";
+            // The host carousel replaces PcView's grid. PcView is left in the
+            // tree because it still owns the rename/delete/network-test flows
+            // that the carousel has no designed home for yet.
+            initialView = "qrc:/gui/HostCarousel.qml";
         }
 
         // Debug hook: MOONLIGHT_INITIAL_VIEW=qrc:/gui/SettingsView.qml boots
@@ -1062,6 +1065,11 @@ int main(int argc, char *argv[])
         // See the Loader in main.qml. Empty unless MOONLIGHT_SCREENSHOT is set.
         engine.rootContext()->setContextProperty("screenshotPath",
                                                  QString::fromUtf8(qgetenv("MOONLIGHT_SCREENSHOT")));
+        // Debug hook: MOONLIGHT_FAKE_HOSTS=none|one|offline|mixed swaps a fixed
+        // host list into the carousel, so its states can be reviewed without
+        // pairing or unpairing real machines. Inert unless set.
+        engine.rootContext()->setContextProperty("fakeHosts",
+                                                 QString::fromUtf8(qgetenv("MOONLIGHT_FAKE_HOSTS")));
         // Suppress the startup warning dialogs in token proof mode -- they would
         // otherwise open modally on top of the sheet.
         engine.rootContext()->setContextProperty("runConfigChecks",

@@ -84,10 +84,11 @@ Item {
             Text {
                 anchors.verticalCenter: parent.verticalCenter
                 text: (modelData && modelData.label !== undefined) ? modelData.label : ""
-                // Label follows its glyph, so an emphasised hint reads as one
-                // amber unit rather than an amber glyph with a grey word after it.
-                color: parent._tone === "focus" ? Bulan.accentPrimary
-                                                : Bulan.textSecondary
+                // Always the quiet tone, including on the emphasised hint: only
+                // the glyph carries the amber. The label is the same kind of
+                // information on every hint, so colouring it too would make the
+                // primary action shout rather than lead.
+                color: Bulan.textSecondary
                 font.family: Bulan.familyUi
                 font.pixelSize: Bulan.sizeLabel
             }

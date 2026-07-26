@@ -281,12 +281,33 @@ void SdlGamepadKeyNavigation::onPollingTimerFired()
             case SDL_CONTROLLER_BUTTON_X:
                 sendKey(type, Qt::Key_Menu);
                 break;
-            case SDL_CONTROLLER_BUTTON_Y:
             case SDL_CONTROLLER_BUTTON_START:
                 // HACK: We use this keycode to inform main.qml
                 // to show the settings when Key_Menu is handled
                 // by the control in focus.
                 sendKey(type, Qt::Key_Hangup);
+                break;
+            case SDL_CONTROLLER_BUTTON_Y:
+                // Y used to share Key_Hangup with Start, which made the two
+                // buttons indistinguishable to QML. The host carousel needs them
+                // apart -- Y wakes a host, Start opens client settings -- so Y now
+                // has a keycode of its own.
+                //
+                // Key_Call is chosen for the same reason Key_Hangup was: it is a
+                // reserved telephony key with no text meaning, so it cannot
+                // collide with typing in a focused text field. QML surfaces it as
+                // Keys.onCallPressed.
+                //
+                // main.qml still treats it as "show settings" at the StackView
+                // level, so Y keeps its old behaviour on every screen that does
+                // not consume it first.
+                sendKey(type, Qt::Key_Call);
+                break;
+            case SDL_CONTROLLER_BUTTON_BACK:
+                // Select/Back/View was not mapped to anything at all before.
+                // Key_Context1 is a reserved soft key, surfaced in QML as
+                // Keys.onContext1Pressed.
+                sendKey(type, Qt::Key_Context1);
                 break;
             default:
                 break;
