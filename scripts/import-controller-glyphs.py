@@ -64,6 +64,23 @@ DEFAULT_SRC = os.path.expanduser("~/Documents/Bulan/controller_glyphs")
 FAMILIES = ["xinput", "ds", "switch", "deck"]
 TOKENS = ["b1", "b2", "b3", "b4", "lb", "lt", "rb", "rt", "start", "select"]
 
+# Glyphs sourced from a different file than their own name.
+#
+# xinput_rt.svg shipped as an embedded base64 bitmap rather than vector art: it
+# does not scale and ignores the fill colour, rendering as a black box with black
+# lettering. ds_rt.svg, meanwhile, draws "RT" -- Xbox nomenclature that does not
+# belong in the PlayStation set at all -- as clean vector art. The export appears
+# to have put the Xbox trigger art in the PlayStation slot.
+#
+# So xinput_rt is taken from ds_rt, which is what it should have been. Delete the
+# entry once a proper vector xinput_rt is delivered.
+#
+# This leaves ds_rt still drawing "RT" where PlayStation wants "R2"; there is no
+# R2 art in the set to substitute, so it is reported instead of guessed at.
+SUBSTITUTIONS = {
+    ("xinput", "rt"): ("ds", "rt"),
+}
+
 BULAN_QML = os.path.normpath(os.path.join(REPO, "app", "gui", "Bulan.qml"))
 
 # Which design token the glyphs are drawn in.
@@ -129,11 +146,27 @@ def recolour(tag, colour):
 
 
 def normalise(svg, colour):
-    """Strip redundant text nodes and recolour all artwork."""
-    # 1. Drop <text>...</text> blocks (and any <tspan> inside them).
+    """Strip clips and redundant text nodes, then recolour all artwork."""
+    # 1. Drop <clipPath> and <defs> blocks, plus any clip-path reference to them.
+    #
+    #    Qt renders SVG Tiny, which does not honour <clipPath>. Instead of
+    #    clipping, it draws the <rect> sitting inside the clip path -- and those
+    #    rects declare no fill, so they default to BLACK and land as a solid
+    #    square behind the glyph. The 17 glyphs in this set carrying a clipPath
+    #    were exactly the 17 showing a dark backing.
+    #
+    #    Removing them is visually lossless: every clip in this set is the full
+    #    122.88 canvas, so it never actually clipped anything away. macOS
+    #    QuickLook honours clipPath correctly, which is why the defect is
+    #    invisible when previewing the files outside the app.
+    svg = re.sub(r"<clipPath\b.*?</clipPath>", "", svg, flags=re.DOTALL)
+    svg = re.sub(r"<defs\b.*?</defs>", "", svg, flags=re.DOTALL)
+    svg = re.sub(r'\s*clip-path\s*=\s*"[^"]*"', "", svg)
+
+    # 2. Drop <text>...</text> blocks (and any <tspan> inside them).
     svg = re.sub(r"<text\b.*?</text>", "", svg, flags=re.DOTALL)
 
-    # 2. Recolour every artwork element.
+    # 3. Recolour every artwork element.
     for el in ART_ELEMENTS:
         svg = re.sub(
             r"<%s\b[^>]*>" % el, lambda m: recolour(m.group(0), colour), svg
@@ -163,13 +196,16 @@ def main():
         fam, _, tok = clean.partition("_")
         found[(fam, tok)] = name
 
-    written, missing, renamed, textstripped, raster = 0, [], [], [], []
+    written, missing, renamed, textstripped, raster, substituted = 0, [], [], [], [], []
     for fam in FAMILIES:
         for tok in TOKENS:
-            srcname = found.get((fam, tok))
+            key = SUBSTITUTIONS.get((fam, tok), (fam, tok))
+            srcname = found.get(key)
             if srcname is None:
                 missing.append("%s_%s" % (fam, tok))
                 continue
+            if key != (fam, tok):
+                substituted.append("%s_%s <- %s_%s" % (fam, tok, key[0], key[1]))
             raw = open(os.path.join(src, srcname), encoding="utf-8").read()
             name = "%s_%s" % (fam, tok)
             if re.search(r"<text\b", raw):
@@ -193,12 +229,21 @@ def main():
             print("    " + r)
     if textstripped:
         print("  redundant <text> node removed: " + ", ".join(textstripped))
+    if substituted:
+        print("  sourced from another file: " + ", ".join(substituted))
     if raster:
         print("  *** EMBEDDED BITMAP, not vector: %s" % ", ".join(raster))
         print("      will not scale and ignores the fill colour -- needs re-export")
     if missing:
         print("  not supplied (%d): %s" % (len(missing), ", ".join(missing)))
         print("  -> resolved by resolveGlyphFamily() in gui/sdlgamepadkeynavigation.cpp")
+
+    # Defects that cannot be fixed by transforming the art, so they are restated
+    # on every run rather than living only in a commit message.
+    print("  OUTSTANDING source-art issues:")
+    print("    ds_rt        draws \"RT\" (Xbox); PlayStation wants \"R2\" -- no R2 art to substitute")
+    print("    xinput_rt    original is an embedded bitmap; currently borrowing ds_rt's vector")
+    print("    deck_*       not supplied; falling back to the xinput set")
 
 
 if __name__ == "__main__":
