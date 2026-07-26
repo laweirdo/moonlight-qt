@@ -1,7 +1,12 @@
 # Bulan — handoff
 
 Context for whoever picks this up next, human or otherwise. Current as of
-**26 July 2026**, branch `dev/token-proof`, head `f40a7deb`.
+**26 July 2026**, branch `dev/token-proof`, head `79f2baea`.
+
+The first Steam Deck verification session has now happened. Checks 1–3 are done
+and turned up two real defects; checks 4–8 are still open. See
+"Deck checks the Mac cannot perform" at the end — **that section has been
+rewritten with results and is no longer a to-do list.**
 
 Bulan is a UI/UX-focused fork of moonlight-qt targeting the Steam Deck. The client
 is a creative director who does not read code; explanations belong in plain English,
@@ -15,7 +20,8 @@ and design decisions are theirs to make, not yours to assume.
 |---|---|
 | `~/Downloads/bulan-creative-brief.md` | **The authority on design.** Not in the repo — the client's file. §4 depth/atmosphere, §6 motion, §8 voice, §11 guardrails are the sections that get cited constantly. |
 | `SPEC-host-carousel.md` | The host screen as built: navigation table, components, decisions, and what is knowingly unfinished. |
-| `BUILDING-MAC.md` | How this machine builds and launches the project. |
+| `BUILDING-MAC.md` | How the design machine builds and launches the project. |
+| `BUILDING-DECK.md` | How the Steam Deck builds, installs and runs it. Read before any Deck session — the recipe hardcodes a source path and will silently build the wrong branch. |
 | `UI-AUDIT.md` | Upstream's interface as it was *before* this work. Historical baseline, not a current description — it says so at the top. |
 
 ---
@@ -55,6 +61,8 @@ These are not suggestions. They have been restated across several sessions.
 | `c39437dc` | Host carousel replacing the host grid |
 | `9bf731f1` | `SPEC-host-carousel.md` |
 | `f40a7deb` | `BUILDING-MAC.md`, `UI-AUDIT.md`, gitignore fix |
+| `4d967758` | This handoff document |
+| `79f2baea` | `BUILDING-DECK.md` |
 
 ### The component inventory
 
@@ -77,10 +85,97 @@ Still upstream's, restyled but not rebuilt: `AppView.qml` (the game grid),
 
 ---
 
+## Known defects, found on the Deck
+
+Nothing here has been fixed. The client asked for the full picture before any
+changes, and then to decide. Do not fix without their say-so.
+
+### 1. A is a dead button after visiting Client Settings — confirmed, reproducible
+
+**The worst of the lot, and not Deck-specific.** It reproduces anywhere with a
+gamepad; it surfaced here only because this was the first time anyone pressed
+physical buttons in sequence rather than reviewing screens in isolation.
+
+Go to the carousel, press START to open Client Settings, press B to come back,
+press A. Nothing happens, permanently, until the app restarts.
+
+`m_UiNavMode` is stuck `true` after the round-trip. That mode changes the keycode
+for exactly two things — **A** (`Key_Return` → `Key_Space`) and D-pad up/down
+(arrows → Tab/Shift+Tab). `HostCarousel` handles `onReturnPressed` and
+`onEnterPressed` but **not Space**, so A silently reaches nothing. Every other
+button is unaffected, which is what makes it look like a pairing bug rather than
+a focus bug.
+
+Confirmed by elimination: after the round-trip **X still opens "Add a PC"**, so
+`root` has not lost active focus and the bindings are alive.
+
+Both `SettingsView.onDeactivating` and `HostCarousel.onActivated` call
+`setUiNavMode(false)`, so on paper the reset is correct. Two candidate
+mechanisms, not yet distinguished:
+
+- **`AutoResizingComboBox`** toggles nav mode around its popup and sets it back
+  to `true` on close (`AutoResizingComboBox.qml:51`). If that fires *after* the
+  pop, it re-arms the mode on a screen that has already reset it.
+- **`HostCarousel.onActivated` never fires on pop-back**, so the reset never runs.
+
+The experiment that splits them: enter settings and come straight back
+(A should work), then enter settings, open the Resolution dropdown, close it,
+come back (A should be dead). If only the second kills it, it is the combo box.
+
+### 2. The hint bar offers "Wake" on hosts that cannot be woken
+
+`actWake()` returns immediately when `host.online`, so on an online host Y does
+nothing, by design — you cannot wake a machine that is already awake. But the
+hint bar advertises **Wake** regardless of host state. Press it, nothing happens,
+no explanation.
+
+This is a design defect, not a binding one. The binding is correct. The client
+saw it as a broken button, which is the point.
+
+The offline path is still unverified — it needs a machine that can actually be
+put to sleep.
+
+### 3. `actConfirm()` pushes `AppView` without checking the component loaded
+
+`HostCarousel.qml:186` does `Qt.createComponent("AppView.qml")` and pushes
+`createObject(...)` with **no `component.status` check**. If `AppView.qml` ever
+fails to load, `createObject` returns `null`, `stackView.push(null)` does
+nothing, and the result is a dead A button with no error on screen.
+
+This was *not* the cause of defect 1 — it is latent. But it converts any future
+`AppView` breakage into exactly the same silent symptom, which cost real time to
+diagnose once already.
+
+### 4. Glyph family follows the most recently *attached* pad, not the most recently *used*
+
+`refreshGlyphFamily()` reads `m_Gamepads.last()`, which only changes on hotplug.
+Observed on the Deck: connect a DualSense and the glyphs switch to PlayStation
+shapes; then pick the Deck back up and use its built-in controls, and the glyphs
+**stay** on PlayStation. They only revert when the DualSense is disconnected.
+
+**The client has specified the intended rule:** glyphs should follow whichever
+controller most recently sent input. That is a different mechanism — it needs
+input polling, not hotplug events.
+
+### 5. Host Settings (SELECT) shows details, but should be a menu
+
+Previously logged as "not yet designed". The client has now scoped it: SELECT
+should open the right-click context menu equivalent — **host details, wake PC,
+and forget PC** — not the bare details panel it currently shows. They have
+flagged the host details screen as a priority candidate.
+
+This also absorbs the "rename / delete / test-network are unreachable"
+regression noted below: that menu is where they belong.
+
+---
+
 ## What to do next
 
-No instruction has been given yet. The obvious candidates, roughly in order of how
-much they are blocking:
+The client has seen the full picture and will decide. The candidates, with the
+Deck findings folded in:
+
+0. **The defects above**, of which defect 1 is the only one that makes the app
+   feel broken in normal use.
 
 1. **The three states left minimal.** `SPEC-host-carousel.md` lists them:
    **Connecting** has no design; **host settings (SELECT)** has no designed screen
@@ -105,9 +200,9 @@ much they are blocking:
 
 | Thing | Detail |
 |---|---|
-| **`deck_*` glyphs** | 10 files. Until they land, `deck` resolves to the Xbox set via `resolveGlyphFamily()` in `sdlgamepadkeynavigation.cpp` — deleting one line is the whole change. |
+| **`deck_*` glyphs** | 10 files. Until they land, `deck` resolves to the Xbox set via `resolveGlyphFamily()` in `sdlgamepadkeynavigation.cpp` — deleting one line is the whole change. **Detection is now confirmed working on real hardware**, so those 10 files are the only thing between here and Deck glyphs. |
 | **Grain intensity** | `atmosphereGrainOpacity` is at 0.03, the midpoint of the brief's 2–4%. The brief itself lists this as "Still Open" pending a real Deck panel. |
-| **Deck verification** | A list of checks the Mac cannot perform is at the end of this document. |
+| **Deck verification** | Checks 1–3 done — see the end of this document. Checks 4–8 need the client's eyes on the panel and are still open. |
 | **Vignette / hint-bar band** | The client confirmed hairline-only for the hint bar. No filled surface token exists; if one is ever wanted, it is theirs to specify. |
 
 ---
@@ -190,6 +285,65 @@ is identified by **vendor ID `0x28DE`**. SDL3 underneath does carry a Steam Deck
 HIDAPI driver and reports the name "Steam Deck", but exposes no distinct type
 through the SDL2 API.
 
+**Verified on hardware: this works.** The built-in controls resolve to `deck`.
+The earlier worry that Steam Input would mask Valve's vendor ID appears
+unfounded — its virtual pad is `Vendor=28de Product=11ff` in
+`/proc/bus/input/devices`, i.e. it carries Valve's vendor ID too. Still unproven
+in **Game Mode**, which is where Steam Input actually sits in the path; the
+confirmed run was Desktop Mode.
+
+### The glyph detection log line cannot be seen the obvious way
+
+`resolveGlyphFamily()` maps **both** `deck` and `fallback` to `xinput`, the
+constructor initialises `m_GlyphFamily` to `xinput`, and `refreshGlyphFamily()`
+only logs when `resolved != m_GlyphFamily`. So on a Deck the line is **silent
+whether detection succeeds or fails**, and the on-screen glyphs are identical
+either way. Simply launching the app and reading the log proves nothing.
+
+The way to force it, with no code change: connect a DualSense (glyphs go
+PlayStation, logs `ds -> ds`), then **disconnect it**. Removal calls
+`refreshGlyphFamily()` while the built-in pad is still open, and the previous
+value is now `ds`, so the comparison passes and the real answer prints:
+
+- `Controller glyphs: deck -> xinput` — detection works.
+- `Controller glyphs: fallback -> xinput` — detection failed.
+
+This is the only known way to observe it today. A permanent fix would be an
+unconditional log at startup.
+
+### The Deck in hand is a "Galileo" — the OLED, not the LCD
+
+`/sys/class/dmi/id/product_name` reports `Galileo`. 1280×800 at roughly
+**204 ppi**.
+
+This matters for the atmosphere checks. The brief's banding concern targets the
+**LCD**, and the two panels fail differently — LCD shows wide stepped bands,
+OLED tends toward near-black crush and tinting. **The LCD banding case cannot be
+checked on this hardware at all.**
+
+It also sharpens the grain question. At 2× DPR on the design machine each grain
+speck covered 2 device pixels; here it covers 1 physical pixel, about 0.12 mm,
+which at a 50 cm viewing distance is roughly 0.9 arcmin — at or below the limit
+of human acuity. **The likely failure mode for grain on the Deck is "invisible",
+not "too coarse."** And invisible grain cannot break banding, so grain density
+and banding have to be judged together rather than as separate checks.
+
+Same arithmetic flags `sizeCaption: 16` as the type size at risk: about
+13.7 arcmin at 50 cm, below the ~16 arcmin comfort threshold. `sizeBody: 22` and
+up are fine.
+
+### The atmosphere switches are compile-time, which makes A/B measurement slow
+
+`atmosphereGrainEnabled`, `atmosphereVignetteEnabled` and
+`atmosphereGradientEnabled` are `readonly property` in `Bulan.qml`. Toggling one
+needs a rebuild — about two minutes on the Deck. Any grain-on/grain-off power
+comparison therefore costs two builds. If that becomes routine, making them
+runtime-switchable is a small change.
+
+Idle draw with the app closed, on battery, measured at **3.92 W**
+(`current_now × voltage_now` from `/sys/class/power_supply/BAT1`; there is no
+`power_now` on this machine). The reading is noisy — sample repeatedly.
+
 ### This links sdl2-compat, not SDL2
 
 `libSDL2.dylib` reports version 3201.70.0 while the runtime logs "SDL3 version:
@@ -230,6 +384,18 @@ launching the build you just made, and you review the wrong binary.
 
 After pulling: `git submodule update --init --recursive && python3 setup-deps.py`.
 
+On the Deck it is a Flatpak build instead — see `BUILDING-DECK.md`. Three traps
+worth knowing before you start, all of which cost time this session:
+
+- **The recipe hardcodes the source path** and will happily build a different
+  branch than the one you have open, with no warning.
+- **Submodules are per-worktree** and a fresh worktree has none.
+- **The offscreen hooks need `--filesystem=home`** or the screenshot silently
+  never appears.
+
+The generated glyph and atmosphere assets are **committed**, so the two asset
+scripts do not need re-running after a pull — only after new art is delivered.
+
 ### Reviewing screens without a Deck
 
 There is no Screen Recording permission on this machine, so screens are captured
@@ -266,34 +432,71 @@ cannot be produced without either faking or damaging their config.
 
 ## Deck checks the Mac cannot perform
 
-Still outstanding. The client has the hardware.
+First verification session done **26 July 2026** on a Steam Deck OLED
+("Galileo"), Desktop Mode, real hosts on the client's network.
 
-**Could be outright wrong:**
+### 1. Glyph detection on the built-in controls — PASSED
 
-1. **Glyph detection on the built-in controls.** Check the log for
-   `Controller glyphs: <detected> -> <resolved>`. It should say `deck`. **If Steam
-   Input is presenting a virtual gamepad it will say `fallback`**, and Valve's
-   vendor ID never gets seen. Most likely failure of the lot.
-2. **The Y / SELECT remap on physical buttons.** Never pressed one. Verify Y wakes,
-   START opens client settings, SELECT opens host settings — and that Steam Input
-   has not rebound them first.
-3. **Hot-swap.** Plug a DualSense or Switch Pro in with the app open; every glyph
-   should change live. Built and compiling, never observed.
+Confirmed `Controller glyphs: deck -> xinput`. Valve's vendor ID **is** seen and
+the built-in controls are correctly identified as `deck`. It resolves to
+`xinput` only because no `deck_*` art exists yet.
 
-**Judgement calls needing the real panel:**
+This was predicted to be "most likely failure of the lot". It was not a failure.
 
-4. **Grain density.** This Mac renders at 2× DPR, so the 128px noise tile covers 256
-   device pixels — **grain looks twice as coarse here as it will on the Deck.**
-5. **Colour banding on the gradient.** The Deck's LCD is where banding shows, and
-   breaking it is the practical reason grain exists.
-6. **Type at arm's length.** Sizes are px at 1280×800, exact on the Deck. Physical
-   legibility at ~50cm is untestable on a desktop display.
-7. **Motion feel.** `motionOvershoot: 0.7` (~3%) is an interpretation of
-   "barely-there" — the brief gives no number.
-8. **Menu battery cost.** The atmosphere measured below this machine's noise floor,
-   and is structurally zero during a stream (the Qt window is hidden). But grain is
-   a full-screen alpha blend, and only the Deck shows whether idling in menus costs
-   anything.
+Two caveats: the line cannot be observed by simply reading the log — see
+"hard-won knowledge" for the DualSense-disconnect trick that forces it — and this
+was **Desktop Mode**. Game Mode, where Steam Input actually sits in the path, is
+still unverified.
+
+### 2. The Y / SELECT remap on physical buttons — PASSED, but see defects
+
+All five bindings arrive and fire the right handler, including the two that were
+structurally broken before this work (Y and START sharing a keycode, SELECT
+unmapped entirely). **Steam Input has not rebound them.** "Swap face buttons" was
+confirmed off, ruling out that confounder.
+
+| Press | Sends | Result |
+|---|---|---|
+| A | `Key_Return` | Works — but see defect 1, it dies after a Client Settings round-trip |
+| Y | `Key_Call` | Binding correct; silently returns on online hosts — defect 2 |
+| X | `Key_Menu` | Opens "Add a PC" |
+| START | `Key_Hangup` | Opens Client Settings |
+| SELECT | `Key_Context1` | Opens Host Settings — the destination is unbuilt, defect 5 |
+| B | `Key_Escape` | Back / close |
+
+The remap is sound. What the session found was two problems sitting *behind*
+correct bindings.
+
+### 3. Hot-swap — PASSED, one question open
+
+Connecting a DualSense with the app open switched the glyphs live. Disconnecting
+reverted them.
+
+What it also exposed is defect 4: glyphs do **not** switch back when the built-in
+controls resume input while the DualSense is still connected.
+
+Still unanswered: did *every* glyph in the hint bar change, or did any stay Xbox?
+
+### 4–8. Judgement calls needing the real panel — STILL OPEN
+
+Not yet reported by the client. Predictions from the hardware, so the next
+session knows what "wrong" looks like:
+
+4. **Grain density.** `atmosphereGrainOpacity: 0.03`, 128×128 tile. Expect
+   **invisible**, not coarse — see the Galileo note above. Look at the flat area
+   mid-screen at 50 cm, then again at 25 cm.
+5. **Colour banding.** **Cannot be completed on this hardware** — the concern
+   targets the LCD and this is an OLED. What can be checked is the darkest region
+   of the gradient, above the hint bar, for stepping or colour cast. If a Deck LCD
+   is in scope, this stays open.
+6. **Type at arm's length.** `sizeCaption: 16` is the one at risk (~13.7 arcmin at
+   50 cm). Read the address line under the host name, and the hint bar labels, at
+   normal holding distance.
+7. **Motion feel.** `motionOvershoot: 0.7`, `motionFocusMs: 140`. Hold left/right
+   to run the carousel fast — soft landing or visible bounce? Then a single tap:
+   immediate or laggy?
+8. **Menu battery cost.** Baseline with the app closed is 3.92 W. Note the
+   compile-time-switch problem above: an on/off comparison costs two builds.
 
 ---
 
