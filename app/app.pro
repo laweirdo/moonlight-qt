@@ -557,16 +557,29 @@ win32 {
     QMAKE_LFLAGS += /MANIFEST:embed /MANIFESTINPUT:$${PWD}/Moonlight.exe.manifest
 }
 macx {
-    # Create Info.plist in object dir with the correct version string
-    system(cp $$PWD/Info.plist $$OUT_PWD/Info.plist)
-    system(sed -i -e 's/VERSION/$$cat(version.txt)/g' $$OUT_PWD/Info.plist)
+    # Generate Info.plist with the correct version string.
+    #
+    # Write to a filename that differs from the source template, rather than
+    # copying over it. For a shadow build OUT_PWD != PWD so a copy was harmless,
+    # but for an in-source build OUT_PWD == PWD, which made the copy a no-op and
+    # left the sed rewriting the tracked template itself -- permanently
+    # replacing the VERSION placeholder with whatever version was built. Every
+    # later build then silently produced that stale version, because there was
+    # no placeholder left to substitute.
+    #
+    # Redirect to a new file instead of editing in place: `sed -i` is not
+    # portable. GNU sed treats the suffix as optional, but BSD sed (macOS) reads
+    # the following argument as the backup suffix, so `-i -e` consumed the -e
+    # and dropped a stray Info.plist-e beside the template on every build.
+    GENERATED_INFO_PLIST = $$OUT_PWD/Info.generated.plist
+    system(sed 's/VERSION/$$cat(version.txt)/g' $$PWD/Info.plist > $$GENERATED_INFO_PLIST)
 
-    QMAKE_INFO_PLIST = $$OUT_PWD/Info.plist
+    QMAKE_INFO_PLIST = $$GENERATED_INFO_PLIST
 
     APP_BUNDLE_RESOURCES.files = moonlight.icns
     APP_BUNDLE_RESOURCES.path = Contents/Resources
 
-    APP_BUNDLE_PLIST.files = $$OUT_PWD/Info.plist
+    APP_BUNDLE_PLIST.files = $$GENERATED_INFO_PLIST
     APP_BUNDLE_PLIST.path = Contents
 
     QMAKE_BUNDLE_DATA += APP_BUNDLE_RESOURCES APP_BUNDLE_PLIST
