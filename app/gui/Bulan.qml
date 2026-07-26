@@ -100,4 +100,30 @@ QtObject {
     // --- Gradients (creative brief, not Figma) -------------------------------
     readonly property color gradientBaseTop:    "#151A38"
     readonly property color gradientBaseBottom: "#080A18"
+
+    // --- Atmosphere (creative brief §4, "Depth, Not Darkness") ---------------
+    // Consumed by Atmosphere.qml, the shared ground under every screen. Not in
+    // Figma: the brief states these as ranges, and Figma variables cannot
+    // express the textures they drive.
+    //
+    // The two PNGs referenced by Atmosphere carry *shape only* — pattern in the
+    // alpha channel, flat RGB. Strength is applied entirely by these opacities,
+    // so retuning the look never means regenerating a texture.
+
+    // Brief says 2–4%. This is the midpoint. The brief also lists grain
+    // intensity under "Still Open" pending a test on real Deck hardware, so
+    // treat this as a starting point rather than a settled value.
+    readonly property real atmosphereGrainOpacity:    0.03
+
+    // Brief says "barely-there ... ~8%".
+    readonly property real atmosphereVignetteOpacity: 0.08
+
+    // Per-effect kill switches. The brief makes "every background effect must be
+    // individually disableable" a non-negotiable. There is no settings UI to
+    // bind these to yet, so they are the defaults each Atmosphere starts from;
+    // any instance can override them, and they can later be bound to real
+    // preferences without touching the component.
+    readonly property bool atmosphereGradientEnabled: true
+    readonly property bool atmosphereVignetteEnabled: true
+    readonly property bool atmosphereGrainEnabled:    true
 }

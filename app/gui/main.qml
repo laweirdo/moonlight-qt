@@ -175,13 +175,10 @@ ApplicationWindow {
         anchors.fill: parent
         focus: true
 
-        // Vertical base gradient — sky into water — behind every page.
-        background: Rectangle {
-            gradient: Gradient {
-                GradientStop { position: 0.0; color: Bulan.gradientBaseTop }
-                GradientStop { position: 1.0; color: Bulan.gradientBaseBottom }
-            }
-        }
+        // The shared atmosphere layer — gradient, vignette and grain — behind
+        // every page. See Atmosphere.qml; each effect is individually
+        // switchable there.
+        background: Atmosphere {}
 
         Component.onCompleted: {
             // Perform our early initialization before constructing
@@ -317,6 +314,19 @@ ApplicationWindow {
             // Match the top stop of the content gradient so the chrome and the
             // content read as one continuous ground.
             color: Bulan.gradientBaseTop
+
+            // The atmosphere layer lives in StackView.background, which sits
+            // below this bar rather than behind it — so without this the grain
+            // would stop dead at the bar's lower edge and leave a visible
+            // untextured strip. Only the grain is repeated: the gradient's top
+            // stop is already the fill above, and the vignette is positioned
+            // against the full window rather than this 88px slice.
+            Atmosphere {
+                anchors.fill: parent
+                gradientEnabled: false
+                vignetteEnabled: false
+            }
+
             Rectangle {
                 anchors.bottom: parent.bottom
                 width: parent.width

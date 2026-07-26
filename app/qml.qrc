@@ -20,6 +20,7 @@
         <file>gui/CenteredGridView.qml</file>
         <file>gui/CliPair.qml</file>
         <file>gui/Bulan.qml</file>
+        <file>gui/Atmosphere.qml</file>
         <file>gui/TokenProof.qml</file>
         <file>gui/BulanTokens.qml</file>
         <file>gui/SectionHeader.qml</file>
