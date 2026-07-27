@@ -3,10 +3,19 @@
 Context for whoever picks this up next, human or otherwise. Current as of
 **27 July 2026**, branch `bulan`.
 
-The first Steam Deck verification session has now happened. Checks 1–3 are done
-and turned up two real defects; checks 4–8 are still open. See
-"Deck checks the Mac cannot perform" at the end — **that section has been
-rewritten with results and is no longer a to-do list.**
+The first Steam Deck verification session has happened, and the defects it found
+are fixed. Deck checks 1–3 are done; checks 4–8 are still open and need the
+client's eyes on the real panel. See "Deck checks the Mac cannot perform" at the
+end.
+
+**Roadmap Phase A is complete except for the parts only the client can do.**
+Defects 1–4 are fixed and merged, the source documents are in the repo, `bulan`
+exists as the known-good baseline, and upstream has been merged. What Phase A
+still wants: Deck checks 4–8 reported, Game Mode verified, the wake question
+answered, and `REVIEW-CHECKLIST.md` written. **The three global tokens are still
+unsettled** — `sizeCaption`, `atmosphereGrainOpacity` and `motionOvershoot` are
+frozen pending real observation, and `ROADMAP.md` is explicit that construction
+should not start before they are.
 
 Bulan is a UI/UX-focused fork of moonlight-qt targeting the Steam Deck. The client
 is a creative director who does not read code; explanations belong in plain English,
@@ -58,6 +67,14 @@ Syncing with upstream is therefore: fast-forward `master` from
 `upstream/master`, then merge `master` into `bulan`. Conflicts, if any, are
 confined to that second step — the mirror itself never conflicts.
 
+**Done once, 27 July 2026, and it worked as designed.** Twelve upstream commits
+fast-forwarded onto `master`, then merged into `bulan` with **no conflicts**.
+Only two files are touched by both sides — `app/main.cpp` and `app/app.pro` —
+and both merged cleanly because the edits sit in different regions. Upstream
+also replaced the `h264bitstream` submodule with vendored sources; that lands
+cleanly but leaves an untracked `h264bitstream/h264bitstream/` directory behind
+from the old submodule checkout. It is safe to delete and was.
+
 `origin` is the client's fork (`laweirdo`). `upstream` is moonlight-stream.
 **Never push to `upstream`.**
 
@@ -101,6 +118,13 @@ These are not suggestions. They have been restated across several sessions.
 | `4d967758` | This handoff document |
 | `79f2baea` | `BUILDING-DECK.md` |
 | `76e1fcb3` | The first Steam Deck verification session, and the defects it found |
+| `460e7436` | Merged the macOS Info.plist build fix — builds no longer dirty the tree |
+| `b4110453` | Defects 1 and 3: the dead A button, and the silent game-grid failure |
+| `95efe680` | Defect 4: glyphs follow the pad in use; unconditional detection log |
+| `93394eaf` | Defect 2: hints appear only in states where their button does something |
+| `cfb9d25b` | Brief, `FLOW.md`, onboarding frames and the flow board moved into the repo |
+| `d52c1435` | `ROADMAP.md` |
+| `40b9d938` | Merged upstream moonlight-qt — 12 commits, no conflicts |
 
 ### The component inventory
 
@@ -123,114 +147,52 @@ Still upstream's, restyled but not rebuilt: `AppView.qml` (the game grid),
 
 ---
 
-## Known defects, found on the Deck
+## Defects from the Deck session
 
-Nothing here has been fixed. The client asked for the full picture before any
-changes, and then to decide. Do not fix without their say-so.
+Defects 1–4 are **fixed and merged** (`fix/input-defects`, merged 27 July 2026).
+Defect 5 is a design task, not a bug, and is scheduled as Phase B work.
 
-### 1. A is a dead button after visiting Client Settings — confirmed, reproducible
+| # | What it was | Status |
+|---|---|---|
+| 1 | A was a dead button after a Client Settings round trip | Fixed |
+| 2 | The hint bar offered Wake on hosts that were already awake | Fixed — the hint is hidden on an online host |
+| 3 | `actConfirm()` pushed the game grid without checking it loaded | Fixed — both failure paths now report |
+| 4 | Glyphs followed the most recently *attached* pad, not the most recently *used* | Fixed |
 
-**The worst of the lot, and not Deck-specific.** It reproduces anywhere with a
-gamepad; it surfaced here only because this was the first time anyone pressed
-physical buttons in sequence rather than reviewing screens in isolation.
+### 5. Host Settings (SELECT) shows details, but should be a menu — STILL OPEN
 
-Go to the carousel, press START to open Client Settings, press B to come back,
-press A. Nothing happens, permanently, until the app restarts.
-
-`m_UiNavMode` is stuck `true` after the round-trip. That mode changes the keycode
-for exactly two things — **A** (`Key_Return` → `Key_Space`) and D-pad up/down
-(arrows → Tab/Shift+Tab). `HostCarousel` handles `onReturnPressed` and
-`onEnterPressed` but **not Space**, so A silently reaches nothing. Every other
-button is unaffected, which is what makes it look like a pairing bug rather than
-a focus bug.
-
-Confirmed by elimination: after the round-trip **X still opens "Add a PC"**, so
-`root` has not lost active focus and the bindings are alive.
-
-Both `SettingsView.onDeactivating` and `HostCarousel.onActivated` call
-`setUiNavMode(false)`, so on paper the reset is correct. Two candidate
-mechanisms, not yet distinguished:
-
-- **`AutoResizingComboBox`** toggles nav mode around its popup and sets it back
-  to `true` on close (`AutoResizingComboBox.qml:51`). If that fires *after* the
-  pop, it re-arms the mode on a screen that has already reset it.
-- **`HostCarousel.onActivated` never fires on pop-back**, so the reset never runs.
-
-The experiment that splits them: enter settings and come straight back
-(A should work), then enter settings, open the Resolution dropdown, close it,
-come back (A should be dead). If only the second kills it, it is the combo box.
-
-### 2. The hint bar offers "Wake" on hosts that cannot be woken
-
-`actWake()` returns immediately when `host.online`, so on an online host Y does
-nothing, by design — you cannot wake a machine that is already awake. But the
-hint bar advertises **Wake** regardless of host state. Press it, nothing happens,
-no explanation.
-
-This is a design defect, not a binding one. The binding is correct. The client
-saw it as a broken button, which is the point.
-
-The offline path is still unverified — it needs a machine that can actually be
-put to sleep.
-
-### 3. `actConfirm()` pushes `AppView` without checking the component loaded
-
-`HostCarousel.qml:186` does `Qt.createComponent("AppView.qml")` and pushes
-`createObject(...)` with **no `component.status` check**. If `AppView.qml` ever
-fails to load, `createObject` returns `null`, `stackView.push(null)` does
-nothing, and the result is a dead A button with no error on screen.
-
-This was *not* the cause of defect 1 — it is latent. But it converts any future
-`AppView` breakage into exactly the same silent symptom, which cost real time to
-diagnose once already.
-
-### 4. Glyph family follows the most recently *attached* pad, not the most recently *used*
-
-`refreshGlyphFamily()` reads `m_Gamepads.last()`, which only changes on hotplug.
-Observed on the Deck: connect a DualSense and the glyphs switch to PlayStation
-shapes; then pick the Deck back up and use its built-in controls, and the glyphs
-**stay** on PlayStation. They only revert when the DualSense is disconnected.
-
-**The client has specified the intended rule:** glyphs should follow whichever
-controller most recently sent input. That is a different mechanism — it needs
-input polling, not hotplug events.
-
-### 5. Host Settings (SELECT) shows details, but should be a menu
-
-Previously logged as "not yet designed". The client has now scoped it: SELECT
-should open the right-click context menu equivalent — **host details, wake PC,
-and forget PC** — not the bare details panel it currently shows. They have
-flagged the host details screen as a priority candidate.
+The client has scoped it: SELECT should open the right-click context menu
+equivalent — **host details, wake PC, and forget PC** — not the bare details
+panel it currently shows.
 
 This also absorbs the "rename / delete / test-network are unreachable"
-regression noted below: that menu is where they belong.
+regression: those still live in `PcView.qml`, which is no longer the initial
+view, and that menu is where they belong. `ROADMAP.md` puts this first in
+Phase B, and calls it a functional loss against upstream.
 
 ---
 
 ## What to do next
 
-The client has seen the full picture and will decide. The candidates, with the
-Deck findings folded in:
+**`ROADMAP.md` is now the authority on sequencing.** It supersedes the informal
+candidate list that used to live here. The short version:
 
-0. **The defects above**, of which defect 1 is the only one that makes the app
-   feel broken in normal use.
+Phase A (stabilise) is done apart from what only the client can do —
+**Deck checks 4–8, Game Mode verification, the wake question, and
+`REVIEW-CHECKLIST.md`.** Phase A explicitly gates construction, because
+`sizeCaption`, `atmosphereGrainOpacity` and `motionOvershoot` are global: if
+`sizeCaption` fails at arm's length it is a token change touching every screen
+built and unbuilt. **Do not start Phase B screens while those are unsettled.**
 
-1. **The three states left minimal.** `SPEC-host-carousel.md` lists them:
-   **Connecting** has no design; **host settings (SELECT)** has no designed screen
-   and currently just shows the old "View Details" text; and **rename / delete /
-   test-network are not reachable at all** from the carousel — they still live in
-   `PcView.qml`, which is no longer the initial view. That last one is a functional
-   regression against upstream and needs a home.
-2. **The game grid.** `AppView.qml` is still upstream's grid with Bulan colours on
-   it. It is the next screen a user hits after the carousel, and the visual jump is
-   jarring.
-3. **Settings.** `SettingsView.qml` is stock Qt Quick Controls throughout — the
-   single largest violation of rule 1 remaining. 37 controls, two columns, and its
-   D-pad navigation is a flat 37-step tab chain that ignores the visual layout
-   (documented in `UI-AUDIT.md` §3). A real redesign, not a restyle.
-4. **Sound.** Brief §7 specifies a full cue set. Nothing has been built.
-5. **Screen transitions.** Brief §6 specifies 220ms vertical reveal.
-   `Bulan.motionTransitionMs` exists and is unused.
+Phase B closes the core loop: host settings menu, the Connecting state, the game
+grid, game detail, and wiring up the 220ms screen transition that
+`Bulan.motionTransitionMs` already defines and nothing uses.
+
+One thing the roadmap says that the branch structure does not: Phase A lists
+"**merge to `main`**". There is no `main` here — the integration branch is
+`bulan` and the fork's default is `master`. Same intent, different name; worth
+correcting in `ROADMAP.md` the next time it is edited so nobody goes looking for
+a branch that does not exist.
 
 ---
 
@@ -240,7 +202,7 @@ Deck findings folded in:
 |---|---|
 | **`deck_*` glyphs** | 10 files. Until they land, `deck` resolves to the Xbox set via `resolveGlyphFamily()` in `sdlgamepadkeynavigation.cpp` — deleting one line is the whole change. **Detection is now confirmed working on real hardware**, so those 10 files are the only thing between here and Deck glyphs. |
 | **Grain intensity** | `atmosphereGrainOpacity` is at 0.03, the midpoint of the brief's 2–4%. The brief itself lists this as "Still Open" pending a real Deck panel. |
-| **Deck verification** | Checks 1–3 done — see the end of this document. Checks 4–8 need the client's eyes on the panel and are still open. |
+| **Deck verification** | Checks 1–3 done — see the end of this document. Checks 4–8 need the client's eyes on the panel and are still open, and `ROADMAP.md` gates all construction on them. Game Mode is check 9. |
 | **Vignette / hint-bar band** | The client confirmed hairline-only for the hint bar. No filled surface token exists; if one is ever wanted, it is theirs to specify. |
 
 ---
@@ -330,24 +292,54 @@ unfounded — its virtual pad is `Vendor=28de Product=11ff` in
 in **Game Mode**, which is where Steam Input actually sits in the path; the
 confirmed run was Desktop Mode.
 
-### The glyph detection log line cannot be seen the obvious way
+### Global state written by a component that is being destroyed
 
-`resolveGlyphFamily()` maps **both** `deck` and `fallback` to `xinput`, the
-constructor initialises `m_GlyphFamily` to `xinput`, and `refreshGlyphFamily()`
-only logs when `resolved != m_GlyphFamily`. So on a Deck the line is **silent
-whether detection succeeds or fails**, and the on-screen glyphs are identical
-either way. Simply launching the app and reading the log proves nothing.
+**This was defect 1, and the shape of it will recur.** The settings page arms a
+tab-chain navigation mode in which A sends Space instead of Return. Its combo
+box turned that mode off while its dropdown was open and asserted it back *on*
+when the dropdown closed — including when the dropdown was being torn down along
+with the page, which happens *after* the page has already reset the mode. The
+carousel then ran its own reset and happened to land last, which is the only
+reason the bug was intermittent rather than constant.
 
-The way to force it, with no code change: connect a DualSense (glyphs go
-PlayStation, logs `ds -> ds`), then **disconnect it**. Removal calls
-`refreshGlyphFamily()` while the built-in pad is still open, and the previous
-value is now `ds`, so the comparison passes and the real answer prints:
+Two things worth carrying forward:
 
-- `Controller glyphs: deck -> xinput` — detection works.
-- `Controller glyphs: fallback -> xinput` — detection failed.
+- **A dying component cannot tell that it is dying.** At `aboutToHide` during
+  teardown, the combo box's `visible`, `enabled`, `parent` and `Window.window`
+  are all indistinguishable from a normal close. Checked directly; there is no
+  discriminator to branch on. Any fix that depends on detecting teardown is
+  built on sand.
+- **The fix was to remove the authority, not to order the writes.** The screen
+  owns the navigation style; a popup now only declares that it is open
+  (`setNavModeSuspended`). Clearing a suspension cannot resurrect a stale value,
+  so ordering stops mattering. If you find yourself reasoning about which
+  handler runs last, that is the signal to split the state instead.
 
-This is the only known way to observe it today. A permanent fix would be an
-unconditional log at startup.
+The symptom is worth recognising: **exactly one button dead, everything else
+fine.** Only two places in the app ever turn that mode on, so a stuck mode is
+always one of them — that argument narrows this class of bug faster than any
+experiment.
+
+### Glyph detection is logged unconditionally at startup
+
+It did not used to be. `resolveGlyphFamily()` maps both `deck` and `fallback` to
+`xinput`, and the old log fired only when the *drawn* family changed — so on a
+Deck the line was silent whether detection succeeded or failed, and the only way
+to force it was to connect a DualSense and unplug it. Every Deck session paid
+that tax.
+
+Three lines now print at startup regardless:
+
+```
+Controller glyphs: 1 controller(s) attached
+Controller glyphs:   "Steam Deck" vendor=28de product=1205 type=0 -> deck
+Controller glyphs: detected deck, drawing xinput
+```
+
+`detected deck` means Valve's vendor ID was seen. `detected fallback` with a
+controller attached means it was not. `drawing xinput` is expected either way
+until `deck_*` art exists. The change-triggered line now keys off what was
+**detected** rather than what is drawn, so hot-swaps are visible too.
 
 ### The Deck in hand is a "Galileo" — the OLED, not the LCD
 
@@ -498,10 +490,10 @@ the built-in controls are correctly identified as `deck`. It resolves to
 
 This was predicted to be "most likely failure of the lot". It was not a failure.
 
-Two caveats: the line cannot be observed by simply reading the log — see
-"hard-won knowledge" for the DualSense-disconnect trick that forces it — and this
-was **Desktop Mode**. Game Mode, where Steam Input actually sits in the path, is
-still unverified.
+One caveat remains: this was **Desktop Mode**. Game Mode, where Steam Input
+actually sits in the path, is still unverified — `ROADMAP.md` lists it as check
+9. The old caveat about the line being unobservable is gone: detection is now
+printed unconditionally at startup, so reading the log is enough.
 
 ### 2. The Y / SELECT remap on physical buttons — PASSED, but see defects
 
@@ -527,8 +519,11 @@ correct bindings.
 Connecting a DualSense with the app open switched the glyphs live. Disconnecting
 reverted them.
 
-What it also exposed is defect 4: glyphs do **not** switch back when the built-in
-controls resume input while the DualSense is still connected.
+What it also exposed was defect 4: glyphs did **not** switch back when the
+built-in controls resumed input while the DualSense was still connected. That is
+now fixed — they follow the pad most recently used. **Re-test on hardware**: with
+a DualSense connected, press something on the Deck itself and the glyphs should
+revert without unplugging anything.
 
 Still unanswered: did *every* glyph in the hint bar change, or did any stay Xbox?
 
