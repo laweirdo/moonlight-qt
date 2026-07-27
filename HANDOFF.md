@@ -1,7 +1,7 @@
 # Bulan — handoff
 
 Context for whoever picks this up next, human or otherwise. Current as of
-**26 July 2026**, branch `dev/token-proof`, head `79f2baea`.
+**27 July 2026**, branch `bulan`.
 
 The first Steam Deck verification session has now happened. Checks 1–3 are done
 and turned up two real defects; checks 4–8 are still open. See
@@ -23,6 +23,39 @@ and design decisions are theirs to make, not yours to assume.
 | `BUILDING-MAC.md` | How the design machine builds and launches the project. |
 | `BUILDING-DECK.md` | How the Steam Deck builds, installs and runs it. Read before any Deck session — the recipe hardcodes a source path and will silently build the wrong branch. |
 | `UI-AUDIT.md` | Upstream's interface as it was *before* this work. Historical baseline, not a current description — it says so at the top. |
+
+---
+
+## How this repository is branched
+
+Settled 27 July 2026. `dev/token-proof` is gone; everything it carried is on
+`bulan`. Follow this — the shape exists to keep upstream syncs cheap.
+
+| Branch | Role |
+|---|---|
+| `master` | **The fork's default branch, and a clean mirror of upstream.** Never commit Bulan work here. Its only job is to fast-forward from `upstream/master`. The moment it carries a fork-only commit, every future sync becomes a conflicted merge instead of a fast-forward. |
+| `bulan` | **The integration branch and the baseline.** All Bulan work lands here. This is what you build, what you flash to the Deck, and what "known-good" means. |
+| short task branches | One per task, cut from `bulan`, merged back when the client signs off, then deleted — local and remote. |
+
+Task branches are **named at creation, once the task is actually known.** The old
+`dev/token-proof` stopped describing its contents about eight commits in, which
+is the failure this rule prevents. Prefixes in use: `fix/`, `docs/`, `feat/`.
+
+Syncing with upstream is therefore: fast-forward `master` from
+`upstream/master`, then merge `master` into `bulan`. Conflicts, if any, are
+confined to that second step — the mirror itself never conflicts.
+
+`origin` is the client's fork (`laweirdo`). `upstream` is moonlight-stream.
+**Never push to `upstream`.**
+
+### Loose ends in the branch list
+
+- **`fix/macos-info-plist`** (`98efed4d`) is cut from `master` and has never been
+  merged into `bulan`. It is a real fix for the Info.plist trap described under
+  "hard-won knowledge" — it makes the build write `Info.generated.plist` instead
+  of rewriting the tracked template in place, which would retire the
+  "revert before committing" step entirely. Left alone pending the client's call
+  on whether to merge it or drop it.
 
 ---
 
@@ -63,6 +96,7 @@ These are not suggestions. They have been restated across several sessions.
 | `f40a7deb` | `BUILDING-MAC.md`, `UI-AUDIT.md`, gitignore fix |
 | `4d967758` | This handoff document |
 | `79f2baea` | `BUILDING-DECK.md` |
+| `76e1fcb3` | The first Steam Deck verification session, and the defects it found |
 
 ### The component inventory
 
