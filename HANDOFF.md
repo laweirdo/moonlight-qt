@@ -301,6 +301,25 @@ unfounded — its virtual pad is `Vendor=28de Product=11ff` in
 in **Game Mode**, which is where Steam Input actually sits in the path; the
 confirmed run was Desktop Mode.
 
+### There are two token files, and only one of them changes the app
+
+`app/gui/Bulan.qml` is the live design system — the singleton every screen
+imports. Changing a value here changes the application.
+
+`app/gui/BulanTokens.qml` is a **separate copy**, and it feeds `TokenProof.qml`,
+the offline review sheet. Changing a value here changes nothing the user ever
+sees. It exists because the proof sheet documents provenance per token, which the
+runtime singleton has no reason to carry.
+
+**`sizeCaption` lives in both** — as `sizeCaption: 16` in `Bulan.qml`, and as
+`size: 16` on the `caption` entry of the type ramp in `BulanTokens.qml`. Change
+one and the review sheet shows the client a value the app is not using, which is
+the worst possible failure for a document whose entire job is to be reviewed.
+Grep both files for any token before changing it.
+
+`atmosphereGrainOpacity` and `motionOvershoot` are only in `Bulan.qml`. The
+palette and the type ramp are the parts that are duplicated.
+
 ### Global state written by a component that is being destroyed
 
 **This was defect 1, and the shape of it will recur.** The settings page arms a
