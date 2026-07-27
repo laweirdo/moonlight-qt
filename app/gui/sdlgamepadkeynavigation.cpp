@@ -75,6 +75,7 @@ SdlGamepadKeyNavigation::SdlGamepadKeyNavigation(StreamingPreferences* prefs)
     : m_Prefs(prefs),
       m_Enabled(false),
       m_UiNavMode(false),
+      m_NavModeSuspended(false),
       m_FirstPoll(false),
       m_HasFocus(false),
       m_LastAxisNavigationEventTime(0),
@@ -245,7 +246,7 @@ void SdlGamepadKeyNavigation::onPollingTimerFired()
 
             switch (event.cbutton.button) {
             case SDL_CONTROLLER_BUTTON_DPAD_UP:
-                if (m_UiNavMode) {
+                if (uiNavActive()) {
                     // Back-tab
                     sendKey(type, Qt::Key_Tab, Qt::ShiftModifier);
                 }
@@ -254,7 +255,7 @@ void SdlGamepadKeyNavigation::onPollingTimerFired()
                 }
                 break;
             case SDL_CONTROLLER_BUTTON_DPAD_DOWN:
-                if (m_UiNavMode) {
+                if (uiNavActive()) {
                     sendKey(type, Qt::Key_Tab);
                 }
                 else {
@@ -268,7 +269,7 @@ void SdlGamepadKeyNavigation::onPollingTimerFired()
                 sendKey(type, Qt::Key_Right);
                 break;
             case SDL_CONTROLLER_BUTTON_A:
-                if (m_UiNavMode) {
+                if (uiNavActive()) {
                     sendKey(type, Qt::Key_Space);
                 }
                 else {
@@ -365,7 +366,7 @@ void SdlGamepadKeyNavigation::onPollingTimerFired()
             // Do nothing
         }
         else if (leftY < -30000) {
-            if (m_UiNavMode) {
+            if (uiNavActive()) {
                 // Back-tab
                 sendKey(QEvent::Type::KeyPress, Qt::Key_Tab, Qt::ShiftModifier);
                 sendKey(QEvent::Type::KeyRelease, Qt::Key_Tab, Qt::ShiftModifier);
@@ -378,7 +379,7 @@ void SdlGamepadKeyNavigation::onPollingTimerFired()
             m_LastAxisNavigationEventTime = SDL_GetTicks();
         }
         else if (leftY > 30000) {
-            if (m_UiNavMode) {
+            if (uiNavActive()) {
                 sendKey(QEvent::Type::KeyPress, Qt::Key_Tab);
                 sendKey(QEvent::Type::KeyRelease, Qt::Key_Tab);
             }
@@ -429,6 +430,11 @@ void SdlGamepadKeyNavigation::updateTimerState()
 void SdlGamepadKeyNavigation::setUiNavMode(bool uiNavMode)
 {
     m_UiNavMode = uiNavMode;
+}
+
+void SdlGamepadKeyNavigation::setNavModeSuspended(bool suspended)
+{
+    m_NavModeSuspended = suspended;
 }
 
 int SdlGamepadKeyNavigation::getConnectedGamepads()

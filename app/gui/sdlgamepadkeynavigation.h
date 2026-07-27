@@ -28,7 +28,22 @@ public:
 
     Q_INVOKABLE void notifyWindowFocus(bool hasFocus);
 
+    // The active SCREEN's navigation style: true means the settings page's tab
+    // chain, false means arrow keys. Owned by whichever screen is current --
+    // each one asserts its own on activation.
     Q_INVOKABLE void setUiNavMode(bool settingsMode);
+
+    // A transient suspension of the above, for a popup that needs plain arrow
+    // keys while it is open. Deliberately SEPARATE from setUiNavMode(): a popup
+    // states only that it is open, never what the mode should be afterwards.
+    //
+    // This is what defect 1 was. The combo box used to restore the mode by
+    // asserting it true on close, and a combo box torn down along with the
+    // settings page fires that after the page has already reset the mode --
+    // leaving the tab chain armed on a screen that does not use it, where A
+    // sends Space and reaches nothing. Clearing a suspension cannot resurrect a
+    // stale value, so the ordering stops mattering.
+    Q_INVOKABLE void setNavModeSuspended(bool suspended);
 
     Q_INVOKABLE int getConnectedGamepads();
 
@@ -38,6 +53,10 @@ signals:
     void glyphFamilyChanged();
 
 private:
+    // The mode actually in force: the screen's style, unless a popup is holding
+    // it suspended. Every input decision reads this, never m_UiNavMode directly.
+    bool uiNavActive() const { return m_UiNavMode && !m_NavModeSuspended; }
+
     void sendKey(QEvent::Type type, Qt::Key key, Qt::KeyboardModifiers modifiers = Qt::NoModifier);
 
     void updateTimerState();
@@ -55,6 +74,7 @@ private:
     QList<SDL_GameController*> m_Gamepads;
     bool m_Enabled;
     bool m_UiNavMode;
+    bool m_NavModeSuspended;
     bool m_FirstPoll;
     bool m_HasFocus;
     Uint32 m_LastAxisNavigationEventTime;
