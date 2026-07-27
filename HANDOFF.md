@@ -18,11 +18,24 @@ and design decisions are theirs to make, not yours to assume.
 
 | Document | What it is |
 |---|---|
-| `~/Downloads/bulan-creative-brief.md` | **The authority on design.** Not in the repo — the client's file. §4 depth/atmosphere, §6 motion, §8 voice, §11 guardrails are the sections that get cited constantly. |
+| `bulan-creative-brief.md` | **The authority on design.** §4 depth/atmosphere, §6 motion, §8 voice, §11 guardrails are the sections that get cited constantly. |
+| `FLOW.md` | Where every screen sits and how you get between them, as Mermaid. Two diagrams: Bulan as designed, and upstream as it is today. Carries the board's open questions as prose. |
 | `SPEC-host-carousel.md` | The host screen as built: navigation table, components, decisions, and what is knowingly unfinished. |
 | `BUILDING-MAC.md` | How the design machine builds and launches the project. |
 | `BUILDING-DECK.md` | How the Steam Deck builds, installs and runs it. Read before any Deck session — the recipe hardcodes a source path and will silently build the wrong branch. |
 | `UI-AUDIT.md` | Upstream's interface as it was *before* this work. Historical baseline, not a current description — it says so at the top. |
+
+Design source material lives in `design/`:
+
+| File | What it is |
+|---|---|
+| `design/onboarding-01-splash.png` … `-04-pairing-pin.png` | The four onboarding frames, 1× at 1280×800. Named so a future `SPEC-onboarding.md` can cite a single frame. **Nothing in this sequence is built** — the app has no onboarding at all today. |
+| `design/navigation-flow-board.png` | The flow board as exported, 9902×1828. Mermaid lays out its own graph, so `FLOW.md` cannot reproduce the spatial reading; this is the reference for that. |
+
+**These were all outside the repo until 27 July 2026.** Every session cited the
+brief as authority while it sat in the client's Downloads folder, which meant no
+session could be reproduced from a checkout alone. If a new authority document
+appears, move it in rather than citing a path on someone's machine.
 
 ---
 
