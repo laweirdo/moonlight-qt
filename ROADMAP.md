@@ -59,11 +59,15 @@ Each phase ends on the Deck before the next begins. That cadence is the point, n
 - Unconditional glyph-detection log at startup
 - Deck checks 4–8 reported, plus Game Mode (check 9) and the wake question
 - Brief, flow diagram and onboarding frames moved into the repo
-- **Merge to `main`** — first known-good baseline
-- Upstream rebase
+- **Merge to `bulan`** — first known-good baseline
+- Upstream sync — fast-forward `master` from upstream, then merge `master` into `bulan`
 - `REVIEW-CHECKLIST.md`
 
-**Exit:** `main` exists, the carousel is defect-free on hardware, and global tokens (grain, `sizeCaption`, overshoot) are settled from real observation rather than arithmetic.
+**Exit:** `bulan` exists, the carousel is defect-free on hardware, and global tokens (grain, `sizeCaption`, overshoot) are settled from real observation rather than arithmetic.
+
+**Branch names.** This originally said "merge to `main`". There is no `main`: the fork's default branch is `master` and it is kept as a clean mirror of upstream, while `bulan` is the integration branch and the baseline. Corrected here so nobody goes looking for a branch that does not exist. See `HANDOFF.md` § *How this repository is branched*.
+
+**Sync, not rebase.** This originally said "upstream rebase". `bulan` is pushed and shared, so rebasing it would rewrite history other checkouts already have. The sync is a merge in one direction only, which is why `master` must never carry Bulan work — that is what keeps the first half a fast-forward.
 
 ### Phase B — Close the core loop
 *The path a user walks every single session.*
@@ -86,7 +90,7 @@ Each phase ends on the Deck before the next begins. That cadence is the point, n
 - **Manual IP entry** — referenced by two designed screens as "Enter an address instead" and currently undesigned. Needs deliberate handling of Steam's on-screen keyboard in Game Mode.
 - First-run routing logic — what "first launch" means mechanically, and where pairing lands the user
 
-**Blocked on:** the logo composition question. Replacing the large reflected mark with the small wordmark leaves a void in frames composed around it. Resolve before building, since it changes all four.
+**Logo composition — decided, 27 July 2026.** The reflected mark is not used in these frames. They use the wordmark already in the repo, `app/res/bulan_logo_horiz.svg`, which is the same mark the carousel already draws. This unblocks the phase, and it means all four frames need recomposing: they were laid out around a tall centred element and the wordmark is small and horizontal, so the vertical space it vacates has to be deliberately reallocated rather than left as a gap. The frames in `design/` are the *old* composition and are now reference for content and copy, not for layout.
 
 ### Phase D — Edges
 *Where the flow diagram already says things are missing.*
