@@ -81,7 +81,11 @@ SdlGamepadKeyNavigation::SdlGamepadKeyNavigation(StreamingPreferences* prefs)
       m_LastAxisNavigationEventTime(0),
       // Nothing attached yet. Xbox lettering is the neutral default, and is what
       // "fallback" resolves to anyway.
-      m_GlyphFamily(QLatin1String("xinput"))
+      m_GlyphFamily(QLatin1String("xinput")),
+      // Deliberately not "fallback": detection has not run, which is a different
+      // state from having run and found nothing, and the startup log says so.
+      m_DetectedFamily(QLatin1String("none")),
+      m_ActiveGamepadId(-1)
 {
     m_PollingTimer = new QTimer(this);
     connect(m_PollingTimer, &QTimer::timeout, this, &SdlGamepadKeyNavigation::onPollingTimerFired);
@@ -141,34 +145,105 @@ void SdlGamepadKeyNavigation::enable()
     // Pick up whatever was already attached before we opened. Without this the
     // glyphs would stay on the default family until the first hotplug event.
     refreshGlyphFamily();
+    logGlyphDetection();
 
     // Start the polling timer if the window is focused
     updateTimerState();
 }
 
+// The controller whose glyphs should be drawn: the one most recently used, or
+// the most recently attached if nothing has been used yet. Null with none open.
+SDL_GameController* SdlGamepadKeyNavigation::glyphSourceController() const
+{
+    if (m_Gamepads.isEmpty()) {
+        return nullptr;
+    }
+
+    if (m_ActiveGamepadId >= 0) {
+        SDL_GameController* active = SDL_GameControllerFromInstanceID(m_ActiveGamepadId);
+        if (active != nullptr && m_Gamepads.contains(active)) {
+            return active;
+        }
+    }
+
+    return m_Gamepads.last();
+}
+
+// Defect 4. Called whenever a controller actually sends input. The glyphs follow
+// the pad in the user's hands, not the one plugged in most recently: with a
+// DualSense connected and the Deck's own sticks still live, picking the Deck
+// back up used to leave PlayStation shapes on screen until the DualSense was
+// unplugged.
+//
+// Attaching a pad also marks it active, so hot-swap still switches the glyphs
+// the instant something is plugged in rather than waiting for the first press.
+// Plugging a controller in is itself a statement of intent to use it.
+void SdlGamepadKeyNavigation::noteGamepadUsed(SDL_JoystickID which)
+{
+    if (m_ActiveGamepadId == which) {
+        return;
+    }
+
+    m_ActiveGamepadId = which;
+    refreshGlyphFamily();
+}
+
 void SdlGamepadKeyNavigation::refreshGlyphFamily()
 {
-    QString family;
+    SDL_GameController* source = glyphSourceController();
+    QString family = (source == nullptr) ? QLatin1String("fallback")
+                                         : familyForController(source);
 
-    if (m_Gamepads.isEmpty()) {
-        family = QLatin1String("fallback");
-    }
-    else {
-        // Most recently attached controller wins. If someone has a pad plugged in
-        // and then picks up a different one, the one they just connected is the
-        // one they are about to use.
-        family = familyForController(m_Gamepads.last());
+    // Log on any change in what was DETECTED, not just in what gets drawn.
+    // Several families resolve to the same art -- "deck" and "fallback" both
+    // draw the Xbox set -- so keying the log off the drawn family made it
+    // silent in exactly the case worth knowing about: whether a Steam Deck's
+    // built-in controls were recognised at all.
+    if (family != m_DetectedFamily) {
+        m_DetectedFamily = family;
+        SDL_LogInfo(SDL_LOG_CATEGORY_APPLICATION,
+                    "Controller glyphs: %s -> %s",
+                    family.toUtf8().constData(),
+                    resolveGlyphFamily(family).toUtf8().constData());
     }
 
     QString resolved = resolveGlyphFamily(family);
     if (resolved != m_GlyphFamily) {
-        SDL_LogInfo(SDL_LOG_CATEGORY_APPLICATION,
-                    "Controller glyphs: %s -> %s",
-                    family.toUtf8().constData(),
-                    resolved.toUtf8().constData());
         m_GlyphFamily = resolved;
         emit glyphFamilyChanged();
     }
+}
+
+// An unconditional report of what was found, written once at startup.
+//
+// The change-triggered line above cannot be relied on here: at startup the
+// detected family goes from nothing to something, so it does fire -- but the
+// only way anyone could previously observe glyph detection on a Steam Deck was
+// to connect a DualSense and then unplug it, purely to force a change. That
+// cost every Deck session real time. This states the answer outright, including
+// the vendor ID, which is the thing that actually decides whether Valve
+// hardware is recognised.
+void SdlGamepadKeyNavigation::logGlyphDetection()
+{
+    SDL_LogInfo(SDL_LOG_CATEGORY_APPLICATION,
+                "Controller glyphs: %d controller(s) attached",
+                (int)m_Gamepads.count());
+
+    for (auto gc : std::as_const(m_Gamepads)) {
+        const char* name = SDL_GameControllerName(gc);
+        SDL_LogInfo(SDL_LOG_CATEGORY_APPLICATION,
+                    "Controller glyphs:   \"%s\" vendor=%04x product=%04x type=%d -> %s",
+                    name != nullptr ? name : "(unnamed)",
+                    SDL_GameControllerGetVendor(gc),
+                    SDL_GameControllerGetProduct(gc),
+                    (int)SDL_GameControllerGetType(gc),
+                    familyForController(gc).toUtf8().constData());
+    }
+
+    SDL_LogInfo(SDL_LOG_CATEGORY_APPLICATION,
+                "Controller glyphs: detected %s, drawing %s",
+                m_DetectedFamily.toUtf8().constData(),
+                m_GlyphFamily.toUtf8().constData());
 }
 
 void SdlGamepadKeyNavigation::disable()
@@ -225,6 +300,10 @@ void SdlGamepadKeyNavigation::onPollingTimerFired()
             QEvent::Type type =
                     event.type == SDL_CONTROLLERBUTTONDOWN ?
                         QEvent::Type::KeyPress : QEvent::Type::KeyRelease;
+
+            // A press is the clearest possible statement of which pad is in
+            // the user's hands.
+            noteGamepadUsed(event.cbutton.which);
 
             // Swap face buttons if needed
             if (m_Prefs->swapFaceButtons) {
@@ -332,6 +411,8 @@ void SdlGamepadKeyNavigation::onPollingTimerFired()
                 }
 
                 // Swapping pads mid-session has to change the glyphs live.
+                // Plugging one in counts as picking it up.
+                noteGamepadUsed(SDL_JoystickInstanceID(SDL_GameControllerGetJoystick(gc)));
                 refreshGlyphFamily();
             }
             break;
@@ -350,6 +431,11 @@ void SdlGamepadKeyNavigation::onPollingTimerFired()
                 if (idx >= 0) {
                     m_Gamepads.removeAt(idx);
                     SDL_GameControllerClose(gc);
+                    // If the pad that just left was the one the glyphs were
+                    // following, fall back to whatever is still attached.
+                    if (m_ActiveGamepadId == event.cdevice.which) {
+                        m_ActiveGamepadId = -1;
+                    }
                     refreshGlyphFamily();
                 }
             }
@@ -362,6 +448,15 @@ void SdlGamepadKeyNavigation::onPollingTimerFired()
     for (auto gc : std::as_const(m_Gamepads)) {
         short leftX = SDL_GameControllerGetAxis(gc, SDL_CONTROLLER_AXIS_LEFTX);
         short leftY = SDL_GameControllerGetAxis(gc, SDL_CONTROLLER_AXIS_LEFTY);
+
+        // A stick pushed past the navigation threshold counts as using this
+        // pad. The threshold matters: it is a deliberate shove, well clear of
+        // the resting drift that would otherwise let an idle controller on the
+        // desk keep stealing the glyphs back.
+        if (leftX < -30000 || leftX > 30000 || leftY < -30000 || leftY > 30000) {
+            noteGamepadUsed(SDL_JoystickInstanceID(SDL_GameControllerGetJoystick(gc)));
+        }
+
         if (SDL_GetTicks() - m_LastAxisNavigationEventTime < AXIS_NAVIGATION_REPEAT_DELAY) {
             // Do nothing
         }

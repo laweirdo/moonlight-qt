@@ -65,6 +65,19 @@ private:
     // emits glyphFamilyChanged() if it moved.
     void refreshGlyphFamily();
 
+    // The controller the glyphs should follow: most recently used, falling back
+    // to most recently attached. Null when none are open.
+    SDL_GameController* glyphSourceController() const;
+
+    // Records that a controller sent input, and refreshes the glyphs if that
+    // changes which pad is in the user's hands.
+    void noteGamepadUsed(SDL_JoystickID which);
+
+    // Writes what was detected to the log unconditionally. Called once at
+    // startup so a Deck session can read the answer instead of forcing it out
+    // with the controller-disconnect trick.
+    void logGlyphDetection();
+
 private slots:
     void onPollingTimerFired();
 
@@ -79,4 +92,10 @@ private:
     bool m_HasFocus;
     Uint32 m_LastAxisNavigationEventTime;
     QString m_GlyphFamily;
+    // What detection actually returned, before art availability collapses it
+    // into m_GlyphFamily. "deck" and "fallback" both draw the Xbox set, so this
+    // is the only place the difference survives.
+    QString m_DetectedFamily;
+    // Instance ID of the controller that most recently sent input, or -1.
+    SDL_JoystickID m_ActiveGamepadId;
 };
