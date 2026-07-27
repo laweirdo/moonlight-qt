@@ -575,7 +575,11 @@ FocusScope {
         leftHints: root.hasHosts
             ? [
                   { action: "confirm",   label: qsTr("Connect"), emphasis: true },
-                  { action: "alternate", label: qsTr("Wake") },
+                  // Wake only where waking means something. actWake() returns
+                  // immediately on a host that is already awake, so advertising
+                  // it there offered a button that did nothing -- defect 2.
+                  { action: "alternate", label: qsTr("Wake"),
+                    visible: !root.hostOnline },
                   { action: "options",   label: qsTr("Add a PC") }
               ]
             : [
