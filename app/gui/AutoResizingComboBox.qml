@@ -37,8 +37,10 @@ ComboBox {
     onActivated: recalculateWidth()
 
     popup.onAboutToShow: {
-        // Switch to normal navigation for combo boxes
-        SdlGamepadKeyNavigation.setUiNavMode(false)
+        // Suspend the page's tab chain so the popup gets plain arrow keys.
+        // Suspending rather than setting the mode outright: this popup knows it
+        // is open, but not what the navigation style should be once it closes.
+        SdlGamepadKeyNavigation.setNavModeSuspended(true)
 
         // Override the popup color to improve contrast with the overridden
         // Material 2 background color set in main.qml.
@@ -48,7 +50,11 @@ ComboBox {
     }
 
     popup.onAboutToHide: {
-        SdlGamepadKeyNavigation.setUiNavMode(true)
+        // Lift the suspension only. This also fires when the combo box is torn
+        // down along with its page, which is after that page has already reset
+        // the mode -- asserting a value here instead would strand the tab chain
+        // on the next screen and silently kill its A button. See defect 1.
+        SdlGamepadKeyNavigation.setNavModeSuspended(false)
     }
 
     Keys.onLeftPressed: {

@@ -186,10 +186,30 @@ FocusScope {
 
         connectingIndex = pathView.currentIndex
         var component = Qt.createComponent("AppView.qml")
-        stackView.push(component.createObject(stackView, {
-                                                  "computerIndex": pathView.currentIndex,
-                                                  "objectName": host.hostName
-                                              }))
+        // Defect 3. Without these checks a failure to build the game grid is
+        // completely silent: createObject() returns null, push(null) does
+        // nothing, and A looks like a dead button with no clue on screen. Say
+        // so instead -- an error the user can report beats a button that
+        // appears broken.
+        if (component.status !== Component.Ready) {
+            console.error("AppView.qml failed to load:", component.errorString())
+            connectingIndex = -1
+            messagePanel.show(qsTr("Can't open %1").arg(host.hostName),
+                              qsTr("Something went wrong loading the game list."))
+            return
+        }
+        var view = component.createObject(stackView, {
+                                              "computerIndex": pathView.currentIndex,
+                                              "objectName": host.hostName
+                                          })
+        if (view === null) {
+            console.error("AppView.qml loaded but could not be created")
+            connectingIndex = -1
+            messagePanel.show(qsTr("Can't open %1").arg(host.hostName),
+                              qsTr("Something went wrong loading the game list."))
+            return
+        }
+        stackView.push(view)
     }
 
     function actWake() {
@@ -555,7 +575,11 @@ FocusScope {
         leftHints: root.hasHosts
             ? [
                   { action: "confirm",   label: qsTr("Connect"), emphasis: true },
-                  { action: "alternate", label: qsTr("Wake") },
+                  // Wake only where waking means something. actWake() returns
+                  // immediately on a host that is already awake, so advertising
+                  // it there offered a button that did nothing -- defect 2.
+                  { action: "alternate", label: qsTr("Wake"),
+                    visible: !root.hostOnline },
                   { action: "options",   label: qsTr("Add a PC") }
               ]
             : [
@@ -591,9 +615,18 @@ FocusScope {
     Keys.onUpPressed: event.accepted = true
     Keys.onDownPressed: event.accepted = true
 
-    // A
+    // A. Three keycodes for one button: Return and Enter are the same press on
+    // different keyboards, and Space is what A becomes while the settings page's
+    // tab chain is armed. This screen never wants that chain, but accepting
+    // Space anyway means a mode that leaks in from elsewhere can no longer make
+    // A do nothing at all -- which is the failure defect 1 produced, and the
+    // reason it read as a pairing problem rather than a navigation one.
     Keys.onReturnPressed: actConfirm()
     Keys.onEnterPressed: actConfirm()
+    Keys.onSpacePressed: {
+        actConfirm()
+        event.accepted = true
+    }
 
     // X. Menu is also what the toolbar used for settings upstream; consumed here.
     Keys.onMenuPressed: {
