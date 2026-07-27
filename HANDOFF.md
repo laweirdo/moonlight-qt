@@ -48,15 +48,6 @@ confined to that second step — the mirror itself never conflicts.
 `origin` is the client's fork (`laweirdo`). `upstream` is moonlight-stream.
 **Never push to `upstream`.**
 
-### Loose ends in the branch list
-
-- **`fix/macos-info-plist`** (`98efed4d`) is cut from `master` and has never been
-  merged into `bulan`. It is a real fix for the Info.plist trap described under
-  "hard-won knowledge" — it makes the build write `Info.generated.plist` instead
-  of rewriting the tracked template in place, which would retire the
-  "revert before committing" step entirely. Left alone pending the client's call
-  on whether to merge it or drop it.
-
 ---
 
 ## Standing rules the client has set
@@ -385,12 +376,29 @@ Idle draw with the app closed, on battery, measured at **3.92 W**
 identification functions exist in both the headers and the shim, so the SDL2 API is
 safe to build against — but do not assume SDL2 internals.
 
-### The macOS build rewrites `app/Info.plist` in place
+### The macOS build used to rewrite `app/Info.plist` in place — fixed
 
-It stamps the literal `VERSION` placeholder to the real version number, so the file
-shows as modified after every build. **Revert it before committing.** Committing the
-stamped value replaces the placeholder the build's `sed` looks for and silently
-breaks every future version bump. `.gitignore` carries a note about this.
+**Historical, kept because the symptom is memorable and the trap could be
+reintroduced.** Until `460e7436` the build stamped the literal `VERSION`
+placeholder to the real version number *in the tracked template*, so the file
+showed as modified after every build and had to be reverted by hand. Committing
+the stamped value would have destroyed the placeholder the build's `sed` looks
+for and silently broken every future version bump.
+
+Two causes, both now fixed in `app/app.pro`:
+
+- The old rule copied the template to `$$OUT_PWD/Info.plist`. In a **shadow**
+  build that is a different file; in an **in-source** build — which is what this
+  project does — `OUT_PWD == PWD`, so the copy was a no-op and the `sed` landed
+  on the tracked template.
+- It used `sed -i -e`, and BSD `sed` reads the argument after `-i` as a backup
+  suffix. So macOS consumed the `-e` and dropped a stray `Info.plist-e` beside
+  the template on every build.
+
+The build now writes `app/Info.generated.plist` — a different filename from the
+template, so in-source and shadow builds behave identically — with a plain
+redirect rather than in-place editing. **Building no longer dirties the working
+tree.** If `git status` is ever non-empty after a build again, this regressed.
 
 ### Upstream quirks worth knowing
 
