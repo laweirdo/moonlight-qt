@@ -12,7 +12,8 @@ end.
 Defects 1–4 are fixed and merged, the source documents are in the repo, `bulan`
 exists as the known-good baseline, and upstream has been merged. What Phase A
 still wants: Deck checks 4–8 reported, Game Mode verified, the wake question
-answered, and `REVIEW-CHECKLIST.md` written. **The three global tokens are still
+answered. `REVIEW-CHECKLIST.md` now exists and is what that session should work
+from. **The three global tokens are still
 unsettled** — `sizeCaption`, `atmosphereGrainOpacity` and `motionOvershoot` are
 frozen pending real observation, and `ROADMAP.md` is explicit that construction
 should not start before they are.
@@ -29,6 +30,8 @@ and design decisions are theirs to make, not yours to assume.
 |---|---|
 | `bulan-creative-brief.md` | **The authority on design.** §4 depth/atmosphere, §6 motion, §8 voice, §11 guardrails are the sections that get cited constantly. |
 | `FLOW.md` | Where every screen sits and how you get between them, as Mermaid. Two diagrams: Bulan as designed, and upstream as it is today. Carries the board's open questions as prose. |
+| `ROADMAP.md` | **The authority on sequencing.** What v1 is, the scope decisions that stopped being re-derived, and the phase order. |
+| `REVIEW-CHECKLIST.md` | The next Deck session, as a list. Regression on the four fixes, then the judgement calls that settle the three frozen tokens. |
 | `SPEC-host-carousel.md` | The host screen as built: navigation table, components, decisions, and what is knowingly unfinished. |
 | `BUILDING-MAC.md` | How the design machine builds and launches the project. |
 | `BUILDING-DECK.md` | How the Steam Deck builds, installs and runs it. Read before any Deck session — the recipe hardcodes a source path and will silently build the wrong branch. |
@@ -38,7 +41,7 @@ Design source material lives in `design/`:
 
 | File | What it is |
 |---|---|
-| `design/onboarding-01-splash.png` … `-04-pairing-pin.png` | The four onboarding frames, 1× at 1280×800. Named so a future `SPEC-onboarding.md` can cite a single frame. **Nothing in this sequence is built** — the app has no onboarding at all today. |
+| `design/onboarding-01-splash.png` … `-04-pairing-pin.png` | The four onboarding frames, 1× at 1280×800. Named so a future `SPEC-onboarding.md` can cite a single frame. **Nothing in this sequence is built** — the app has no onboarding at all today, and these frames show the *superseded* composition built around the reflected mark. Content and copy still hold; the layout does not. See Phase C. |
 | `design/navigation-flow-board.png` | The flow board as exported, 9902×1828. Mermaid lays out its own graph, so `FLOW.md` cannot reproduce the spatial reading; this is the reference for that. |
 
 **These were all outside the repo until 27 July 2026.** Every session cited the
@@ -188,11 +191,17 @@ Phase B closes the core loop: host settings menu, the Connecting state, the game
 grid, game detail, and wiring up the 220ms screen transition that
 `Bulan.motionTransitionMs` already defines and nothing uses.
 
-One thing the roadmap says that the branch structure does not: Phase A lists
-"**merge to `main`**". There is no `main` here — the integration branch is
-`bulan` and the fork's default is `master`. Same intent, different name; worth
-correcting in `ROADMAP.md` the next time it is edited so nobody goes looking for
-a branch that does not exist.
+`REVIEW-CHECKLIST.md` is what the remaining Phase A work looks like in practice.
+It is written to be worked top to bottom on the hardware, and its last section is
+the list of answers that need to come back.
+
+**Phase C is no longer blocked.** The client decided the onboarding frames do not
+use the reflected mark — they use `app/res/bulan_logo_horiz.svg`, the wordmark
+the carousel already draws. The consequence is that all four frames need
+recomposing rather than resizing: they were built around a tall centred element,
+and the wordmark is small and horizontal, so the vertical space it vacates has to
+be deliberately reallocated. **The PNGs in `design/` are the old composition** —
+reference for content and copy, not for layout.
 
 ---
 

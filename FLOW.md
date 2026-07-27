@@ -141,6 +141,13 @@ sends you back to Launch.
 The same journey in the app this forks from. It is drawn to show what the
 redesign is replacing, not as anything to preserve.
 
+**Corrected against the board.** The board drew Bulan's three pairing screens
+inside this diagram, tinted violet and labelled "our addition". That is true —
+they *are* ours — but drawing them here made upstream look like it has a
+find-your-PC flow, and it does not. They have been removed from this diagram and
+live where they belong, in the Onboarding group above. What upstream actually
+does is in the note under the diagram.
+
 ```mermaid
 flowchart LR
     UpLaunch([Launch])
@@ -152,11 +159,7 @@ flowchart LR
         UpContext["PC context menu"]
     end
 
-    subgraph UpPairing["Pairing — our addition"]
-        UpFindPC["Let's find your PC"]
-        UpLooking["Looking for your PC"]
-        UpTypePin["Type PIN on PC"]
-    end
+    UpTypePin["PIN to type on the host"]
 
     UpAppGrid["App grid"]
     UpSettings["Settings"]
@@ -171,17 +174,15 @@ flowchart LR
     UpLaunch --> UpGrid
     UpLaunch -.->|Checks fail| UpWarnings
     UpWarnings -->|OK| UpGrid
-    UpLaunch -.->|First run| UpFindPC
 
-    UpFindPC --> UpLooking
-    UpLooking -.->|Pick a PC| UpTypePin
+    UpGrid -.->|Found on the network| UpGrid
+    UpGrid -->|A on unpaired PC| UpTypePin
     UpTypePin -->|Paired| UpGrid
 
     UpGrid -->|Add PC| UpAddDialog
     UpAddDialog -->|Confirm| UpGrid
     UpGrid -->|X| UpContext
     UpContext --> UpGrid
-    UpGrid -->|A on unpaired PC| UpFindPC
     UpGrid -->|A on paired PC| UpAppGrid
     UpGrid -->|B| UpQuit
 
@@ -208,20 +209,24 @@ flowchart LR
     class UpQuit decision
 ```
 
-**One thing about the colours here.** On the board, the "Pairing — our addition"
-group is tinted violet, which in the legend means *a modal over a live stream*.
-It does not mean that here — on this diagram the violet tint marks the part of
-the flow Bulan added rather than inherited. That reuse is a wrinkle in the
-board, not a rule, so it has been left as a group label rather than given a
-`classDef`. **Worth resolving on the board itself the next time it is edited**,
-because a second meaning for an established colour is exactly the kind of thing
-that gets misread later.
+**How upstream actually finds a host.** There is no find-your-PC screen and no
+search step. Machines running the host software appear **on the computers grid
+by themselves**, discovered on the local network — that is the self-edge above.
+Pressing A on one that is not yet paired shows a PIN to type on the host, and
+that is the whole of pairing.
+
+**Add PC is a manual address entry**, not a search. It opens a small dialog
+asking for an IP address, for the case where discovery does not find the machine
+— a different network, or a host that does not broadcast. Bulan's onboarding
+keeps this escape hatch as "Enter an address instead", which is the same
+function given a designed home rather than a bare dialog.
 
 **What the comparison shows.** Upstream has two hubs, not one — the computers
-grid and the app grid — and which is "home" depends on how far in you are.
-Getting to a stream is four screens from launch. The stream exits to the app
-grid rather than to anything resembling a home, so the way back out is a
-sequence of Backs. Bulan's diagram is not simpler by accident.
+grid and the app grid — and which is "home" depends on how far in you are. The
+stream exits to the app grid rather than to anything resembling a home, so the
+way back out is a sequence of Backs. And the first thing a new user sees is a
+grid that is either empty or already populated, with no explanation of which it
+should be. Bulan's diagram is not simpler by accident.
 
 ---
 
