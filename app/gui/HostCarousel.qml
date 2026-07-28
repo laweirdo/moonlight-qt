@@ -60,10 +60,15 @@ FocusScope {
             if (!root.useFakeHosts) {
                 return
             }
-            function host(n, on, paired, addr, unknown) {
+            // wakeable defaults to "offline hosts can be woken", which is the
+            // common case. Pass it explicitly for the case that is easy to
+            // forget exists: a host that is unreachable AND cannot be woken,
+            // because it never told us its hardware address. Shoebox is one.
+            function host(n, on, paired, addr, unknown, canWake) {
                 return {
                     name: n, online: on, paired: paired, statusUnknown: unknown === true,
-                    wakeable: !on, serverSupported: true,
+                    wakeable: canWake === undefined ? !on : canWake,
+                    serverSupported: true,
                     address: addr, details: "Name: " + n + "\nStatus: " + (on ? "Online" : "Offline")
                 }
             }
@@ -75,9 +80,26 @@ FocusScope {
                 return
             }
             if (fakeHosts === "offline") {
-                append(host("Living-Room", false, true, "192.168.1.31"))
+                // First, so it is the one on screen when this preset opens:
+                // unreachable AND not wakeable, which is the state that is easy
+                // to forget exists. The hint bar should withhold Wake here and
+                // offer it on the two after. Shoebox is this case permanently.
+                append(host("Living-Room", false, true, "192.168.1.31", false, false))
                 append(host("Desktop-PC", false, true, "192.168.1.24"))
                 append(host("Studio-Tower", false, true, "192.168.1.44"))
+                return
+            }
+            // "many": more hosts than the carousel draws at once. Exists because
+            // the carousel's behaviour changes shape at exactly three -- below
+            // that the tiles fill its loop exactly and one has to cross the
+            // screen on every move; above it, the surplus tile is never built.
+            // Three states cannot demonstrate that on their own.
+            if (fakeHosts === "many") {
+                append(host("Living-Room", false, true, "192.168.1.31"))
+                append(host("Desktop-PC", true, true, "192.168.1.24"))
+                append(host("Studio-Tower", false, true, "192.168.1.44"))
+                append(host("Bedroom-Mini", true, true, "192.168.1.58"))
+                append(host("Garage-Rig", true, true, "192.168.1.62"))
                 return
             }
             // "mixed": the mockup's own arrangement -- one reachable, two not.
@@ -90,12 +112,31 @@ FocusScope {
     // Index whose connection is in flight, or -1.
     property int connectingIndex: -1
 
+    // Where the selection was before the move currently in flight, catching up
+    // once the move has finished. The carousel's delegates need to know both
+    // ends of a move, not just its destination -- see the tile visibility rule.
+    //
+    // A timer rather than PathView's own movement signals: those report user
+    // flicking, and this carousel has flicking switched off, so a selection
+    // driven from the buttons never raises them.
+    property int settledIndex: 0
+    Timer {
+        id: settleTimer
+        interval: Bulan.motionFocusMs
+        onTriggered: root.settledIndex = pathView.currentIndex
+    }
+
     readonly property int hostCount: pathView.count
     readonly property bool hasHosts: hostCount > 0
 
     // The focused host, or null. Everything below reads through this.
     readonly property var host: pathView.currentItem
     readonly property bool hostOnline: host !== null && host.online
+
+    // Whether waking this host could actually do anything. The app can only wake
+    // a machine whose hardware address it has learned, and it learns that from
+    // the host's own reply -- Sunshine does not always give one.
+    readonly property bool hostWakeable: host !== null && host.wakeable
 
     function createModel() {
         var model = Qt.createQmlObject('import ComputerModel 1.0; ComputerModel {}', root, '')
@@ -166,10 +207,31 @@ FocusScope {
             actWake()
             return
         }
+        // Everything past this point acts on a real machine, addressed by its
+        // position in the real host list. A fake host has no machine behind it
+        // and its position means nothing in that list, so acting on one either
+        // does something to the wrong host or reads past the end of the list
+        // and takes the app down with it.
+        //
+        // That is why the crash was intermittent and looked unrelated to host
+        // count: with two real hosts, pressing A on the second fake host opens
+        // the second REAL host's games and looks like it worked. Pressing A on
+        // the fifth reads off the end and segfaults. Same code, same press.
+        //
+        // One guard covering every branch below, rather than one per branch --
+        // the previous shape guarded pairing and missed the game list, and
+        // would have missed the next branch added too.
+        if (root.useFakeHosts) {
+            // Says so out loud rather than doing nothing. A silent A is
+            // indistinguishable from the dead-A defect this project has now
+            // chased three times, and this screen is where that was chased.
+            messagePanel.show(qsTr("Review mode"),
+                              qsTr("%1 isn't a real PC, so there's nothing to open.")
+                                  .arg(host.hostName))
+            return
+        }
+
         if (!host.paired) {
-            if (root.useFakeHosts) {
-                return
-            }
             var pin = computerModel.generatePinString()
             computerModel.pairComputer(pathView.currentIndex, pin)
             pinPanel.pin = pin
@@ -228,6 +290,29 @@ FocusScope {
                           qsTr("Give it a moment to come back."))
     }
 
+    // Move the selection one host, clamping at both ends.
+    //
+    // The direction is stated rather than left to the carousel to work out.
+    // Its default is "take the shorter way round the loop", which is the right
+    // rule for something that wraps and the wrong one here: this list clamps,
+    // so moving to a higher index must ALWAYS slide the row left and a lower
+    // one must always slide it right, whatever the arithmetic says is shorter.
+    //
+    // Left to itself it got this wrong at exactly three hosts. Going from the
+    // second host to the third, every tile slid RIGHT and wrapped round the
+    // screen to arrive -- two full crossings for a one-step press. That is the
+    // "rolls over to the right and comes in from the left" the client reported,
+    // and it is a genuine direction fault rather than the frame-timing one the
+    // writeup concluded it was.
+    function moveBy(step) {
+        var next = pathView.currentIndex + step
+        if (next < 0 || next > pathView.count - 1) {
+            return
+        }
+        pathView.movementDirection = step > 0 ? PathView.Positive : PathView.Negative
+        pathView.currentIndex = next
+    }
+
     function actAddPc() {
         addPcPanel.visible = true
     }
@@ -268,6 +353,9 @@ FocusScope {
                 }
             }
         }
+        // Arriving on a screen is not a move, so nothing should be mid-flight.
+        settleTimer.stop()
+        settledIndex = pathView.currentIndex
         root.forceActiveFocus()
     }
 
@@ -414,6 +502,19 @@ FocusScope {
         // focused tile as soon as a third host appears.
         readonly property real pathStretch: count >= 3 ? 1.5 : 1.0
 
+        // True when the hosts fill the path loop exactly, leaving no slack.
+        //
+        // Below this threshold the carousel builds a tile for every host and
+        // they occupy the whole loop, so on every move one of them has to
+        // travel from one end of the path to the other -- it leaves one edge of
+        // the screen and reappears at the opposite one in a single frame.
+        // Above it, the surplus tiles are never built at all and nothing has to
+        // cross. That is why this only ever looked wrong at three hosts.
+        //
+        // It is count vs pathItemCount, NOT a hardcoded 3, so it stays true if
+        // either number is ever changed.
+        readonly property bool loopIsFull: count > 0 && count <= pathItemCount
+
         visible: root.hasHosts
         model: root.hostModel
 
@@ -429,6 +530,11 @@ FocusScope {
         // Matches the tile's focus duration, so moving between hosts is one
         // motion rather than a tile animation racing a view animation.
         highlightMoveDuration: Bulan.motionFocusMs
+
+        // Where the selection was before the move in flight. Tiles are judged
+        // against both this and where it is going, so the one that has to cross
+        // the loop is hidden for the whole crossing rather than for half of it.
+        onCurrentIndexChanged: settleTimer.restart()
 
         // A shallow arc: neighbours are inset from the edges and sit lower, so the
         // focused tile reads as the near one rather than the middle one.
@@ -466,22 +572,59 @@ FocusScope {
             address: model.address
             details: model.details
 
+            // Which tiles are allowed on screen.
+            //
             // Navigation clamps at both ends, but PathView still instantiates a
             // wrapped neighbour: focused on the first host, it draws the LAST one
             // to the left, which silently promises a host that pressing left will
             // never reach. Only genuinely adjacent indices are shown.
-            visible: Math.abs(index - pathView.currentIndex) <= 1
+            //
+            // The second half of the test is what stops the visible wrap. A tile
+            // is judged against where the selection is going AND where it came
+            // from, so the one making the long crossing is out of place for the
+            // whole move rather than for the second half of it. Testing only the
+            // destination let it back on screen at the instant the move started,
+            // which is precisely when it began its journey across the middle.
+            //
+            // Only applied when the loop is full, because that is the only time
+            // a tile has to cross. With more hosts than the carousel draws, a new
+            // neighbour genuinely slides in from beyond the edge, and suppressing
+            // that would replace a correct motion with a fade.
+            readonly property bool inPlace:
+                Math.abs(index - pathView.currentIndex) <= 1
+                && (!pathView.loopIsFull
+                    || Math.abs(index - root.settledIndex) <= 1)
+
+            // Hiding is instant; appearing is faded. A tile leaving is about to
+            // be overlapped by the one sliding into its slot, so cutting it is
+            // invisible -- but a tile arriving has nowhere to arrive FROM when
+            // the loop is full, so it fades up in place instead of sliding in
+            // from the wrong side of the screen.
+            // NOT readonly: the Behavior has to write it, and marking it readonly
+            // takes the whole screen down. See HANDOFF.
+            property real appear: inPlace ? 1.0 : 0.0
+            Behavior on appear {
+                NumberAnimation {
+                    duration: Bulan.motionFocusMs
+                    easing.type: Easing.OutCubic
+                }
+            }
+
+            visible: inPlace
 
             isCurrent: PathView.isCurrentItem
             pathScale: PathView.itemScale === undefined ? 1.0 : PathView.itemScale
             z: PathView.itemZ === undefined ? 0 : PathView.itemZ
-            opacity: PathView.itemOpacity === undefined ? 1.0 : PathView.itemOpacity
+            opacity: (PathView.itemOpacity === undefined ? 1.0 : PathView.itemOpacity)
+                     * appear
 
             // Hover moves focus, so there is only ever one highlight and the
             // pointer and the D-pad always agree about what is selected.
-            onHoverEntered: pathView.currentIndex = index
+            // Routed through moveBy so the pointer states its direction the same
+            // way the D-pad does, rather than leaving the carousel to guess.
+            onHoverEntered: root.moveBy(index - pathView.currentIndex)
             onActivated: {
-                pathView.currentIndex = index
+                root.moveBy(index - pathView.currentIndex)
                 root.actConfirm()
             }
         }
@@ -615,11 +758,20 @@ FocusScope {
         leftHints: root.hasHosts
             ? [
                   { action: "confirm",   label: qsTr("Connect"), emphasis: true },
-                  // Wake only where waking means something. actWake() returns
-                  // immediately on a host that is already awake, so advertising
-                  // it there offered a button that did nothing -- defect 2.
+                  // Wake only where waking means something. Two ways it can
+                  // mean nothing, and both have now been seen:
+                  //
+                  //   The host is already awake. actWake() returns immediately,
+                  //   so advertising it offered a button that did nothing.
+                  //   That was defect 2 from the July hardware session.
+                  //
+                  //   The host cannot be woken at all, because it never told us
+                  //   its hardware address. Pressing Wake there only ever
+                  //   produces "it didn't tell us how to wake it", which is a
+                  //   refusal the hint bar should not have promised. Shoebox is
+                  //   this case permanently.
                   { action: "alternate", label: qsTr("Wake"),
-                    visible: !root.hostOnline },
+                    visible: !root.hostOnline && root.hostWakeable },
                   { action: "options",   label: qsTr("Add a PC") }
               ]
             : [
@@ -639,16 +791,8 @@ FocusScope {
     // --- input ---------------------------------------------------------------
     // Movement clamps rather than wrapping, which is why it is done here instead
     // of through PathView's own increment/decrement -- those wrap by design.
-    Keys.onLeftPressed: {
-        if (pathView.currentIndex > 0) {
-            pathView.currentIndex--
-        }
-    }
-    Keys.onRightPressed: {
-        if (pathView.currentIndex < pathView.count - 1) {
-            pathView.currentIndex++
-        }
-    }
+    Keys.onLeftPressed: moveBy(-1)
+    Keys.onRightPressed: moveBy(1)
 
     // Inert, and swallowed. Without accepting them they bubble to the StackView
     // and drag focus into chrome this screen does not have.

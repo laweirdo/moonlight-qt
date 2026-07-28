@@ -58,7 +58,7 @@ Each phase ends on the Deck before the next begins. That cadence is the point, n
 - ✅ Defects 1, 3, 4 fixed; decision made on 2 — **and all four confirmed by hand on hardware**
 - ✅ Unconditional glyph-detection log at startup
 - ✅ Deck checks 4–8 reported, plus Game Mode (check 9)
-- ⏳ **The wake question — still owed.** The only item not closed. It needs a host that can genuinely be put to sleep, and does **not** need a Deck. Carried into Phase B rather than holding the gate, because nothing depends on the answer except one line of copy.
+- ✅ **The wake question — answered 28 July 2026, and wake works.** A paired host put genuinely to sleep was woken from the carousel with Y and was back a minute later. The *"Asleep"* copy stands as written, so the one line that depended on the answer needs no change. Answered on the Mac; it never needed a Deck.
 - ✅ Brief, flow diagram and onboarding frames moved into the repo
 - ✅ **Merge to `bulan`** — first known-good baseline
 - ✅ Upstream sync — fast-forward `master` from upstream, then merge `master` into `bulan`
@@ -81,7 +81,7 @@ Judged on a Steam Deck OLED ("Galileo") on 28 July 2026, by the client, on the r
 
 #### What Phase A also produced
 
-Three open defects, all in `BUGS-open.md`, none needing a Deck to reproduce. One of them — the carousel's third tile wrapping visibly on every move — the client called out as reading unpolished, and it is worth clearing early in Phase B since it sits on the screen every session starts with.
+Three defects, all in `BUGS-open.md`, none needing a Deck to reproduce. **All three are now closed**, cleared in the Mac session on 28 July before any Phase B work started — including the carousel's third tile wrapping, which the client had called out as reading unpolished. One new defect remains open there: the same wrap still occurs once per move at **two** hosts, which is the client's real host count.
 
 **Branch names.** This originally said "merge to `main`". There is no `main`: the fork's default branch is `master` and it is kept as a clean mirror of upstream, while `bulan` is the integration branch and the baseline. Corrected here so nobody goes looking for a branch that does not exist. See `HANDOFF.md` § *How this repository is branched*.
 
@@ -90,6 +90,20 @@ Three open defects, all in `BUGS-open.md`, none needing a Deck to reproduce. One
 ### Phase B — Close the core loop
 *The path a user walks every single session.*
 
+**Order confirmed by the client on 28 July 2026: the host settings menu is first.**
+
+**But one thing is recommended ahead of it, and is not yet decided: replacing the
+host carousel's underlying component.** The argument is in
+`SPEC-host-carousel.md`. In short, `PathView` moves items endlessly around a
+closed loop while this carousel clamps and never wraps, and every open carousel
+defect plus two of the client's six review items are that one mismatch. Two
+sessions have worked around it; the workarounds are now themselves what the client
+is objecting to. About a session, contained to two files, reviewable offline.
+
+It is listed here rather than as Phase A polish because it is no longer a defect
+fix — it is a rebuild of the screen every session starts on, and it should be
+sequenced deliberately rather than slipped in.
+
 - **Host settings menu** (SELECT) — absorbs the rename / delete / test-network regression, which is currently a functional loss against upstream
 - **Connecting state** — designed properly, replacing the placeholder
 - **Game grid** (`AppView.qml`) — Recent and Library tabs, per the existing frames
@@ -97,6 +111,10 @@ Three open defects, all in `BUGS-open.md`, none needing a Deck to reproduce. One
 - Screen transitions wired up (220ms, brief §6 — the token exists and is unused)
 
 **Exit:** launch → pick host → pick game → stream → return, with no upstream screen visible.
+
+**Six review items on the host carousel**, given by the client on 28 July after looking at the fixed build, are recorded in full in `SPEC-host-carousel.md`. Two belong to phases below rather than to the carousel itself: the **wake state should be a waiting overlay rather than a popup**, which is Phase D's *Waking PC* screen arriving early, and the **"N of M ready" count should include unpaired hosts**, which reverses a decision that spec recorded. Neither is started.
+
+**One thing learned on 28 July that changes how the host settings menu should be scoped.** Removing a PC in Moonlight does **not** unpair it — the host goes on recognising this client, so the machine reappears as already paired. Whatever "Forget PC" means in the menu, it cannot mean "unpair", and a user who chooses it expecting the machine to stop trusting them will be wrong. That is a copy and behaviour question worth settling before the screen is drawn, not after. See `HANDOFF.md`.
 
 ### Phase C — First run
 *Runs once, invisible in daily testing, breaks the spell if missing.*
@@ -117,7 +135,7 @@ Three open defects, all in `BUGS-open.md`, none needing a Deck to reproduce. One
 - Couldn't start stream
 - Library empty state for a paired host with no games — flagged on the board as not drawn
 - Zero hosts
-- Waking PC
+- **Waking PC** — the client has scoped this on 28 July: not a popup, a waiting overlay, *"perhaps with 3 animated bouncing dots"*, held until the host is awake **or fails to wake**. Today `actWake()` raises a panel saying *"Give it a moment to come back."* and never revisits it. Resolving it needs the screen to notice both outcomes, so this is more than a visual change.
 - Quit / disconnect confirmation
 
 ### Phase E — Settings and About
@@ -166,6 +184,12 @@ HDR · Windows and other platforms · the mascot · a brand rules sheet while no
 
 ### Current standing risks
 
-**Wake is unproven.** Bulan offers to wake a sleeping host and nobody has ever seen it work. If it does not, the "Asleep" state is a promise the app cannot keep and the copy has to change. Cheap to answer, and does not need a Deck.
+~~**Wake is unproven.**~~ **Retired 28 July 2026 — it works.** Woken by hand from the carousel on a host that was genuinely asleep. The *"Asleep"* copy stands. Note for anyone testing it again: only `Steambox` is wakeable, because `Shoebox` never supplies a hardware address — and as of `402b37d4` the hint bar no longer offers Wake where it cannot work.
 
-**The carousel wraps visibly at three hosts.** `BUGS-open.md` defect 2. Cosmetic, on the screen every session begins with, and the fix is not yet attempted.
+~~**The carousel wraps visibly at three hosts.**~~ **Retired 28 July 2026 — fixed in `9c721e13`,** and it was two faults rather than one. Note that the entry ruling out "wrong direction" was itself wrong; see `BUGS-open.md`.
+
+**The host carousel has three open defects and they are one problem.** `BUGS-open.md` defects 4, 6 and 7. The carousel is built on a component that loops endlessly; the design clamps and never wraps. Two sessions have worked around that rather than removing it, and on 28 July the client rejected the second workaround on sight. **Two hosts is the client's real configuration**, and it is the count where the mismatch is most visible — including at rest, not only in motion. The recommendation is to position the tiles directly instead; see `SPEC-host-carousel.md`. Not yet decided.
+
+**The screen every session starts on has now been reviewed twice and failed twice.** Not because either fix was wrong — the direction fault was real and is gone — but because the component underneath cannot express what the design asks for, and each fix has had to trade one artefact for another. That is the signal worth acting on, rather than attempting a third workaround.
+
+**A fourth pattern in the same family as the three retired above.** All three retired risks were *perceptual* estimates that ran pessimistic. This one is different and worth separating: **two of the three defect write-ups on this project had a wrong diagnosis on record**, each drawn from a measurement that could not see the thing it was being used to rule out. Both cost time this session. The estimates that have proven unreliable here are not the ones about how things will look — they are the ones about what has been eliminated.

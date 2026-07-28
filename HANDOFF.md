@@ -3,9 +3,9 @@
 Context for whoever picks this up next, human or otherwise. Current as of
 **28 July 2026**, branch `bulan`.
 
-**Two Steam Deck sessions have happened and Phase A is closed.** See
-"Deck verification — what has actually been checked" near the end for the
-results, and `REVIEW-CHECKLIST.md` for the full answers.
+**Two Steam Deck sessions and one Mac session have happened. Phase A is closed
+and now owes nothing.** See "Deck verification — what has actually been checked"
+near the end for the results, and `REVIEW-CHECKLIST.md` for the full answers.
 
 **The three global tokens are settled**, from observation on the real panel
 rather than arithmetic: `atmosphereGrainOpacity` stays **0.03**, `sizeCaption`
@@ -17,13 +17,27 @@ can start.
 untested assumption: Steam Input interposes a virtual controller but carries
 Valve's vendor ID through, so glyph detection and all five bindings survive.
 
-Two things Phase A still owes, neither of them blocking:
+**Wake works.** The last Phase A question was answered on the Mac on 28 July: a
+paired host put genuinely to sleep was woken from the carousel with Y and was
+back a minute later. *"Asleep"* is a promise the app can keep, and the copy
+stands as written.
 
-- **The wake question is unanswered.** It needs a host that can genuinely be put
-  to sleep and the only paired host was busy. It does **not** need the Deck.
-- **Three defects are open** in `BUGS-open.md`, one of which — the carousel's
-  third tile wrapping visibly — the client called out as reading unpolished. It
-  reproduces off hardware.
+**The three defects `BUGS-open.md` was opened for are all closed.** Four more were
+found on the way; one is fixed and **three are open, all on the host carousel and
+all one underlying problem.** The client reviewed the fixed carousel and did not
+accept it.
+
+**The recommendation the next session should decide on first** is in
+`SPEC-host-carousel.md`: replace `PathView` with directly positioned tiles.
+`PathView` moves items endlessly around a closed loop; this carousel clamps and
+never wraps, and every open carousel defect is that mismatch. Two sessions have
+worked around it and the workarounds are now themselves the complaint.
+
+**Two of the three original entries had a wrong diagnosis on record**, and both
+wrong diagnoses cost this session time before they were caught. Read
+`BUGS-open.md` before trusting the phrase "ruled out" in any bug write-up on this
+project — the note at the top of it explains how both went wrong in the same way,
+and it is the same way twice.
 
 Bulan is a UI/UX-focused fork of moonlight-qt targeting the Steam Deck. The client
 is a creative director who does not read code; explanations belong in plain English,
@@ -135,6 +149,11 @@ These are not suggestions. They have been restated across several sessions.
 | `cfb9d25b` | Brief, `FLOW.md`, onboarding frames and the flow board moved into the repo |
 | `d52c1435` | `ROADMAP.md` |
 | `40b9d938` | Merged upstream moonlight-qt — 12 commits, no conflicts |
+| `7e8506c1` | The build stamp — the log now names the commit and build time it is running |
+| `d3c57f95` | The fake-host crash, and `MOONLIGHT_FAKE_HOSTS=many` |
+| `9c721e13` | The carousel's visible wrap at three hosts |
+| `1ba04c01` | The Mac session write-up, and two corrected diagnoses |
+| `402b37d4` | Wake no longer offered on hosts that cannot be woken |
 
 ### The component inventory
 
@@ -233,13 +252,52 @@ reference for content and copy, not for layout.
 | Thing | Detail |
 |---|---|
 | **`deck_*` glyphs** | 10 files. Until they land, `deck` resolves to the Xbox set via `resolveGlyphFamily()` in `sdlgamepadkeynavigation.cpp` — deleting one line is the whole change. **Detection is confirmed working on real hardware in both Desktop Mode and Game Mode**, so those 10 files are the only thing between here and Deck glyphs. |
-| **The wake question** | The one Phase A item still owed. Needs a host that can genuinely be put to sleep — `Shoebox` was busy on 28 July. Does **not** need the Deck. If wake does not work, the "Asleep" wording is a copy decision and theirs. |
 | **Vignette / hint-bar band** | The client confirmed hairline-only for the hint bar. No filled surface token exists; if one is ever wanted, it is theirs to specify. |
 | **Status colour on in-between states** | Red and green now carry reachability on the host status line. *Looking for your PC…*, *Connecting…* and *Not paired yet* were left on the neutral text colour, on the reasoning that red and green are verdicts and those states have not reached one. Assistant's call, flagged to the client, not yet overturned. |
+| **Replacing the carousel's engine** | Recommended and not yet decided — see `SPEC-host-carousel.md`. Would retire `BUGS-open.md` defects 2, 4, 6 and 7 together, and makes two of the client's six review items cheap rather than awkward. About a session, two files. |
+| **The six carousel review items** | Given 28 July after looking at the fixed build. Listed in full in `SPEC-host-carousel.md`. None started. Two of them reverse or replace decisions recorded in that spec, so read it rather than the code. |
+| **Rebuilding on upstream vs. replacing it** | The client asked whether the whole thing should be rebuilt rather than skinned. Advice given: **against** — see the note below. Not re-opened since, but not formally closed either. |
+| **Review-mode copy** | Pressing A on a review-mode host now raises a *"Review mode"* panel. Placeholder wording, never seen by a real user, changeable on request. |
 
 **Settled 28 July, no longer waiting:** grain intensity (`atmosphereGrainOpacity`
 stays 0.03), caption size (`sizeCaption` stays 16), overshoot
-(`motionOvershoot` stays 0.7), and the hint-bar reflow (accepted as built).
+(`motionOvershoot` stays 0.7), the hint-bar reflow (accepted as built),
+**the wake question — wake works, so the "Asleep" copy stands**, and Wake being
+withheld on hosts that cannot be woken.
+
+---
+
+## Should this fork rebuild upstream rather than skin it?
+
+**Asked by the client on 28 July 2026, after reviewing the carousel. Advice given
+was: against a full rebuild, for replacing one component.** Recorded here because
+it will be asked again, and the reasoning is the useful part.
+
+The question came from six complaints about the host screen. **None of the six is
+upstream's code.** Four are the carousel component this project chose, one is this
+project's counting rule, one is this project's mouse-hover handler. A rebuild of
+upstream's shell would have fixed none of them.
+
+What upstream still provides is discovery, pairing, the streaming protocol and
+video decode — essentially all of it, and years of work. What it provides that
+Bulan actually touches is thin: a window, a screen stack, and a toolbar this fork
+already hides.
+
+**The cost of diverging is concrete and permanent.** The upstream sync currently
+fast-forwards `master` and merges into `bulan` with no conflicts — twelve commits,
+zero conflicts, 27 July. That is the channel protocol and security fixes arrive
+through. Structural divergence turns every future sync into a merge that has to be
+reasoned about, in exchange for fixing nothing that was complained about.
+
+**What is worth replacing is one component**, and that argument is in
+`SPEC-host-carousel.md`.
+
+One genuine structural weakness in the inherited input layer is worth naming, so
+the "against" is not mistaken for "there is nothing wrong": **navigation mode is
+global mutable state**, set by one screen and read by another. That is what caused
+defect 1 and it is the shape of fault most likely to recur. It has been de-fanged
+rather than removed. If the input layer is ever revisited, that is the thing to
+revisit — not the SDL-to-Qt key translation, which is thin and works.
 
 ---
 
@@ -269,6 +327,27 @@ stack:
 plain language, with file and line. Two sessions have now been lost to inferring
 build state from the outside when the app was saying it outright.
 
+**As of `7e8506c1` the log answers the first two outright**, so stop inferring
+them. Second line of every run:
+
+```
+Build: fix/carousel-defects @ deck-test-1-56-g9c721e13 | binary built "2026-07-28T16:43:59"
+```
+
+The commit answers *is this the code I think it is*, which catches building a
+different source tree — the Deck recipe's hardcoded source path makes that a live
+risk there. The timestamp answers *is this the build I just made*, which catches
+an old instance in front of you. They fail independently, which is why both are
+printed. `-dirty` on the commit means uncommitted changes, which mid-session is
+normal and itself worth seeing.
+
+It is regenerated by `scripts/gen-buildstamp.sh` on **every** build, not at
+`qmake` time. A stamp generated once at configure time would go on describing
+whichever commit happened to be checked out then, which would not merely fail to
+help — it would lie, which is the exact failure it exists to prevent. The script
+only rewrites its header when the value changes, so ordinary rebuilds do not
+recompile `main.cpp`.
+
 ### Do not grep the binary to check what is in a build
 
 Interface code is not stored as plain text in the executable. `grep` returns zero
@@ -278,10 +357,20 @@ diagnosis on 28 July.
 
 The log is the source of truth for what loaded.
 
-### QML `console.log` never reaches the log; `console.warn` does
+### QML `console.log` never reaches the log **on the Deck**; on the Mac both do
 
-Debug output from the interface layer is dropped. Warnings are not, and print as
-`Qt Warning:` lines. `qDebug()` from C++ also arrives.
+Debug output from the interface layer is dropped **in the Flatpak build**.
+Warnings are not, and print as `Qt Warning:` lines. `qDebug()` from C++ also
+arrives.
+
+**Checked on the Mac on 28 July and it is different there**: `console.log`
+arrives as `Qt Debug:` and `console.warn` as `Qt Warning:`. Both work. So this is
+a property of how the Deck build is run, not of QML.
+
+The rule that survives is the second-order one, not the first: **prove your
+logging appears before drawing any inference from its absence**, because the
+answer differs between the two machines this project builds for. Using
+`console.warn` everywhere costs nothing and works on both.
 
 An empty log was read as "the handler never fired" when the handler had run
 perfectly and the logging was the thing that never arrived — the opposite
@@ -317,11 +406,62 @@ Do not sample while a build is running; compiling swamps the reading.
 
 ### `MOONLIGHT_FAKE_HOSTS` cannot be used past the carousel
 
-Its hosts are marked online and paired, so pressing A walks past the pairing
-branch and tries to open a game library for a machine that does not exist. **The
-app crashes.** Fake hosts are for reviewing the carousel and nothing beyond it;
-anything that needs A pressed to completion needs a real host. See
-`BUGS-open.md` defect 3.
+Fake hosts are for reviewing the carousel and nothing beyond it; anything that
+needs A pressed to completion needs a real host. Screens past the carousel are
+reachable with `MOONLIGHT_INITIAL_VIEW` instead, so this is not a blocker for
+Phase B review.
+
+**A now says so rather than crashing** (`d3c57f95`), and the reason it used to
+crash is worth carrying forward, because the same shape will recur anywhere a
+view is fed an injectable model:
+
+**Everything past the offline branch of `actConfirm()` addresses a machine by its
+POSITION in the real host list**, and a fake host's position means nothing there.
+With two real machines paired, pressing A on the second fake host quietly opened
+the *second real machine's* games and looked like it worked. Pressing A on the
+fifth read off the end of the list and segfaulted. Whether it died depended on how
+many real machines happened to be paired — which is why it reproduced on the Deck
+and not on the Mac until it was looked for deliberately.
+
+**The silent wrong action was worse than the crash**, and a crash is what got
+reported. Assume any injectable-model debug hook has this failure mode until the
+guard is shown to cover every branch, not just the one that was noticed.
+
+### Removing a PC in Moonlight does not unpair it
+
+Learned while trying to produce an online-but-unpaired host to confirm defect 1
+in Desktop Mode.
+
+"Delete PC" removes the machine from **this** client's list. It does not tell the
+host to forget this client. Add it back and the host recognises the client
+certificate, reports itself as already paired, and no PIN panel ever appears —
+so the pairing flow cannot be exercised this way.
+
+**The unpair has to happen on the host.** Both of the client's machines run
+Sunshine (`state` reports `SUNSHINE_SERVER_FREE`), so it is done in Sunshine's
+own web interface, under Troubleshooting. That needs the client's login and is
+therefore theirs to do.
+
+Re-pairing afterwards is one PIN typed on the host. A completed pairing runs five
+requests ending in an HTTPS `pairchallenge`; an abandoned one stops after the
+first and eventually logs `RemoteHostClosedError`. That difference is how to tell
+from the log whether a pairing actually completed rather than taking it on trust.
+
+### Wake needs a hardware address the host has to volunteer
+
+`wakeable` in `computermodel.cpp` is simply "we have a MAC stored", and the MAC
+comes from the host's own `serverinfo` reply. **Moonlight rejects
+`00:00:00:00:00:00`**, which is what Sunshine reports over plain HTTP and, on at
+least one of the client's machines, over HTTPS too.
+
+The practical consequence: **`Steambox` is wakeable and `Shoebox` is not**, and no
+amount of app-side work changes that. Any future wake testing has to use
+Steambox. The hint bar checks `wakeable` before offering Wake as of `402b37d4`; before
+that it offered Wake on `Shoebox` and could only ever refuse.
+
+Wake itself broadcasts on every network interface as well as to the addresses it
+knows, so a host known only by a VPN address is still wakeable provided it is
+physically on the same network. Confirmed working on 28 July.
 
 ### Qt renders SVG Tiny, and it does not honour `<clipPath>`
 
@@ -378,6 +518,61 @@ with three hosts the neighbours slide inward and collide with the focused tile.
 moves. Focused on the first host it draws the *last* one to the left, promising a
 host that pressing left can never reach. Delegates draw only when
 `|index − currentIndex| ≤ 1`.
+
+### A full PathView loop always has one item crossing the join
+
+This is the root of `BUGS-open.md` defects 2 and 4 and is worth understanding
+once rather than rediscovering per host count.
+
+`PathView` arranges items around a **closed loop**. While the host count is at or
+below `pathItemCount` the items fill that loop exactly, so every move forces one
+of them to travel from one end of the path to the other — it leaves one edge of
+the screen and reappears at the opposite one in a single frame. The join sits at a
+visible screen position, so that crossing is visible.
+
+Once the host count **exceeds** `pathItemCount` the surplus items are never built
+at all. Nothing crosses, and new neighbours slide in from beyond the edge exactly
+as they should. Verified by frame-by-frame trace at five hosts: completely clean.
+
+**Two consequences that are easy to get backwards:**
+
+- **Raising `pathItemCount` does not give the loop slack.** Spacing is
+  `1/count` in that regime, so the items still fill the loop however high you
+  push it. Slack only comes from having *more hosts than tiles drawn*, which is
+  the opposite adjustment. A previous write-up recommended raising it first; it
+  cannot work.
+- **`movementDirection` defaults to "shortest way round the loop"**, which is
+  right for something that wraps and wrong for this, which clamps. Left to itself
+  it sent every tile the long way round on one transition at three hosts.
+  `moveBy()` in `HostCarousel.qml` now states the direction instead.
+
+### A settled value cannot tell you how something got there
+
+**This is the single most expensive mistake on record for this project, and it
+has now happened twice under different disguises.**
+
+The carousel wrap was diagnosed by logging `PathView.offset` after each move,
+observing it changed by exactly one unit every time, and concluding the carousel
+could not be travelling the wrong way round its loop. The client, who had watched
+it, said it was. The client was right: the animation really did take the long way
+on one transition. **Where something ends up cannot say which way it travelled to
+get there**, and the measurement was of where it ended up.
+
+The fix for this class of error is cheap: log the value **every frame** rather
+than once it settles. In QML, `onXChanged` on a delegate is enough, and 250 lines
+of trace answered in one run what a settled-value measurement had got wrong for a
+week. See the same shape in defect 1's history, where an empty log was read as
+"the handler never fired".
+
+**If a write-up says something is ruled out, check what measurement ruled it
+out** before building on it.
+
+**Used successfully the same day.** The client reported the left arrow running the
+carousel away. Rather than reasoning about the key handler, `moveBy()` was called
+eight times in each direction from a probe with the index logged each time: it
+clamps at both ends. That took one build and converted a guess into a fact, and it
+redirected the search to the mouse-hover handler — `BUGS-open.md` defect 6. Do
+this before theorising, not after.
 
 ### The gamepad layer could not express the specified bindings
 
@@ -588,7 +783,7 @@ QT_QPA_PLATFORM=offscreen app/Moonlight.app/Contents/MacOS/Moonlight
 |---|---|
 | `MOONLIGHT_SCREENSHOT=<path>` | Pins the window to 1280×800, grabs it, exits. Also writes `<path>-toolbar.png`. |
 | `MOONLIGHT_INITIAL_VIEW=qrc:/gui/X.qml` | Boots straight to a screen. `GlyphProof.qml` and `TokenProof.qml` are the review sheets. |
-| `MOONLIGHT_FAKE_HOSTS=none\|one\|offline\|mixed` | Swaps a fixed host list into the carousel, so its states can be reviewed without pairing or unpairing real machines. |
+| `MOONLIGHT_FAKE_HOSTS=none\|one\|offline\|mixed\|many` | Swaps a fixed host list into the carousel, so its states can be reviewed without pairing or unpairing real machines. `mixed` is three hosts, `many` is five — the count matters, see the PathView note above. |
 
 All three are inert unless set. Note the grab captures `stackView` only — 1280×712,
 without the toolbar — because the window root has no QML engine.
@@ -690,23 +885,29 @@ Sampling must be done with the Deck **actually unplugged** -- `current_now` read
 `/sys/class/power_supply/ACAD/online` is 0 first. There is no `bc` on this
 machine; use `awk`.
 
-### Still owed: can Bulan actually wake a sleeping PC?
+### Can Bulan actually wake a sleeping PC? — yes, answered 28 July 2026
 
-**The one Phase A item not answered.** It needs a host that can genuinely be put
-to sleep, and the only host paired into this build is `Shoebox`, which was busy.
-Waking an already-awake machine proves nothing, so there is no partial credit
-here.
+**The last Phase A item, and it passed.** Answered on the Mac, not the Deck, with
+the client pressing the button.
 
-**What right looks like:** put a paired host to sleep properly. It should appear
-offline in the carousel with **Y Wake** offered. Press Y; the machine wakes and
-the carousel reflects it coming back.
+`Steambox` was unpaired in Sunshine, re-paired from the carousel, then put
+genuinely to sleep. The app logged it going offline, the status line read
+*Couldn't reach Steambox*, and the hint bar offered **Y Wake**. One press and it
+was back online 64 seconds later.
 
-**What wrong means:** if it does not work, the "Asleep" state the app shows is a
-promise it cannot keep, and the wording has to change -- that is a copy decision
-and the client's.
+**Why this counts as a real answer rather than a hopeful one.** `NvComputer::wake()`
+has exactly two ways to decline quietly — the host is already online, or no MAC
+is stored — and warns for both. Neither warning appears in the log, so it sent the
+packet rather than declining. The host was verifiably asleep beforehand: not
+responding to the app, and not responding to a direct `serverinfo` query either.
 
-This does not need the Deck. Any machine running the app against a sleepable
-host can answer it.
+**Consequence:** the *"Asleep"* state is a promise the app can keep and the copy
+stands as written. No copy decision is owed.
+
+Two things learned in the process, both recorded under hard-won knowledge: only
+`Steambox` is wakeable at all, because `Shoebox` never supplies a hardware
+address; and the hint bar offers Wake without checking, which is
+`BUGS-open.md` defect 5.
 
 ## Things to be careful about
 

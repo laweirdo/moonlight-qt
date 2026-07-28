@@ -146,9 +146,17 @@ neighbours' labels overhang the carousel band by a variable amount, so chaining 
 **Opening focus lands on the first reachable host**, not index 0. Opening on an
 offline machine makes the screen look broken when a working one is one press away.
 
-**Ready count excludes unpaired hosts from both figures.** "N of M ready" counts
-paired hosts only, so a discovered-but-unpaired machine appears in the carousel
-without inflating the denominator. It is not yours to count until you have paired it.
+~~**Ready count excludes unpaired hosts from both figures.**~~ **Overturned by the
+client, 28 July 2026.** The rule was: "N of M ready" counts paired hosts only, so
+a discovered-but-unpaired machine appears in the carousel without inflating the
+denominator, on the reasoning that it is not yours to count until you have paired
+it.
+
+Seen in use it reads wrong. With Steambox unpaired and Shoebox online the line
+said **"1 of 1 ready"** while two machines were plainly on screen, so the count
+contradicted the carousel beside it — which looks like a fault rather than a
+principle. The client wants **"1 of 2"**: the denominator is machines you have,
+not machines you have finished setting up. **Not yet implemented.**
 
 **`AddressRole` was added to `ComputerModel`.** The mockup shows the address and the
 only existing route to it was `DetailsRole` — a *translated* human-readable blob a
@@ -166,6 +174,62 @@ screen Connect is emphasised: **amber glyph, unfocused label.**
 `StackView` attached properties (`StackView.onActivated`), since this screen pushes
 and pops through the app's existing StackView. No stock control from that module is
 instantiated in any Bulan screen.
+
+---
+
+## Client review, 28 July 2026 — six changes wanted
+
+Given on the Mac after the wrap fix, watching the real build. **None of these are
+started.** They are recorded here because this is the screen they belong to; the
+sequencing question is `ROADMAP.md`'s.
+
+| # | What the client said | What it means here |
+|---|---|---|
+| 1 | *"The far tile jarringly disappears instead of shifting farther or fading out."* | The wrap fix traded a tile crossing the screen for a tile vanishing. Not accepted. The far tile should **travel further out and fade**, not cut. |
+| 2 | *"Text stays static at the bottom of the screen. The text should be part of the carousel."* | The focused host's name, status and address are drawn in a fixed block anchored above the hint bar. They should move with the selection instead of sitting still while the tiles move under them. |
+| 3 | *"It read '1 of 1 ready' instead of '1 of 2' when Steambox was unpaired."* | **Reverses a decision recorded below.** Discovered-but-unpaired hosts were deliberately excluded from both figures. The client wants them in the denominator: the count is of machines you have, not machines you have finished setting up. |
+| 4 | *"Waking should not create a popup. It should create a 'loading' overlay, perhaps with 3 animated bouncing dots, until the host is awake or fails to wake."* | `actWake()` currently raises `HostPanel` with *"Give it a moment to come back."* and returns. It should hold a determinate-feeling waiting state and resolve on the host coming back **or failing to**, which means the screen has to notice both. |
+| 5 | *"Left arrow key turns the carousel into an infinite scroll until right arrow key is pressed. Right arrow behaves correctly."* | See `BUGS-open.md` defect 6. The key handler is **not** at fault — it clamps, proven by test. |
+| 6 | *"On 2 hosts, even on the leftmost host selected, I see the host that would've been on the right appear faded on the left."* | `BUGS-open.md` defect 4, seen at rest rather than in motion. With two hosts the non-focused tile sits exactly on the loop's join, which is one loop position drawn at two different screen positions. |
+
+**Four of these six — 1, 2, 4 and 6 — are cheaper after the carousel's engine is
+replaced than before it.** 1 and 6 are the loop's join; 2 needs per-tile
+positions the current component does not expose. See the note below.
+
+---
+
+## The component underneath is the wrong shape — recommendation, not yet decided
+
+`PathView` exists to move items endlessly around a **closed path**. This carousel
+**clamps** at both ends and never wraps. Everything in defects 2, 4 and 6, and
+client review items 1 and 6, is that single mismatch:
+
+- items fill the loop exactly at low host counts, so one must always be crossing
+  the join;
+- the join is at a visible screen position, so the crossing is visible;
+- the component picks its own direction round the loop, and picked wrong;
+- at two hosts the join *is* a resting position, so a tile is drawn on the wrong
+  side at rest.
+
+Two sessions have now worked around this rather than removing it, and the
+workarounds are themselves what the client is objecting to.
+
+**The alternative is to position the tiles directly** — a `Repeater` with an
+animated `x` per tile — which removes the loop, the join, the direction guessing
+and the special-casing by host count all at once, and hands over the per-tile
+positions items 1 and 2 need.
+
+**What that costs.** `PathView` was chosen for reasons still recorded under
+*Decisions* below, and they were good ones: it interpolates scale and opacity
+along its path for free, and `StrictlyEnforceRange` centres the focused item with
+no arithmetic. Replacing it means writing both by hand. More code in exchange for
+total control.
+
+Estimated at about a session, contained to `HostCarousel.qml` and `HostTile.qml`,
+and reviewable offline: the fake-host presets and the frame-by-frame tracing
+method are both in place.
+
+**Recommended, and awaiting the client's decision.**
 
 ---
 
@@ -188,7 +252,11 @@ MOONLIGHT_FAKE_HOSTS=mixed MOONLIGHT_SCREENSHOT=/tmp/shot.png QT_QPA_PLATFORM=of
   app/Moonlight.app/Contents/MacOS/Moonlight
 ```
 
-`MOONLIGHT_FAKE_HOSTS` accepts `none`, `one`, `offline`, `mixed`. It swaps a fixed
+`MOONLIGHT_FAKE_HOSTS` accepts `none`, `one`, `offline`, `mixed` and `many`.
+**The host count changes the carousel's behaviour**, so pick deliberately: `mixed`
+is three, which is where the loop is exactly full and worst; `many` is five, which
+is above the threshold and behaves correctly. `offline` leads with a host that is
+unreachable *and* cannot be woken. It swaps a fixed
 host list into the carousel so every state can be reviewed without pairing or
 unpairing real machines, and it is the reason the model is injectable — which is
 what makes this screen testable at all. Inert unless set.

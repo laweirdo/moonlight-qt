@@ -13,6 +13,7 @@
 #include <QElapsedTimer>
 #include <QTemporaryFile>
 #include <QRegularExpression>
+#include <QFileInfo>
 
 #ifdef Q_OS_UNIX
 #include <sys/socket.h>
@@ -27,6 +28,17 @@
 
 #ifdef HAVE_FFMPEG
 #include "streaming/video/ffmpeg.h"
+#endif
+
+// Generated fresh on every build by scripts/gen-buildstamp.sh. Absent on
+// platforms that do not run it, hence the fallback -- an honest "unknown" is
+// better than no line at all, because a missing line reads as an old build
+// rather than as an unstamped one.
+#ifdef HAVE_BUILD_STAMP
+#include "buildstamp.h"
+#endif
+#ifndef BUILD_STAMP_STR
+#define BUILD_STAMP_STR "unknown"
 #endif
 
 #if defined(Q_OS_WIN32)
@@ -503,6 +515,22 @@ int main(int argc, char *argv[])
         QFile(tempDir.filePath(existingLogNames.at(i))).remove();
     }
 #endif
+
+    // Say outright which build this is, before anything else can go wrong.
+    //
+    // Two facts, because they fail independently: the commit answers "is this
+    // the code I think it is", which catches building a different source tree
+    // than the one open, and the binary's own timestamp answers "is this the
+    // build I just made", which catches an old instance still in front of you.
+    // Three sessions on this fork reached a wrong conclusion by inferring one
+    // or the other from outside the app. It states them instead.
+    {
+        QFileInfo binary(QString::fromLocal8Bit(argv[0]));
+        qInfo() << "Build:" << BUILD_STAMP_STR
+                << "| binary built" << (binary.exists()
+                                        ? binary.lastModified().toString(Qt::ISODate)
+                                        : QStringLiteral("unknown"));
+    }
 
 #if defined(Q_OS_WIN32)
     // Force AntiHooking.dll to be statically imported and loaded
@@ -1061,9 +1089,9 @@ int main(int argc, char *argv[])
         // See the Loader in main.qml. Empty unless MOONLIGHT_SCREENSHOT is set.
         engine.rootContext()->setContextProperty("screenshotPath",
                                                  QString::fromUtf8(qgetenv("MOONLIGHT_SCREENSHOT")));
-        // Debug hook: MOONLIGHT_FAKE_HOSTS=none|one|offline|mixed swaps a fixed
-        // host list into the carousel, so its states can be reviewed without
-        // pairing or unpairing real machines. Inert unless set.
+        // Debug hook: MOONLIGHT_FAKE_HOSTS=none|one|offline|mixed|many swaps a
+        // fixed host list into the carousel, so its states can be reviewed
+        // without pairing or unpairing real machines. Inert unless set.
         engine.rootContext()->setContextProperty("fakeHosts",
                                                  QString::fromUtf8(qgetenv("MOONLIGHT_FAKE_HOSTS")));
         // Suppress the startup warning dialogs in token proof mode -- they would
