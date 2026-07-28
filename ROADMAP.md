@@ -92,8 +92,8 @@ Three defects, all in `BUGS-open.md`, none needing a Deck to reproduce. **All th
 
 **Order confirmed by the client on 28 July 2026: the host settings menu is first.**
 
-**But one thing is recommended ahead of it, and is not yet decided: replacing the
-host carousel's underlying component.** The argument is in
+**One thing comes ahead of it, decided by the client on 28 July 2026: replacing
+the host carousel's underlying component.** The argument is in
 `SPEC-host-carousel.md`. In short, `PathView` moves items endlessly around a
 closed loop while this carousel clamps and never wraps, and every open carousel
 defect plus two of the client's six review items are that one mismatch. Two
@@ -102,7 +102,10 @@ is objecting to. About a session, contained to two files, reviewable offline.
 
 It is listed here rather than as Phase A polish because it is no longer a defect
 fix — it is a rebuild of the screen every session starts on, and it should be
-sequenced deliberately rather than slipped in.
+sequenced deliberately rather than slipped in. Scoped in
+`PROMPT-next-session.md`, together with two of the client's review items that
+become cheap once it is done: the text becoming part of the carousel, and the
+ready count including unpaired hosts.
 
 - **Host settings menu** (SELECT) — absorbs the rename / delete / test-network regression, which is currently a functional loss against upstream
 - **Connecting state** — designed properly, replacing the placeholder
@@ -189,6 +192,8 @@ HDR · Windows and other platforms · the mascot · a brand rules sheet while no
 ~~**The carousel wraps visibly at three hosts.**~~ **Retired 28 July 2026 — fixed in `9c721e13`,** and it was two faults rather than one. Note that the entry ruling out "wrong direction" was itself wrong; see `BUGS-open.md`.
 
 **The host carousel has three open defects and they are one problem.** `BUGS-open.md` defects 4, 6 and 7. The carousel is built on a component that loops endlessly; the design clamps and never wraps. Two sessions have worked around that rather than removing it, and on 28 July the client rejected the second workaround on sight. **Two hosts is the client's real configuration**, and it is the count where the mismatch is most visible — including at rest, not only in motion. The recommendation is to position the tiles directly instead; see `SPEC-host-carousel.md`. Not yet decided.
+
+**Being acted on:** the engine replacement above. The rest of this note is kept because the reasoning is what justified it.
 
 **The screen every session starts on has now been reviewed twice and failed twice.** Not because either fix was wrong — the direction fault was real and is gone — but because the component underneath cannot express what the design asks for, and each fix has had to trade one artefact for another. That is the signal worth acting on, rather than attempting a third workaround.
 
