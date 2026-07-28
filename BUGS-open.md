@@ -3,21 +3,106 @@
 Current as of **28 July 2026**, after the Mac session.
 
 **The three defects this file was created for are all closed**, and so is one of
-the two found while closing them. **One is open.** None of them needs a Deck.
+the two found while closing them. **Three are open**, all on the host carousel and
+all traceable to the same component choice. None of them needs a Deck.
 
 | # | What | Status |
 |---|---|---|
 | 1 | A is dead after dismissing the pairing PIN panel | **Closed.** Confirmed by hand in Desktop Mode, 28 July |
-| 2 | The carousel's third tile wraps visibly on every move | **Fixed** in `9c721e13`. Two faults, not one — see below |
+| 2 | The carousel's third tile wraps visibly on every move | **Fixed** in `9c721e13`, but **the fix is not accepted** — see defect 7 |
 | 3 | Pressing A on a fake host crashes the app | **Fixed** in `d3c57f95`. Different mechanism than recorded |
 | 4 | The carousel still wraps once per move at **two** hosts | **Open.** Pre-existing, halved by defect 2's fix, not cured |
 | 5 | The hint bar offers Wake on hosts that cannot be woken | **Fixed** in `402b37d4`, on the client's call |
+| 6 | Left arrow runs the carousel away; right arrow is fine | **Open.** Not the key handler — that clamps, proven |
+| 7 | The far tile vanishes instead of leaving | **Open.** Defect 2's fix, rejected on sight by the client |
 
 **Two entries in the previous version of this file sent this session down the
 wrong path.** Both are corrected below, and both failed the same way: a
 conclusion was drawn from a measurement that could not see the thing it was being
 used to rule out. That is the transferable lesson, and it is worth more than
 either bug.
+
+**Defects 2, 4, 6 and 7 are very likely one problem.** `PathView` moves items
+endlessly around a **closed loop**; this carousel **clamps** and never wraps.
+`SPEC-host-carousel.md` carries the argument and a recommendation to position the
+tiles directly instead. Two sessions have now worked around the mismatch rather
+than removing it, and the workarounds are themselves what the client is now
+objecting to. **Read that before fixing any of these individually.**
+
+---
+
+# 7. The far tile vanishes instead of leaving
+
+**Found** 28 July 2026 by the client, looking at defect 2's fix. **Open.**
+
+> *"The far tile jarringly disappears instead of shifting farther or fading out.
+> Seems not polished."*
+
+Defect 2's fix stops the tile crossing the screen by cutting it instantly the
+moment it would start. The cut is instant **by design** — a fade-out would have
+played while the tile was travelling, which is the artefact being removed — but
+instant means visible, and it reads as a glitch rather than as an exit.
+
+**What is wanted:** the far tile should **travel further out and fade**, i.e.
+leave the way something leaves, rather than stop existing.
+
+**Why it cannot simply be faded where it is.** The tile has nowhere to go. With
+the loop exactly full its next position is on the other side of the screen, so
+any motion during the fade is motion across the arc. There is no off-screen slot
+for it to retreat into, because every slot is occupied.
+
+That is the same sentence as defects 2 and 4, and it is why this is listed as one
+of the four rather than as a separate piece of polish. Give the carousel real
+off-screen space — which positioning the tiles directly does — and the tile can
+simply continue outward and fade, which is what was asked for.
+
+---
+
+# 6. Left arrow runs the carousel away
+
+**Found** 28 July 2026 by the client. **Open, and not reproduced in isolation.**
+
+> *"Left arrow key turns the carousel into an infinite scroll until right arrow
+> key is pressed. Right arrow behaves correctly."*
+
+## What has been ruled out, and how
+
+**The key handler is not at fault.** `moveBy()` was called eight times in each
+direction from a probe, logging the index each time: it stops dead at 0 going
+left and at `count - 1` going right. The selection clamps. **This was measured,
+not reasoned** — see `HANDOFF.md` on why that distinction matters on this
+project.
+
+So the index is not running away by itself. Something else is moving it, or the
+motion is visual rather than a selection change.
+
+## The leading hypothesis — unconfirmed
+
+**The mouse-hover handler is feeding back into itself.**
+
+`HostTile` has `hoverEnabled: true` and moves the selection on hover, so the
+pointer and the D-pad agree about what is focused. But the tiles **move under a
+stationary pointer**. A press shifts the row, a different tile arrives beneath the
+cursor, its `entered()` fires, the selection moves again, the row shifts again.
+
+That is self-sustaining, and it would be **direction-dependent** exactly as
+reported: which way it runs depends on which side of centre the pointer is
+resting, and any other input can knock it out of phase — which matches "until
+right arrow key is pressed".
+
+**This is probably not new.** The handler had the same shape before this
+session's changes; only the call it makes changed. It needs one reproduction to
+confirm rather than assume.
+
+## How to confirm it in one minute
+
+Park the mouse pointer **off the carousel entirely** — over the hint bar, or
+outside the window — and press left repeatedly. If it clamps correctly, it is the
+hover loop and the fix is to make hover-to-focus ignore tiles that arrive under a
+pointer that has not itself moved.
+
+If it still runs away with the pointer parked, the hypothesis is wrong and the
+next thing to look at is whether the key event is reaching more than one handler.
 
 ---
 
@@ -33,6 +118,20 @@ is what the screen does in daily use, not an edge case.
 With two hosts, moving the selection one way is clean and moving it back drags
 the non-focused tile across the screen — it leaves one edge and reappears at the
 other in a single frame, exactly as defect 2 did at three hosts.
+
+**The client also sees it at rest, which is worse than the moving case:**
+
+> *"On 2 hosts, even on the leftmost host selected, I see the host that would've
+> been on the right appear faded on the left. This seems to be purely a visual
+> glitch as I must navigate to the right."*
+
+That is the same cause seen standing still. With two hosts the non-focused tile
+sits **exactly on the loop's join**, and the join is one loop position drawn at
+two different screen positions — the far left end of the path and the far right
+end are the same point on the loop. Which one it is drawn at depends on the phase
+left behind by the last move, so the second host can be shown on the left when it
+is logically to the right. The tile is real and focusable; only its side is
+wrong.
 
 Before defect 2's fix it did this in **both** directions. It now does it in one.
 So the fix halved it rather than curing it.

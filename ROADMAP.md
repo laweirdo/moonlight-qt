@@ -92,6 +92,18 @@ Three defects, all in `BUGS-open.md`, none needing a Deck to reproduce. **All th
 
 **Order confirmed by the client on 28 July 2026: the host settings menu is first.**
 
+**But one thing is recommended ahead of it, and is not yet decided: replacing the
+host carousel's underlying component.** The argument is in
+`SPEC-host-carousel.md`. In short, `PathView` moves items endlessly around a
+closed loop while this carousel clamps and never wraps, and every open carousel
+defect plus two of the client's six review items are that one mismatch. Two
+sessions have worked around it; the workarounds are now themselves what the client
+is objecting to. About a session, contained to two files, reviewable offline.
+
+It is listed here rather than as Phase A polish because it is no longer a defect
+fix — it is a rebuild of the screen every session starts on, and it should be
+sequenced deliberately rather than slipped in.
+
 - **Host settings menu** (SELECT) — absorbs the rename / delete / test-network regression, which is currently a functional loss against upstream
 - **Connecting state** — designed properly, replacing the placeholder
 - **Game grid** (`AppView.qml`) — Recent and Library tabs, per the existing frames
@@ -99,6 +111,8 @@ Three defects, all in `BUGS-open.md`, none needing a Deck to reproduce. **All th
 - Screen transitions wired up (220ms, brief §6 — the token exists and is unused)
 
 **Exit:** launch → pick host → pick game → stream → return, with no upstream screen visible.
+
+**Six review items on the host carousel**, given by the client on 28 July after looking at the fixed build, are recorded in full in `SPEC-host-carousel.md`. Two belong to phases below rather than to the carousel itself: the **wake state should be a waiting overlay rather than a popup**, which is Phase D's *Waking PC* screen arriving early, and the **"N of M ready" count should include unpaired hosts**, which reverses a decision that spec recorded. Neither is started.
 
 **One thing learned on 28 July that changes how the host settings menu should be scoped.** Removing a PC in Moonlight does **not** unpair it — the host goes on recognising this client, so the machine reappears as already paired. Whatever "Forget PC" means in the menu, it cannot mean "unpair", and a user who chooses it expecting the machine to stop trusting them will be wrong. That is a copy and behaviour question worth settling before the screen is drawn, not after. See `HANDOFF.md`.
 
@@ -121,7 +135,7 @@ Three defects, all in `BUGS-open.md`, none needing a Deck to reproduce. **All th
 - Couldn't start stream
 - Library empty state for a paired host with no games — flagged on the board as not drawn
 - Zero hosts
-- Waking PC
+- **Waking PC** — the client has scoped this on 28 July: not a popup, a waiting overlay, *"perhaps with 3 animated bouncing dots"*, held until the host is awake **or fails to wake**. Today `actWake()` raises a panel saying *"Give it a moment to come back."* and never revisits it. Resolving it needs the screen to notice both outcomes, so this is more than a visual change.
 - Quit / disconnect confirmation
 
 ### Phase E — Settings and About
@@ -174,6 +188,8 @@ HDR · Windows and other platforms · the mascot · a brand rules sheet while no
 
 ~~**The carousel wraps visibly at three hosts.**~~ **Retired 28 July 2026 — fixed in `9c721e13`,** and it was two faults rather than one. Note that the entry ruling out "wrong direction" was itself wrong; see `BUGS-open.md`.
 
-**The carousel still wraps once per move at two hosts.** `BUGS-open.md` defect 4, and **two hosts is the client's real configuration** — this is what the screen does in daily use. Halved by the three-host fix, not cured, because the trick that fixes three cannot apply when every tile is a neighbour of every other. Curing it properly means feeding the carousel a padded list, which is most of a session and carries real regression risk on the first screen a user sees. Worth a decision before it is started.
+**The host carousel has three open defects and they are one problem.** `BUGS-open.md` defects 4, 6 and 7. The carousel is built on a component that loops endlessly; the design clamps and never wraps. Two sessions have worked around that rather than removing it, and on 28 July the client rejected the second workaround on sight. **Two hosts is the client's real configuration**, and it is the count where the mismatch is most visible — including at rest, not only in motion. The recommendation is to position the tiles directly instead; see `SPEC-host-carousel.md`. Not yet decided.
+
+**The screen every session starts on has now been reviewed twice and failed twice.** Not because either fix was wrong — the direction fault was real and is gone — but because the component underneath cannot express what the design asks for, and each fix has had to trade one artefact for another. That is the signal worth acting on, rather than attempting a third workaround.
 
 **A fourth pattern in the same family as the three retired above.** All three retired risks were *perceptual* estimates that ran pessimistic. This one is different and worth separating: **two of the three defect write-ups on this project had a wrong diagnosis on record**, each drawn from a measurement that could not see the thing it was being used to rule out. Both cost time this session. The estimates that have proven unreliable here are not the ones about how things will look — they are the ones about what has been eliminated.

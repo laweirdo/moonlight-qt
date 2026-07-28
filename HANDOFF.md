@@ -22,10 +22,16 @@ paired host put genuinely to sleep was woken from the carousel with Y and was
 back a minute later. *"Asleep"* is a promise the app can keep, and the copy
 stands as written.
 
-**The three defects `BUGS-open.md` was opened for are all closed.** Two more were
-found while closing them; one of those is fixed too, and **one is still open** —
-the carousel still wraps once per move at **two** hosts, which is the client's
-real host count.
+**The three defects `BUGS-open.md` was opened for are all closed.** Four more were
+found on the way; one is fixed and **three are open, all on the host carousel and
+all one underlying problem.** The client reviewed the fixed carousel and did not
+accept it.
+
+**The recommendation the next session should decide on first** is in
+`SPEC-host-carousel.md`: replace `PathView` with directly positioned tiles.
+`PathView` moves items endlessly around a closed loop; this carousel clamps and
+never wraps, and every open carousel defect is that mismatch. Two sessions have
+worked around it and the workarounds are now themselves the complaint.
 
 **Two of the three original entries had a wrong diagnosis on record**, and both
 wrong diagnoses cost this session time before they were caught. Read
@@ -248,7 +254,9 @@ reference for content and copy, not for layout.
 | **`deck_*` glyphs** | 10 files. Until they land, `deck` resolves to the Xbox set via `resolveGlyphFamily()` in `sdlgamepadkeynavigation.cpp` — deleting one line is the whole change. **Detection is confirmed working on real hardware in both Desktop Mode and Game Mode**, so those 10 files are the only thing between here and Deck glyphs. |
 | **Vignette / hint-bar band** | The client confirmed hairline-only for the hint bar. No filled surface token exists; if one is ever wanted, it is theirs to specify. |
 | **Status colour on in-between states** | Red and green now carry reachability on the host status line. *Looking for your PC…*, *Connecting…* and *Not paired yet* were left on the neutral text colour, on the reasoning that red and green are verdicts and those states have not reached one. Assistant's call, flagged to the client, not yet overturned. |
-| **The two-host carousel wrap** | `BUGS-open.md` defect 4. Still visible once per move at the client's real host count. Curing it properly is most of a session and carries real regression risk on the first screen. Worth a decision before it is started. |
+| **Replacing the carousel's engine** | Recommended and not yet decided — see `SPEC-host-carousel.md`. Would retire `BUGS-open.md` defects 2, 4, 6 and 7 together, and makes two of the client's six review items cheap rather than awkward. About a session, two files. |
+| **The six carousel review items** | Given 28 July after looking at the fixed build. Listed in full in `SPEC-host-carousel.md`. None started. Two of them reverse or replace decisions recorded in that spec, so read it rather than the code. |
+| **Rebuilding on upstream vs. replacing it** | The client asked whether the whole thing should be rebuilt rather than skinned. Advice given: **against** — see the note below. Not re-opened since, but not formally closed either. |
 | **Review-mode copy** | Pressing A on a review-mode host now raises a *"Review mode"* panel. Placeholder wording, never seen by a real user, changeable on request. |
 
 **Settled 28 July, no longer waiting:** grain intensity (`atmosphereGrainOpacity`
@@ -256,6 +264,40 @@ stays 0.03), caption size (`sizeCaption` stays 16), overshoot
 (`motionOvershoot` stays 0.7), the hint-bar reflow (accepted as built),
 **the wake question — wake works, so the "Asleep" copy stands**, and Wake being
 withheld on hosts that cannot be woken.
+
+---
+
+## Should this fork rebuild upstream rather than skin it?
+
+**Asked by the client on 28 July 2026, after reviewing the carousel. Advice given
+was: against a full rebuild, for replacing one component.** Recorded here because
+it will be asked again, and the reasoning is the useful part.
+
+The question came from six complaints about the host screen. **None of the six is
+upstream's code.** Four are the carousel component this project chose, one is this
+project's counting rule, one is this project's mouse-hover handler. A rebuild of
+upstream's shell would have fixed none of them.
+
+What upstream still provides is discovery, pairing, the streaming protocol and
+video decode — essentially all of it, and years of work. What it provides that
+Bulan actually touches is thin: a window, a screen stack, and a toolbar this fork
+already hides.
+
+**The cost of diverging is concrete and permanent.** The upstream sync currently
+fast-forwards `master` and merges into `bulan` with no conflicts — twelve commits,
+zero conflicts, 27 July. That is the channel protocol and security fixes arrive
+through. Structural divergence turns every future sync into a merge that has to be
+reasoned about, in exchange for fixing nothing that was complained about.
+
+**What is worth replacing is one component**, and that argument is in
+`SPEC-host-carousel.md`.
+
+One genuine structural weakness in the inherited input layer is worth naming, so
+the "against" is not mistaken for "there is nothing wrong": **navigation mode is
+global mutable state**, set by one screen and read by another. That is what caused
+defect 1 and it is the shape of fault most likely to recur. It has been de-fanged
+rather than removed. If the input layer is ever revisited, that is the thing to
+revisit — not the SDL-to-Qt key translation, which is thin and works.
 
 ---
 
@@ -524,6 +566,13 @@ week. See the same shape in defect 1's history, where an empty log was read as
 
 **If a write-up says something is ruled out, check what measurement ruled it
 out** before building on it.
+
+**Used successfully the same day.** The client reported the left arrow running the
+carousel away. Rather than reasoning about the key handler, `moveBy()` was called
+eight times in each direction from a probe with the index logged each time: it
+clamps at both ends. That took one build and converted a guess into a fact, and it
+redirected the search to the mouse-hover handler — `BUGS-open.md` defect 6. Do
+this before theorising, not after.
 
 ### The gamepad layer could not express the specified bindings
 
