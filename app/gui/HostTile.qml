@@ -3,13 +3,18 @@ import QtQuick 2.9
 import Bulan 1.0
 
 // -----------------------------------------------------------------------------
-// One host in the carousel: a circular tile, with its name and status beneath it
-// only when it is NOT the focused one.
+// One host in the carousel: a circular tile with its own name, status and
+// address directly beneath it. The whole thing travels as one object.
 //
-// The focused host's name, status and address are drawn by the carousel's own
-// detail block, lower down and larger. That split is why the label here hides
-// itself when focused rather than growing: two sizes of the same information in
-// two places would read as a duplicate rather than a promotion.
+// The text used to be drawn twice -- a small name and status under the unfocused
+// tiles here, and the focused host's name, status and address separately by the
+// carousel, larger and near the bottom of the screen. Client's call, 28 July
+// 2026: the text belongs to the tile. So there is now one text per host which
+// GROWS and BRIGHTENS as its tile takes focus, and travels with it.
+//
+// It sits a fixed gap below the circle's *drawn* edge rather than at a fixed
+// screen position, which is what the client asked for -- the old focused block
+// sat low and disconnected from the host it described.
 //
 // Motion is brief §6. The scale is a single Behavior, deliberately: one animation
 // that retargets when the value changes, so holding a direction tracks the input
@@ -30,8 +35,31 @@ Item {
 
     property bool isCurrent: false
 
-    // Interpolated along the PathView path, so neighbours are smaller.
-    property real pathScale: 1.0
+    // True while this host's connection is in flight. Owned by the carousel,
+    // which is what knows about connections; the tile only draws it.
+    property bool connecting: false
+
+    // Set by the carousel: 1.0 for the focused tile, the neighbour scale for the
+    // rest. The carousel animates it, so this is a plain value here -- see the
+    // note on `interactionScale` below for why it is not eased twice.
+    property real tileScale: 1.0
+
+    // 0 while a neighbour, 1 while focused, animated by the carousel on the same
+    // clock as the travel. Everything about the text that differs between the two
+    // states is interpolated on this, so the label grows into focus rather than
+    // switching size on arrival.
+    property real focusAmount: 0
+
+    // Linear blend between two colours. QML interpolates colours in animations
+    // but gives no expression for it, and the label needs to follow focusAmount
+    // rather than run an animation of its own -- two clocks on one transition is
+    // the "animating an animation" fault that already cost this screen once.
+    function mix(a, b, f) {
+        return Qt.rgba(a.r + (b.r - a.r) * f,
+                       a.g + (b.g - a.g) * f,
+                       a.b + (b.b - a.b) * f,
+                       a.a + (b.a - a.a) * f)
+    }
 
     signal activated()
 
@@ -67,11 +95,12 @@ Item {
 
         // Two scales multiplied, and only one of them is animated here.
         //
-        // pathScale is already being interpolated by the PathView as the carousel
-        // moves. Running it through a Behavior as well animated an animation: the
-        // tile chased a value that was itself still moving, so the grow arrived
-        // after the tile had finished travelling and read as a transform applied
-        // on arrival rather than as the tile responding to the press.
+        // tileScale is already being animated by the carousel, on the same clock
+        // as the tile's travel. Running it through a Behavior here as well would
+        // animate an animation: the tile would chase a value that was itself
+        // still moving, so the grow would arrive after the tile had finished
+        // travelling and read as a transform applied on arrival rather than as
+        // the tile responding to the press. That was a real fault once.
         //
         // The interaction scale -- focus and press -- does change in one step, so
         // that is the part that wants easing.
@@ -91,7 +120,7 @@ Item {
             }
         }
 
-        scale: tile.pathScale * interactionScale
+        scale: tile.tileScale * interactionScale
 
         Behavior on border.color {
             ColorAnimation { duration: Bulan.motionFocusMs }
@@ -111,38 +140,99 @@ Item {
         }
     }
 
-    // --- neighbour label -----------------------------------------------------
+    // --- the host's own text -------------------------------------------------
+    // Name, status and address, belonging to this tile and travelling with it.
+    // Everything that differs between neighbour and focused is interpolated on
+    // focusAmount, so this grows and brightens rather than switching.
     Column {
         id: labelBlock
-        visible: !tile.isCurrent
         width: parent.width * 1.4
         anchors.horizontalCenter: parent.horizontalCenter
-        // Sits below the circle's *scaled* edge, so it does not drift when the
-        // neighbour scale changes.
+
+        // Anchored to the circle's DRAWN edge, not the tile's box. circle.scale
+        // already carries the neighbour scale, the focus scale and the press
+        // dip, so the gap below the artwork stays constant through all three
+        // instead of the text drifting when any of them changes.
         anchors.top: parent.verticalCenter
-        anchors.topMargin: (tile.height / 2) * tile.pathScale + Bulan.spaceMd
+        anchors.topMargin: (tile.height / 2) * circle.scale + Bulan.hostTileLabelGap
         spacing: Bulan.space2xs
 
         Text {
             width: parent.width
             horizontalAlignment: Text.AlignHCenter
             text: tile.hostName
-            color: Bulan.textSecondary
-            font.family: Bulan.familyUi
+            color: tile.mix(Bulan.textSecondary, Bulan.textPrimary, tile.focusAmount)
+            // The display face throughout. The focused name already used it and
+            // the neighbours did not; one text that grows into the other cannot
+            // change typeface on the way, so the branded face wins.
+            font.family: Bulan.familyDisplay
             font.pixelSize: Bulan.sizeBodyLg
+                            + (Bulan.sizeTitleLg - Bulan.sizeBodyLg) * tile.focusAmount
             elide: Text.ElideRight
         }
 
+        // Two status lines, cross-faded rather than one line that swaps text.
+        //
+        // The focused copy is brief §8 verbatim and is the app's voice -- "Ready
+        // when you are." A neighbour cannot carry it: at neighbour size
+        // "Couldn't reach Living-Room. Still on the same network?" wraps to two
+        // lines and shouts louder than the host that IS selected. So the short
+        // form is the neighbour's and the full form is the focused one, and they
+        // trade places on the same clock as everything else.
+        Item {
+            width: parent.width
+            height: Math.max(shortStatus.implicitHeight, fullStatus.implicitHeight)
+
+            Text {
+                id: shortStatus
+                width: parent.width
+                horizontalAlignment: Text.AlignHCenter
+                text: tile.connecting     ? qsTr("Connecting…")
+                    : tile.statusUnknown  ? qsTr("Checking…")
+                    : !tile.online        ? qsTr("Offline")
+                    : !tile.paired        ? qsTr("Not paired")
+                                          : qsTr("Ready")
+                color: Bulan.secondary
+                font.family: Bulan.familyUi
+                font.pixelSize: Bulan.sizeBody
+                opacity: 1.0 - tile.focusAmount
+            }
+
+            Text {
+                id: fullStatus
+                width: parent.width
+                horizontalAlignment: Text.AlignHCenter
+                // Brief §8 verbatim wherever it specifies a line.
+                text: tile.connecting     ? qsTr("Connecting…")
+                    : tile.statusUnknown  ? qsTr("Looking for your PC…")
+                    : !tile.online        ? qsTr("Couldn't reach %1").arg(tile.hostName)
+                    : !tile.paired        ? qsTr("Not paired yet.")
+                                          : qsTr("Ready when you are.")
+                // Red and green state only what is settled: unreachable, or
+                // ready. The in-between states -- still looking, connecting, not
+                // yet paired -- are not a verdict, so they stay neutral rather
+                // than claiming a success or a failure that has not happened.
+                color: tile.connecting || tile.statusUnknown ? Bulan.textSecondary
+                     : !tile.online                          ? Bulan.statusError
+                     : !tile.paired                          ? Bulan.textSecondary
+                                                             : Bulan.statusSuccess
+                font.family: Bulan.familyUi
+                font.pixelSize: Bulan.sizeBodyLg
+                opacity: tile.focusAmount
+            }
+        }
+
+        // The address is the focused host's alone -- it is detail, and repeating
+        // it under every tile would compete with the names.
         Text {
             width: parent.width
             horizontalAlignment: Text.AlignHCenter
-            text: tile.statusUnknown ? qsTr("Checking…")
-                : !tile.online       ? qsTr("Offline")
-                : !tile.paired       ? qsTr("Not paired")
-                                     : qsTr("Ready")
+            text: tile.address
             color: Bulan.secondary
             font.family: Bulan.familyUi
             font.pixelSize: Bulan.sizeBody
+            opacity: tile.focusAmount
+            elide: Text.ElideRight
         }
     }
 

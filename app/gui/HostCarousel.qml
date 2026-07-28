@@ -18,22 +18,37 @@ import Bulan 1.0
 // and calls the same ComputerManager entry points, and touches no discovery or
 // pairing logic.
 //
-// PathView, not a ListView with transforms. PathView is the primitive for exactly
-// this shape: scale and opacity are attributes interpolated along its path, so
-// neighbour dimming is declarative instead of a computed transform per delegate,
-// and StrictlyEnforceRange keeps the focused item centred with no positioning
-// arithmetic at all.
+// The tiles are positioned directly -- a Repeater and one animated position per
+// tile -- rather than laid out by a view component.
 //
-// Two of its defaults are deliberately overridden:
+// This screen used PathView for two sessions and the mismatch was the source of
+// every carousel defect on the project. PathView exists to move items endlessly
+// around a CLOSED LOOP; this carousel CLAMPS at both ends and never wraps. While
+// the host count is at or below the number of tiles drawn, the items fill that
+// loop exactly, so on every move one of them has to travel from one end of the
+// path to the other -- leaving one edge of the screen and reappearing at the
+// opposite one in a single frame. At two hosts the join is a RESTING position,
+// so a tile could be drawn on the wrong side while standing still. Both
+// workarounds attempted -- hiding the crossing tile, stating the direction --
+// traded one artefact for another, and the second was rejected on sight.
 //
-//   interactive: false   Kills drag and flick. Mouse support here is hover-to-
-//                        focus plus click, so dragging would be a second,
-//                        competing way to change the selection.
-//   wrapping             PathView wraps around its path by design. The spec wants
-//                        clamping, so index movement is done in the key handlers
-//                        and never wraps.
+// Owning the coordinates removes the loop, the join, the direction guessing and
+// the per-host-count special-casing all at once:
 //
-// Model access goes through the delegate's own properties (pathView.currentItem)
+//   * a tile's position is a pure function of how far its index sits from the
+//     selection, so direction ALWAYS follows the index and a wrap is not
+//     expressible;
+//   * there is real off-screen space either side, so a tile leaving simply
+//     travels further out and fades rather than being cut;
+//   * `pathStretch` is gone. It existed only to compensate for PathView spacing
+//     items differently above and below three hosts, and there is nothing left
+//     for it to compensate for.
+//
+// The cost is that scale and opacity are written here rather than interpolated
+// for free along a path, and the focused tile is centred by arithmetic rather
+// than by StrictlyEnforceRange. More code in exchange for total control.
+//
+// Model access goes through the delegate's own properties (root.host)
 // rather than computerModel.data() with role numbers. Role numbers are an offset
 // from Qt::UserRole and would break silently if anyone reordered the enum in
 // computermodel.h; role names do not.
@@ -46,8 +61,8 @@ FocusScope {
 
     property ComputerModel computerModel: createModel()
 
-    // Debug hook. MOONLIGHT_FAKE_HOSTS=none|one|offline|mixed substitutes a fixed
-    // host list so every state below can be reviewed without pairing or unpairing
+    // Debug hook. MOONLIGHT_FAKE_HOSTS=none|one|two|offline|mixed|many substitutes
+    // a fixed host list so every state below can be reviewed without pairing or unpairing
     // real machines. Inert unless the variable is set, and the only reason the
     // model is injectable at all -- which is also what makes this screen testable.
     readonly property bool useFakeHosts:
@@ -77,6 +92,21 @@ FocusScope {
             }
             if (fakeHosts === "one") {
                 append(host("Desktop-PC", true, true, "192.168.1.24"))
+                return
+            }
+            // "two": the client's real configuration, and the count the old
+            // carousel was worst at -- with two hosts the non-focused tile sat
+            // exactly on the loop's join, so it could be drawn on the wrong side
+            // even standing still. There was no preset for it, which is why the
+            // case that matters most in daily use was the one hardest to look at.
+            //
+            // Steambox is discovered but NOT paired, which is the exact state the
+            // client was looking at when they reported the count reading "1 of 1
+            // ready" beside two visible machines. Without an unpaired host in
+            // some preset that rule cannot be reviewed at all.
+            if (fakeHosts === "two") {
+                append(host("Shoebox", true, true, "192.168.1.24"))
+                append(host("Steambox", true, false, "192.168.1.31"))
                 return
             }
             if (fakeHosts === "offline") {
@@ -112,25 +142,35 @@ FocusScope {
     // Index whose connection is in flight, or -1.
     property int connectingIndex: -1
 
-    // Where the selection was before the move currently in flight, catching up
-    // once the move has finished. The carousel's delegates need to know both
-    // ends of a move, not just its destination -- see the tile visibility rule.
-    //
-    // A timer rather than PathView's own movement signals: those report user
-    // flicking, and this carousel has flicking switched off, so a selection
-    // driven from the buttons never raises them.
-    property int settledIndex: 0
-    Timer {
-        id: settleTimer
-        interval: Bulan.motionFocusMs
-        onTriggered: root.settledIndex = pathView.currentIndex
-    }
+    // The selection. This is the whole of the carousel's state: every tile's
+    // position, scale and opacity is a function of the distance between its own
+    // index and this one, so there is no view offset, no phase and no join.
+    property int currentIndex: 0
 
-    readonly property int hostCount: pathView.count
+    readonly property int hostCount: hostRepeater.count
     readonly property bool hasHosts: hostCount > 0
 
-    // The focused host, or null. Everything below reads through this.
-    readonly property var host: pathView.currentItem
+    // The focused host's tile, or null. Everything below reads through this.
+    //
+    // Assigned rather than bound: Repeater.itemAt() is a function call, so a
+    // binding on it would not re-evaluate when hosts appear or disappear, only
+    // when the index changes. Every path that can change either one calls this.
+    property var host: null
+    // Normalised to exactly null when there is nothing, never undefined: every
+    // reader below tests `host !== null`, and undefined would pass that test and
+    // then fail on the property access.
+    function refreshHost() {
+        var item = (currentIndex >= 0 && currentIndex < hostRepeater.count)
+                ? hostRepeater.itemAt(currentIndex)
+                : null
+        host = item ? item : null
+    }
+    onCurrentIndexChanged: refreshHost()
+    // Belt and braces. The Repeater's own signals cover every path that populates
+    // the list, but a null `host` reads on screen as a completely dead screen --
+    // the exact failure this project keeps meeting -- so it is worth one more call.
+    Component.onCompleted: refreshHost()
+
     readonly property bool hostOnline: host !== null && host.online
 
     // Whether waking this host could actually do anything. The app can only wake
@@ -154,24 +194,37 @@ FocusScope {
     }
 
     // --- ready count ---------------------------------------------------------
-    // "available systems out of paired systems". Hosts that are discovered but not
-    // yet paired sit outside both figures -- they are not yours to count until you
-    // have paired them -- so they appear in the carousel without inflating this.
-    property int pairedCount: 0
+    // "hosts you can use, out of hosts you have".
+    //
+    // The denominator counts EVERY machine in the carousel, including ones
+    // discovered but not yet paired. It used to count only paired ones, on the
+    // reasoning that a machine is not yours to count until you have paired it.
+    //
+    // Seen in use that reads as a fault rather than a principle: with Steambox
+    // unpaired and Shoebox online the line said "1 of 1 ready" while two
+    // machines were plainly on screen, so the count contradicted the carousel
+    // beside it. Client's call, 28 July 2026 -- the denominator is machines you
+    // have, not machines you have finished setting up.
+    //
+    // The numerator is unchanged and still means "ready to stream": online AND
+    // paired. An unpaired host is visible and selectable but cannot be
+    // connected to, so counting it as ready would promise something the A
+    // button will not deliver.
+    property int totalCount: 0
     property int readyCount: 0
 
     function recount() {
-        var paired = 0, ready = 0
+        var total = 0, ready = 0
         for (var i = 0; i < counter.count; i++) {
             var it = counter.itemAt(i)
-            if (it && it.isPaired) {
-                paired++
-                if (it.isOnline) {
+            if (it) {
+                total++
+                if (it.isPaired && it.isOnline) {
                     ready++
                 }
             }
         }
-        pairedCount = paired
+        totalCount = total
         readyCount = ready
     }
 
@@ -233,7 +286,7 @@ FocusScope {
 
         if (!host.paired) {
             var pin = computerModel.generatePinString()
-            computerModel.pairComputer(pathView.currentIndex, pin)
+            computerModel.pairComputer(root.currentIndex, pin)
             pinPanel.pin = pin
             pinPanel.hostName = host.hostName
             pinPanel.visible = true
@@ -246,7 +299,7 @@ FocusScope {
             return
         }
 
-        connectingIndex = pathView.currentIndex
+        connectingIndex = root.currentIndex
         var component = Qt.createComponent("AppView.qml")
         // Defect 3. Without these checks a failure to build the game grid is
         // completely silent: createObject() returns null, push(null) does
@@ -261,7 +314,7 @@ FocusScope {
             return
         }
         var view = component.createObject(stackView, {
-                                              "computerIndex": pathView.currentIndex,
+                                              "computerIndex": root.currentIndex,
                                               "objectName": host.hostName
                                           })
         if (view === null) {
@@ -284,7 +337,7 @@ FocusScope {
             return
         }
         if (!root.useFakeHosts) {
-            computerModel.wakeComputer(pathView.currentIndex)
+            computerModel.wakeComputer(root.currentIndex)
         }
         messagePanel.show(qsTr("Waking %1").arg(host.hostName),
                           qsTr("Give it a moment to come back."))
@@ -292,38 +345,37 @@ FocusScope {
 
     // Move the selection one host, clamping at both ends.
     //
-    // The direction is stated rather than left to the carousel to work out.
-    // Its default is "take the shorter way round the loop", which is the right
-    // rule for something that wraps and the wrong one here: this list clamps,
-    // so moving to a higher index must ALWAYS slide the row left and a lower
-    // one must always slide it right, whatever the arithmetic says is shorter.
-    //
-    // Left to itself it got this wrong at exactly three hosts. Going from the
-    // second host to the third, every tile slid RIGHT and wrapped round the
-    // screen to arrive -- two full crossings for a one-step press. That is the
-    // "rolls over to the right and comes in from the left" the client reported,
-    // and it is a genuine direction fault rather than the frame-timing one the
-    // writeup concluded it was.
+    // There is no direction to state any more. A tile's position is derived from
+    // its distance to the selection, so raising the index can only ever slide the
+    // row left and lowering it can only ever slide it right -- travelling the
+    // wrong way round is not something the geometry can express. The old
+    // component chose its own route and chose wrong at exactly three hosts.
     function moveBy(step) {
-        var next = pathView.currentIndex + step
-        if (next < 0 || next > pathView.count - 1) {
+        var next = currentIndex + step
+        if (next < 0 || next > hostRepeater.count - 1) {
             return
         }
-        pathView.movementDirection = step > 0 ? PathView.Positive : PathView.Negative
-        pathView.currentIndex = next
+        currentIndex = next
     }
 
     // Select a host directly, for the mouse. Clamping does not apply -- a click
-    // names its target rather than stepping towards it -- but the direction still
-    // has to be stated, for the same reason moveBy() states it.
+    // names its target rather than stepping towards it.
     function selectIndex(index) {
-        if (index < 0 || index > pathView.count - 1
-                || index === pathView.currentIndex) {
+        if (index < 0 || index > hostRepeater.count - 1) {
             return
         }
-        pathView.movementDirection = index > pathView.currentIndex
-                ? PathView.Positive : PathView.Negative
-        pathView.currentIndex = index
+        currentIndex = index
+    }
+
+    // Keep the selection inside the list when hosts appear or disappear.
+    function clampIndex() {
+        if (hostRepeater.count === 0) {
+            currentIndex = 0
+        } else if (currentIndex > hostRepeater.count - 1) {
+            currentIndex = hostRepeater.count - 1
+        } else if (currentIndex < 0) {
+            currentIndex = 0
+        }
     }
 
     function actAddPc() {
@@ -357,18 +409,16 @@ FocusScope {
         recount()
         // Start on the first reachable host rather than whichever happens to be
         // first: opening on an offline machine would make the screen look broken.
-        if (pathView.count > 0) {
+        if (hostRepeater.count > 0) {
             for (var i = 0; i < counter.count; i++) {
                 var it = counter.itemAt(i)
                 if (it && it.isOnline && it.isPaired) {
-                    pathView.currentIndex = i
+                    root.currentIndex = i
                     break
                 }
             }
         }
-        // Arriving on a screen is not a move, so nothing should be mid-flight.
-        settleTimer.stop()
-        settledIndex = pathView.currentIndex
+        refreshHost()
         root.forceActiveFocus()
     }
 
@@ -434,7 +484,7 @@ FocusScope {
         anchors.rightMargin: Bulan.layoutScreenMarginX
         anchors.verticalCenter: wordmark.verticalCenter
         spacing: Bulan.spaceXs
-        visible: root.pairedCount > 0
+        visible: root.totalCount > 0
 
         Rectangle {
             anchors.verticalCenter: parent.verticalCenter
@@ -446,7 +496,7 @@ FocusScope {
 
         Text {
             anchors.verticalCenter: parent.verticalCenter
-            text: qsTr("%1 of %2 ready").arg(root.readyCount).arg(root.pairedCount)
+            text: qsTr("%1 of %2 ready").arg(root.readyCount).arg(root.totalCount)
             color: Bulan.textSecondary
             font.family: Bulan.familyUi
             font.pixelSize: Bulan.sizeLabel
@@ -460,8 +510,8 @@ FocusScope {
         id: focusBloom
         width: Bulan.hostTileSize * 2.2
         height: width
-        x: pathView.x + pathView.width / 2 - width / 2
-        y: pathView.y + pathView.focusY - height / 2
+        x: carousel.x + carousel.width / 2 - width / 2
+        y: carousel.y + carousel.focusY - height / 2
         visible: root.hasHosts
         opacity: root.hostOnline ? 1.0 : 0.3
 
@@ -491,8 +541,10 @@ FocusScope {
     }
 
     // --- carousel ------------------------------------------------------------
-    PathView {
-        id: pathView
+    // A band the tiles are positioned inside. Not a view: it lays nothing out and
+    // scrolls nothing. Every tile's place is worked out from its own index.
+    Item {
+        id: carousel
 
         anchors.horizontalCenter: parent.horizontalCenter
         anchors.top: wordmark.bottom
@@ -504,219 +556,147 @@ FocusScope {
         // than the tile so the neighbours' name labels have somewhere to go.
         readonly property real focusY: Bulan.hostTileSize * 0.52
 
-        // PathView spaces items 1/count apart along the path while count is below
-        // pathItemCount, and 1/pathItemCount once it is above. So a neighbour sits
-        // at path fraction 0.0 when there are two hosts, but at 1/6 when there are
-        // three or more -- the same geometry would put it in two different places.
-        //
-        // Solving x(fraction) = centre - spread for both cases gives a single
-        // factor on the path's extent: 1.5 when the fraction is 1/6, 1.0 when it
-        // is 0.0. Without this the neighbours drift inward and collide with the
-        // focused tile as soon as a third host appears.
-        readonly property real pathStretch: count >= 3 ? 1.5 : 1.0
-
-        // True when the hosts fill the path loop exactly, leaving no slack.
-        //
-        // Below this threshold the carousel builds a tile for every host and
-        // they occupy the whole loop, so on every move one of them has to
-        // travel from one end of the path to the other -- it leaves one edge of
-        // the screen and reappears at the opposite one in a single frame.
-        // Above it, the surplus tiles are never built at all and nothing has to
-        // cross. That is why this only ever looked wrong at three hosts.
-        //
-        // It is count vs pathItemCount, NOT a hardcoded 3, so it stays true if
-        // either number is ever changed.
-        readonly property bool loopIsFull: count > 0 && count <= pathItemCount
-
         visible: root.hasHosts
-        model: root.hostModel
 
-        // The focused tile plus one neighbour each side.
-        pathItemCount: 3
-        preferredHighlightBegin: 0.5
-        preferredHighlightEnd: 0.5
-        highlightRangeMode: PathView.StrictlyEnforceRange
+        Repeater {
+            id: hostRepeater
+            model: root.hostModel
 
-        // Selection comes from buttons and hover, never from dragging.
-        interactive: false
-
-        // Matches the tile's focus duration, so moving between hosts is one
-        // motion rather than a tile animation racing a view animation.
-        highlightMoveDuration: Bulan.motionFocusMs
-
-        // Where the selection was before the move in flight. Tiles are judged
-        // against both this and where it is going, so the one that has to cross
-        // the loop is hidden for the whole crossing rather than for half of it.
-        onCurrentIndexChanged: settleTimer.restart()
-
-        // A shallow arc: neighbours are inset from the edges and sit lower, so the
-        // focused tile reads as the near one rather than the middle one.
-        path: Path {
-            startX: pathView.width / 2 - Bulan.hostTileSpread * pathView.pathStretch
-            startY: pathView.focusY + Bulan.hostTileNeighbourDrop * pathView.pathStretch
-
-            PathAttribute { name: "itemScale"; value: Bulan.hostTileNeighbourScale }
-            PathAttribute { name: "itemOpacity"; value: 0.5 }
-            PathAttribute { name: "itemZ"; value: 0 }
-
-            PathLine { x: pathView.width / 2; y: pathView.focusY }
-
-            PathAttribute { name: "itemScale"; value: 1.0 }
-            PathAttribute { name: "itemOpacity"; value: 1.0 }
-            PathAttribute { name: "itemZ"; value: 2 }
-
-            PathLine {
-                x: pathView.width / 2 + Bulan.hostTileSpread * pathView.pathStretch
-                y: pathView.focusY + Bulan.hostTileNeighbourDrop * pathView.pathStretch
+            // Hosts appearing and disappearing has to keep the selection inside
+            // the list and keep root.host pointing at the right tile. Counting
+            // is left to the mirror above -- this one only owns the geometry.
+            onItemAdded: {
+                root.clampIndex()
+                root.refreshHost()
+            }
+            onItemRemoved: {
+                root.clampIndex()
+                root.refreshHost()
             }
 
-            PathAttribute { name: "itemScale"; value: Bulan.hostTileNeighbourScale }
-            PathAttribute { name: "itemOpacity"; value: 0.5 }
-            PathAttribute { name: "itemZ"; value: 0 }
-        }
+            delegate: HostTile {
+                id: hostTile
 
-        delegate: HostTile {
-            hostName: model.name
-            online: model.online
-            paired: model.paired
-            statusUnknown: model.statusUnknown
-            wakeable: model.wakeable
-            serverSupported: model.serverSupported
-            address: model.address
-            details: model.details
+                hostName: model.name
+                online: model.online
+                paired: model.paired
+                statusUnknown: model.statusUnknown
+                wakeable: model.wakeable
+                serverSupported: model.serverSupported
+                address: model.address
+                details: model.details
 
-            // Which tiles are allowed on screen.
-            //
-            // Navigation clamps at both ends, but PathView still instantiates a
-            // wrapped neighbour: focused on the first host, it draws the LAST one
-            // to the left, which silently promises a host that pressing left will
-            // never reach. Only genuinely adjacent indices are shown.
-            //
-            // The second half of the test is what stops the visible wrap. A tile
-            // is judged against where the selection is going AND where it came
-            // from, so the one making the long crossing is out of place for the
-            // whole move rather than for the second half of it. Testing only the
-            // destination let it back on screen at the instant the move started,
-            // which is precisely when it began its journey across the middle.
-            //
-            // Only applied when the loop is full, because that is the only time
-            // a tile has to cross. With more hosts than the carousel draws, a new
-            // neighbour genuinely slides in from beyond the edge, and suppressing
-            // that would replace a correct motion with a fade.
-            readonly property bool inPlace:
-                Math.abs(index - pathView.currentIndex) <= 1
-                && (!pathView.loopIsFull
-                    || Math.abs(index - root.settledIndex) <= 1)
-
-            // Hiding is instant; appearing is faded. A tile leaving is about to
-            // be overlapped by the one sliding into its slot, so cutting it is
-            // invisible -- but a tile arriving has nowhere to arrive FROM when
-            // the loop is full, so it fades up in place instead of sliding in
-            // from the wrong side of the screen.
-            // NOT readonly: the Behavior has to write it, and marking it readonly
-            // takes the whole screen down. See HANDOFF.
-            property real appear: inPlace ? 1.0 : 0.0
-            Behavior on appear {
-                NumberAnimation {
-                    duration: Bulan.motionFocusMs
-                    easing.type: Easing.OutCubic
+                // How far this host sits from the selected one, clamped to two
+                // slots either side.
+                //
+                // The clamp is what gives the carousel its off-screen space. One
+                // slot out is a visible neighbour; two slots out is past the edge
+                // of the screen and invisible. Everything beyond that parks at
+                // two rather than flying off to arbitrary distances, so a tile
+                // coming into view always travels exactly one slot to get there
+                // however far down the list it started.
+                readonly property int slot: {
+                    var d = index - root.currentIndex
+                    return d < -2 ? -2 : (d > 2 ? 2 : d)
                 }
-            }
+                readonly property int distance: slot < 0 ? -slot : slot
 
-            visible: inPlace
+                // The tile's box is always hostTileSize; the circle inside it is
+                // what scales. So the centre is placed here and the scale is
+                // applied about that centre, which is what keeps the neighbour
+                // labels sitting under a scaled edge rather than drifting.
+                x: carousel.width / 2 - width / 2 + slot * Bulan.hostTileSpread
+                y: carousel.focusY - height / 2 +
+                   (distance === 0 ? 0 : Bulan.hostTileNeighbourDrop)
 
-            isCurrent: PathView.isCurrentItem
-            pathScale: PathView.itemScale === undefined ? 1.0 : PathView.itemScale
-            z: PathView.itemZ === undefined ? 0 : PathView.itemZ
-            opacity: (PathView.itemOpacity === undefined ? 1.0 : PathView.itemOpacity)
-                     * appear
+                tileScale: distance === 0 ? 1.0 : Bulan.hostTileNeighbourScale
 
-            // Click selects and acts. Hover does nothing -- see HostTile.
-            onActivated: {
-                root.selectIndex(index)
-                root.actConfirm()
+                // 1.0 focused, 0.5 for the neighbours, nothing beyond them. A
+                // tile leaving therefore travels out to the second slot while
+                // fading -- it leaves the way something leaves, rather than
+                // being cut because it had nowhere to go.
+                opacity: distance === 0 ? 1.0 : (distance === 1 ? 0.5 : 0.0)
+
+                // The focused tile draws above its neighbours.
+                z: distance === 0 ? 2 : 0
+
+                // Follows the animated opacity rather than the slot, so a tile on
+                // its way out stays drawn for the whole of its exit and stops
+                // being drawn -- and stops taking clicks -- once it is invisible.
+                visible: opacity > 0.01
+
+                isCurrent: index === root.currentIndex
+
+                // Drives the tile's own text from neighbour size and dimness to
+                // focused size and full strength. Animated below on the same
+                // clock as the travel, so the label grows as the tile arrives
+                // rather than snapping when it gets there.
+                focusAmount: distance === 0 ? 1.0 : 0.0
+
+                // The tile draws the connecting state; the carousel knows about it.
+                connecting: root.connectingIndex === index
+
+                // One clock for the whole move: position, drop, scale and fade
+                // all run for motionFocusMs on the same curve, so a tile travels,
+                // shrinks and dims as one object instead of four.
+                //
+                // The easing is the one thing here that had to be chosen rather
+                // than copied -- the old component eased its own travel and did
+                // not expose the curve. InOutQuad is the closest reproduction of
+                // how it read. It is a judgement call and it is the client's to
+                // confirm on screen.
+                Behavior on x {
+                    enabled: hostTile.settled
+                    NumberAnimation {
+                        duration: Bulan.motionFocusMs
+                        easing.type: Easing.InOutQuad
+                    }
+                }
+                Behavior on y {
+                    enabled: hostTile.settled
+                    NumberAnimation {
+                        duration: Bulan.motionFocusMs
+                        easing.type: Easing.InOutQuad
+                    }
+                }
+                Behavior on tileScale {
+                    enabled: hostTile.settled
+                    NumberAnimation {
+                        duration: Bulan.motionFocusMs
+                        easing.type: Easing.InOutQuad
+                    }
+                }
+                Behavior on opacity {
+                    enabled: hostTile.settled
+                    NumberAnimation {
+                        duration: Bulan.motionFocusMs
+                        easing.type: Easing.InOutQuad
+                    }
+                }
+                Behavior on focusAmount {
+                    enabled: hostTile.settled
+                    NumberAnimation {
+                        duration: Bulan.motionFocusMs
+                        easing.type: Easing.InOutQuad
+                    }
+                }
+
+                // False until this tile has been placed once, so the first frame
+                // is a position rather than a journey from the top-left corner.
+                // Bindings are evaluated before Component.onCompleted runs, so by
+                // the time this flips the tile is already where it belongs.
+                property bool settled: false
+                Component.onCompleted: settled = true
+
+                // Click selects and acts. Hover does nothing -- see HostTile.
+                onActivated: {
+                    root.selectIndex(index)
+                    root.actConfirm()
+                }
             }
         }
     }
 
-    // --- focused host detail -------------------------------------------------
-    // Anchored up from the hint bar rather than down from the carousel: the
-    // neighbours' labels overhang the band by a variable amount, so chaining off
-    // pathView.bottom would let this block drift.
-    Column {
-        anchors.bottom: hintBar.top
-        anchors.bottomMargin: Bulan.spaceXl
-        anchors.horizontalCenter: parent.horizontalCenter
-        width: parent.width - Bulan.layoutScreenMarginX * 2
-        spacing: Bulan.space2xs
-        visible: root.hasHosts
-
-        Text {
-            width: parent.width
-            horizontalAlignment: Text.AlignHCenter
-            text: root.host !== null ? root.host.hostName : ""
-            color: Bulan.textPrimary
-            font.family: Bulan.familyDisplay
-            font.pixelSize: Bulan.sizeTitleLg
-            elide: Text.ElideRight
-        }
-
-        // Status carries its own colour rather than a separate indicator: the
-        // dot said the same thing the line already said, so it was two marks for
-        // one fact. Reachability is the fact, and the status swatches are what
-        // the design system has for it.
-        Text {
-            id: statusText
-            anchors.horizontalCenter: parent.horizontalCenter
-            // Copy is brief §8 verbatim wherever it specifies a line.
-            text: {
-                if (root.host === null) {
-                    return ""
-                }
-                if (root.connectingIndex === pathView.currentIndex) {
-                    // MINIMAL / NOT YET DESIGNED -- flagged in the spec.
-                    return qsTr("Connecting…")
-                }
-                if (root.host.statusUnknown) {
-                    return qsTr("Looking for your PC…")
-                }
-                if (!root.host.online) {
-                    return qsTr("Couldn't reach %1").arg(root.host.hostName)
-                }
-                if (!root.host.paired) {
-                    return qsTr("Not paired yet.")
-                }
-                return qsTr("Ready when you are.")
-            }
-            // Red and green state only what is settled: unreachable, or ready.
-            // In-between states -- still looking, connecting, not yet paired --
-            // are not a verdict, so they stay on the neutral text colour rather
-            // than claiming a success or a failure that has not happened.
-            color: {
-                if (root.host === null || root.connectingIndex === pathView.currentIndex
-                        || root.host.statusUnknown) {
-                    return Bulan.textSecondary
-                }
-                if (!root.host.online) {
-                    return Bulan.statusError
-                }
-                if (!root.host.paired) {
-                    return Bulan.textSecondary
-                }
-                return Bulan.statusSuccess
-            }
-            font.family: Bulan.familyUi
-            font.pixelSize: Bulan.sizeBodyLg
-        }
-
-        Text {
-            anchors.horizontalCenter: parent.horizontalCenter
-            text: root.host !== null ? (root.host.address || "") : ""
-            color: Bulan.secondary
-            font.family: Bulan.familyUi
-            font.pixelSize: Bulan.sizeBody
-        }
-    }
 
     // --- zero hosts ----------------------------------------------------------
     // Two stacked elements, per spec. The copy is deliberately off-register from
@@ -799,7 +779,7 @@ FocusScope {
 
     // --- input ---------------------------------------------------------------
     // Movement clamps rather than wrapping, which is why it is done here instead
-    // of through PathView's own increment/decrement -- those wrap by design.
+    // of anywhere else: moveBy() is the only thing that writes the selection.
     Keys.onLeftPressed: moveBy(-1)
     Keys.onRightPressed: moveBy(1)
 
