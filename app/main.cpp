@@ -1089,9 +1089,9 @@ int main(int argc, char *argv[])
         // See the Loader in main.qml. Empty unless MOONLIGHT_SCREENSHOT is set.
         engine.rootContext()->setContextProperty("screenshotPath",
                                                  QString::fromUtf8(qgetenv("MOONLIGHT_SCREENSHOT")));
-        // Debug hook: MOONLIGHT_FAKE_HOSTS=none|one|offline|mixed swaps a fixed
-        // host list into the carousel, so its states can be reviewed without
-        // pairing or unpairing real machines. Inert unless set.
+        // Debug hook: MOONLIGHT_FAKE_HOSTS=none|one|offline|mixed|many swaps a
+        // fixed host list into the carousel, so its states can be reviewed
+        // without pairing or unpairing real machines. Inert unless set.
         engine.rootContext()->setContextProperty("fakeHosts",
                                                  QString::fromUtf8(qgetenv("MOONLIGHT_FAKE_HOSTS")));
         // Suppress the startup warning dialogs in token proof mode -- they would

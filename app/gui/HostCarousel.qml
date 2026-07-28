@@ -80,6 +80,19 @@ FocusScope {
                 append(host("Studio-Tower", false, true, "192.168.1.44"))
                 return
             }
+            // "many": more hosts than the carousel draws at once. Exists because
+            // the carousel's behaviour changes shape at exactly three -- below
+            // that the tiles fill its loop exactly and one has to cross the
+            // screen on every move; above it, the surplus tile is never built.
+            // Three states cannot demonstrate that on their own.
+            if (fakeHosts === "many") {
+                append(host("Living-Room", false, true, "192.168.1.31"))
+                append(host("Desktop-PC", true, true, "192.168.1.24"))
+                append(host("Studio-Tower", false, true, "192.168.1.44"))
+                append(host("Bedroom-Mini", true, true, "192.168.1.58"))
+                append(host("Garage-Rig", true, true, "192.168.1.62"))
+                return
+            }
             // "mixed": the mockup's own arrangement -- one reachable, two not.
             append(host("Living-Room", false, true, "192.168.1.31"))
             append(host("Desktop-PC", true, true, "192.168.1.24"))
@@ -166,10 +179,31 @@ FocusScope {
             actWake()
             return
         }
+        // Everything past this point acts on a real machine, addressed by its
+        // position in the real host list. A fake host has no machine behind it
+        // and its position means nothing in that list, so acting on one either
+        // does something to the wrong host or reads past the end of the list
+        // and takes the app down with it.
+        //
+        // That is why the crash was intermittent and looked unrelated to host
+        // count: with two real hosts, pressing A on the second fake host opens
+        // the second REAL host's games and looks like it worked. Pressing A on
+        // the fifth reads off the end and segfaults. Same code, same press.
+        //
+        // One guard covering every branch below, rather than one per branch --
+        // the previous shape guarded pairing and missed the game list, and
+        // would have missed the next branch added too.
+        if (root.useFakeHosts) {
+            // Says so out loud rather than doing nothing. A silent A is
+            // indistinguishable from the dead-A defect this project has now
+            // chased three times, and this screen is where that was chased.
+            messagePanel.show(qsTr("Review mode"),
+                              qsTr("%1 isn't a real PC, so there's nothing to open.")
+                                  .arg(host.hostName))
+            return
+        }
+
         if (!host.paired) {
-            if (root.useFakeHosts) {
-                return
-            }
             var pin = computerModel.generatePinString()
             computerModel.pairComputer(pathView.currentIndex, pin)
             pinPanel.pin = pin
