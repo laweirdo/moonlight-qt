@@ -593,3 +593,38 @@ macx {
 
 VERSION = "$$cat(version.txt)"
 DEFINES += VERSION_STR=\\\"$$cat(version.txt)\\\"
+
+# --- build stamp -------------------------------------------------------------
+# Generates buildstamp.h, naming the branch and commit this binary was built
+# from, which main.cpp prints at startup. See scripts/gen-buildstamp.sh for why
+# it is worth the lines.
+#
+# depends = FORCE makes it run on every build rather than only when qmake does,
+# which is the whole point: a stamp generated once at configure time would go on
+# describing the commit that happened to be checked out then. The script writes
+# the header only when the value changes, so this does not force a recompile on
+# every build.
+#
+# unix only, because it is a shell script and the two platforms this fork
+# targets -- macOS and the Deck -- are both unix. main.cpp falls back to a plain
+# "unknown" wherever the define is absent, so nothing breaks elsewhere.
+unix {
+    # Relative, deliberately. qmake's own header scan records main.cpp's
+    # dependency on this file by its bare name, and make matches rules by target
+    # string rather than by resolved path -- an absolute target here produces
+    # "no rule to make target buildstamp.h" even though the rule is right there.
+    # make runs in the build directory in both in-source and shadow builds, so
+    # the bare name resolves correctly either way.
+    BUILDSTAMP_H = buildstamp.h
+
+    buildstamp.target = $$BUILDSTAMP_H
+    buildstamp.depends = FORCE
+    buildstamp.commands = sh $$PWD/../scripts/gen-buildstamp.sh $$BUILDSTAMP_H $$PWD/..
+
+    QMAKE_EXTRA_TARGETS += buildstamp
+    PRE_TARGETDEPS += $$BUILDSTAMP_H
+    QMAKE_DISTCLEAN += $$BUILDSTAMP_H
+
+    INCLUDEPATH += $$OUT_PWD
+    DEFINES += HAVE_BUILD_STAMP
+}
