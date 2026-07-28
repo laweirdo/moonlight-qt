@@ -99,9 +99,14 @@ FocusScope {
             // exactly on the loop's join, so it could be drawn on the wrong side
             // even standing still. There was no preset for it, which is why the
             // case that matters most in daily use was the one hardest to look at.
+            //
+            // Steambox is discovered but NOT paired, which is the exact state the
+            // client was looking at when they reported the count reading "1 of 1
+            // ready" beside two visible machines. Without an unpaired host in
+            // some preset that rule cannot be reviewed at all.
             if (fakeHosts === "two") {
                 append(host("Shoebox", true, true, "192.168.1.24"))
-                append(host("Steambox", false, true, "192.168.1.31"))
+                append(host("Steambox", true, false, "192.168.1.31"))
                 return
             }
             if (fakeHosts === "offline") {
@@ -189,24 +194,37 @@ FocusScope {
     }
 
     // --- ready count ---------------------------------------------------------
-    // "available systems out of paired systems". Hosts that are discovered but not
-    // yet paired sit outside both figures -- they are not yours to count until you
-    // have paired them -- so they appear in the carousel without inflating this.
-    property int pairedCount: 0
+    // "hosts you can use, out of hosts you have".
+    //
+    // The denominator counts EVERY machine in the carousel, including ones
+    // discovered but not yet paired. It used to count only paired ones, on the
+    // reasoning that a machine is not yours to count until you have paired it.
+    //
+    // Seen in use that reads as a fault rather than a principle: with Steambox
+    // unpaired and Shoebox online the line said "1 of 1 ready" while two
+    // machines were plainly on screen, so the count contradicted the carousel
+    // beside it. Client's call, 28 July 2026 -- the denominator is machines you
+    // have, not machines you have finished setting up.
+    //
+    // The numerator is unchanged and still means "ready to stream": online AND
+    // paired. An unpaired host is visible and selectable but cannot be
+    // connected to, so counting it as ready would promise something the A
+    // button will not deliver.
+    property int totalCount: 0
     property int readyCount: 0
 
     function recount() {
-        var paired = 0, ready = 0
+        var total = 0, ready = 0
         for (var i = 0; i < counter.count; i++) {
             var it = counter.itemAt(i)
-            if (it && it.isPaired) {
-                paired++
-                if (it.isOnline) {
+            if (it) {
+                total++
+                if (it.isPaired && it.isOnline) {
                     ready++
                 }
             }
         }
-        pairedCount = paired
+        totalCount = total
         readyCount = ready
     }
 
@@ -466,7 +484,7 @@ FocusScope {
         anchors.rightMargin: Bulan.layoutScreenMarginX
         anchors.verticalCenter: wordmark.verticalCenter
         spacing: Bulan.spaceXs
-        visible: root.pairedCount > 0
+        visible: root.totalCount > 0
 
         Rectangle {
             anchors.verticalCenter: parent.verticalCenter
@@ -478,7 +496,7 @@ FocusScope {
 
         Text {
             anchors.verticalCenter: parent.verticalCenter
-            text: qsTr("%1 of %2 ready").arg(root.readyCount).arg(root.pairedCount)
+            text: qsTr("%1 of %2 ready").arg(root.readyCount).arg(root.totalCount)
             color: Bulan.textSecondary
             font.family: Bulan.familyUi
             font.pixelSize: Bulan.sizeLabel
