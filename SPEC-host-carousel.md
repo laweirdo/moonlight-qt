@@ -195,7 +195,7 @@ sequencing question is `ROADMAP.md`'s.
 | # | What the client said | What it means here |
 |---|---|---|
 | 1 | *"The far tile jarringly disappears instead of shifting farther or fading out."* | The wrap fix traded a tile crossing the screen for a tile vanishing. Not accepted. The far tile should **travel further out and fade**, not cut. |
-| 2 | *"Text stays static at the bottom of the screen. The text should be part of the carousel."* | The focused host's name, status and address are drawn in a fixed block anchored above the hint bar. They should move with the selection instead of sitting still while the tiles move under them. |
+| 2 | *"Text stays static at the bottom of the screen. The text should be part of the carousel."* | **Settled 28 July: the text belongs to each tile.** Every host carries its own name, status and address and they travel with its tile; the focused one is large and full-strength, the neighbours' small and dimmed. This unifies text currently drawn twice, in two places at two sizes. |
 | 3 | *"It read '1 of 1 ready' instead of '1 of 2' when Steambox was unpaired."* | **Reverses a decision recorded below.** Discovered-but-unpaired hosts were deliberately excluded from both figures. The client wants them in the denominator: the count is of machines you have, not machines you have finished setting up. |
 | 4 | *"Waking should not create a popup. It should create a 'loading' overlay, perhaps with 3 animated bouncing dots, until the host is awake or fails to wake."* | `actWake()` currently raises `HostPanel` with *"Give it a moment to come back."* and returns. It should hold a determinate-feeling waiting state and resolve on the host coming back **or failing to**, which means the screen has to notice both. |
 | 5 | *"Left arrow key turns the carousel into an infinite scroll until right arrow key is pressed. Right arrow behaves correctly."* plus *"mouse hover still focuses the hovered host"* | **Fixed** in `8c40e196`. The mouse-hover handler, not the key handler. Hover no longer moves the selection at all — see the reversed decision below. A first attempt at keeping hover and filtering the bad events, `0a305af2`, did not work. |
@@ -207,7 +207,7 @@ positions the current component does not expose. See the note below.
 
 ---
 
-## The component underneath is the wrong shape — recommendation, not yet decided
+## The component underneath is the wrong shape — DECIDED, replace it
 
 `PathView` exists to move items endlessly around a **closed path**. This carousel
 **clamps** at both ends and never wraps. Everything in defects 2, 4 and 6, and
@@ -238,7 +238,8 @@ Estimated at about a session, contained to `HostCarousel.qml` and `HostTile.qml`
 and reviewable offline: the fake-host presets and the frame-by-frame tracing
 method are both in place.
 
-**Recommended, and awaiting the client's decision.**
+**Decided by the client on 28 July 2026: replace it, before starting the host
+settings menu.** Scoped in `PROMPT-next-session.md`.
 
 ---
 

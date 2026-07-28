@@ -27,8 +27,10 @@ found on the way; two are fixed and **two are open, both on the host carousel an
 both one underlying problem.** The client reviewed the fixed carousel and did not
 accept it.
 
-**The recommendation the next session should decide on first** is in
-`SPEC-host-carousel.md`: replace `PathView` with directly positioned tiles.
+**The next session is scoped in `PROMPT-next-session.md`: replace the carousel's
+engine.** The client decided this on 28 July, ahead of the host settings menu. The
+argument is in `SPEC-host-carousel.md`: replace `PathView` with directly
+positioned tiles.
 `PathView` moves items endlessly around a closed loop; this carousel clamps and
 never wraps, and every open carousel defect is that mismatch. Two sessions have
 worked around it and the workarounds are now themselves the complaint.
@@ -254,8 +256,8 @@ reference for content and copy, not for layout.
 | **`deck_*` glyphs** | 10 files. Until they land, `deck` resolves to the Xbox set via `resolveGlyphFamily()` in `sdlgamepadkeynavigation.cpp` — deleting one line is the whole change. **Detection is confirmed working on real hardware in both Desktop Mode and Game Mode**, so those 10 files are the only thing between here and Deck glyphs. |
 | **Vignette / hint-bar band** | The client confirmed hairline-only for the hint bar. No filled surface token exists; if one is ever wanted, it is theirs to specify. |
 | **Status colour on in-between states** | Red and green now carry reachability on the host status line. *Looking for your PC…*, *Connecting…* and *Not paired yet* were left on the neutral text colour, on the reasoning that red and green are verdicts and those states have not reached one. Assistant's call, flagged to the client, not yet overturned. |
-| **Replacing the carousel's engine** | Recommended and not yet decided — see `SPEC-host-carousel.md`. Would retire `BUGS-open.md` defects 2, 4, 6 and 7 together, and makes two of the client's six review items cheap rather than awkward. About a session, two files. |
-| **The six carousel review items** | Given 28 July after looking at the fixed build. Listed in full in `SPEC-host-carousel.md`. None started. Two of them reverse or replace decisions recorded in that spec, so read it rather than the code. |
+| ~~**Replacing the carousel's engine**~~ | **Decided 28 July: do it, before the host settings menu.** See `PROMPT-next-session.md`. Would retire `BUGS-open.md` defects 2, 4, 6 and 7 together, and makes two of the client's six review items cheap rather than awkward. About a session, two files. |
+| **The six carousel review items** | Given 28 July after looking at the fixed build. Listed in full in `SPEC-host-carousel.md`. Item 5 is fixed; items 1, 2 and 3 are scoped into the next session; items 4 and 6 are not. Two of them reverse decisions recorded in that spec, so read it rather than the code. |
 | **"Forget PC" wording** | **Settled 28 July, client's call: it stays.** Removing a machine does not unpair it, and the client's reading is that the words already say so — Bulan forgets the host, the host does not forget Bulan. The asymmetry is intended. Do not reopen it as a bug. |
 | **Rebuilding on upstream vs. replacing it** | The client asked whether the whole thing should be rebuilt rather than skinned. Advice given: **against** — see the note below. Not re-opened since, but not formally closed either. |
 | **Review-mode copy** | Pressing A on a review-mode host now raises a *"Review mode"* panel. Placeholder wording, never seen by a real user, changeable on request. |
