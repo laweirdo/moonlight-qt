@@ -65,11 +65,25 @@ Item {
         border.color: tile.isCurrent ? Bulan.accentPrimary : Bulan.hairline
 
         transformOrigin: Item.Center
-        scale: tile.pathScale
-               * (tile.pressed ? Bulan.motionPressScale
-                               : (tile.isCurrent ? Bulan.motionFocusScale : 1.0))
 
-        Behavior on scale {
+        // Two scales multiplied, and only one of them is animated here.
+        //
+        // pathScale is already being interpolated by the PathView as the carousel
+        // moves. Running it through a Behavior as well animated an animation: the
+        // tile chased a value that was itself still moving, so the grow arrived
+        // after the tile had finished travelling and read as a transform applied
+        // on arrival rather than as the tile responding to the press.
+        //
+        // The interaction scale -- focus and press -- does change in one step, so
+        // that is the part that wants easing.
+        // NOT readonly: a Behavior has to write this to animate it, and marking it
+        // readonly makes the whole tile fail to load -- which takes the carousel
+        // with it and drops the app back to upstream's screen.
+        property real interactionScale:
+            tile.pressed ? Bulan.motionPressScale
+                         : (tile.isCurrent ? Bulan.motionFocusScale : 1.0)
+
+        Behavior on interactionScale {
             NumberAnimation {
                 // Press is faster and flat; focus is slower with a hint of spring.
                 duration: tile.pressed ? Bulan.motionPressMs : Bulan.motionFocusMs
@@ -77,6 +91,8 @@ Item {
                 easing.overshoot: Bulan.motionOvershoot
             }
         }
+
+        scale: tile.pathScale * interactionScale
 
         Behavior on border.color {
             ColorAnimation { duration: Bulan.motionFocusMs }

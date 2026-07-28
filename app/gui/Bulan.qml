@@ -130,7 +130,10 @@ QtObject {
     // --- Motion (creative brief §6) -------------------------------------------
     // Durations and scales are the brief's stated values. Not in Figma: variables
     // cannot express motion.
-    readonly property int  motionFocusMs:    140
+    // 140 was the brief's figure and read a touch too fast on the real panel --
+    // judged on a Steam Deck OLED, 28 July 2026. 180 is the client's call from
+    // that session, not a recalculation.
+    readonly property int  motionFocusMs:    180
     readonly property int  motionPressMs:     80
     readonly property real motionFocusScale: 1.04
     readonly property real motionPressScale: 0.97
