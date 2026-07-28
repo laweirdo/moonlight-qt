@@ -60,10 +60,15 @@ FocusScope {
             if (!root.useFakeHosts) {
                 return
             }
-            function host(n, on, paired, addr, unknown) {
+            // wakeable defaults to "offline hosts can be woken", which is the
+            // common case. Pass it explicitly for the case that is easy to
+            // forget exists: a host that is unreachable AND cannot be woken,
+            // because it never told us its hardware address. Shoebox is one.
+            function host(n, on, paired, addr, unknown, canWake) {
                 return {
                     name: n, online: on, paired: paired, statusUnknown: unknown === true,
-                    wakeable: !on, serverSupported: true,
+                    wakeable: canWake === undefined ? !on : canWake,
+                    serverSupported: true,
                     address: addr, details: "Name: " + n + "\nStatus: " + (on ? "Online" : "Offline")
                 }
             }
@@ -75,7 +80,11 @@ FocusScope {
                 return
             }
             if (fakeHosts === "offline") {
-                append(host("Living-Room", false, true, "192.168.1.31"))
+                // First, so it is the one on screen when this preset opens:
+                // unreachable AND not wakeable, which is the state that is easy
+                // to forget exists. The hint bar should withhold Wake here and
+                // offer it on the two after. Shoebox is this case permanently.
+                append(host("Living-Room", false, true, "192.168.1.31", false, false))
                 append(host("Desktop-PC", false, true, "192.168.1.24"))
                 append(host("Studio-Tower", false, true, "192.168.1.44"))
                 return
@@ -123,6 +132,11 @@ FocusScope {
     // The focused host, or null. Everything below reads through this.
     readonly property var host: pathView.currentItem
     readonly property bool hostOnline: host !== null && host.online
+
+    // Whether waking this host could actually do anything. The app can only wake
+    // a machine whose hardware address it has learned, and it learns that from
+    // the host's own reply -- Sunshine does not always give one.
+    readonly property bool hostWakeable: host !== null && host.wakeable
 
     function createModel() {
         var model = Qt.createQmlObject('import ComputerModel 1.0; ComputerModel {}', root, '')
@@ -744,11 +758,20 @@ FocusScope {
         leftHints: root.hasHosts
             ? [
                   { action: "confirm",   label: qsTr("Connect"), emphasis: true },
-                  // Wake only where waking means something. actWake() returns
-                  // immediately on a host that is already awake, so advertising
-                  // it there offered a button that did nothing -- defect 2.
+                  // Wake only where waking means something. Two ways it can
+                  // mean nothing, and both have now been seen:
+                  //
+                  //   The host is already awake. actWake() returns immediately,
+                  //   so advertising it offered a button that did nothing.
+                  //   That was defect 2 from the July hardware session.
+                  //
+                  //   The host cannot be woken at all, because it never told us
+                  //   its hardware address. Pressing Wake there only ever
+                  //   produces "it didn't tell us how to wake it", which is a
+                  //   refusal the hint bar should not have promised. Shoebox is
+                  //   this case permanently.
                   { action: "alternate", label: qsTr("Wake"),
-                    visible: !root.hostOnline },
+                    visible: !root.hostOnline && root.hostWakeable },
                   { action: "options",   label: qsTr("Add a PC") }
               ]
             : [
