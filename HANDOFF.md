@@ -3,9 +3,28 @@
 Context for whoever picks this up next, human or otherwise. Current as of
 **28 July 2026**, branch `bulan`.
 
-**Two Steam Deck sessions and one Mac session have happened. Phase A is closed
-and now owes nothing.** See "Deck verification — what has actually been checked"
-near the end for the results, and `REVIEW-CHECKLIST.md` for the full answers.
+**Two Steam Deck sessions, one Mac session and one Windows session have happened.
+Phase A is closed and now owes nothing.** See "Deck verification — what has
+actually been checked" near the end for the results, and `REVIEW-CHECKLIST.md`
+for the full answers.
+
+**The host carousel has been rebuilt and the client has accepted it.** This was
+the 28 July Windows session and it is the first time this screen has passed
+review. `PathView` is gone — the tiles are positioned directly, so there is no
+loop, no join and no direction to guess. Four commits on `feat/carousel-engine`,
+**not yet merged, awaiting the client's sign-off.** Details in
+`SPEC-host-carousel.md`; the verification is in `BUGS-open.md`.
+
+**There is now a third machine: the client's Windows PC, which is `Shoebox`.**
+It builds and runs the app, and it is a **review station, not a platform** —
+Windows is explicitly not a target and nothing about that has changed. It is good
+for "does the screen load and do the tiles move correctly" and useless for grain,
+type size or motion in the hand. `BUILDING-WINDOWS.md` has the recipe and six
+traps that each cost time.
+
+**One new defect, found by the client watching the app launch:** upstream's top
+bar is on screen for the first **567 milliseconds** of every run. Measured, not
+inferred. `BUGS-open.md` defect 8.
 
 **The three global tokens are settled**, from observation on the real panel
 rather than arithmetic: `atmosphereGrainOpacity` stays **0.03**, `sizeCaption`
@@ -22,24 +41,26 @@ paired host put genuinely to sleep was woken from the carousel with Y and was
 back a minute later. *"Asleep"* is a promise the app can keep, and the copy
 stands as written.
 
-**The three defects `BUGS-open.md` was opened for are all closed.** Four more were
-found on the way; two are fixed and **two are open, both on the host carousel and
-both one underlying problem.** The client reviewed the fixed carousel and did not
-accept it.
+**Seven defects have been found over the project's life and six are closed.** The
+only open one is the top-bar flash above. The two carousel defects were closed by
+removing the component underneath rather than working around it a third time.
 
-**The next session is scoped in `PROMPT-next-session.md`: replace the carousel's
-engine.** The client decided this on 28 July, ahead of the host settings menu. The
-argument is in `SPEC-host-carousel.md`: replace `PathView` with directly
-positioned tiles.
-`PathView` moves items endlessly around a closed loop; this carousel clamps and
-never wraps, and every open carousel defect is that mismatch. Two sessions have
-worked around it and the workarounds are now themselves the complaint.
+**One fix is done but has never been watched by a human:** mouse hover no longer
+steers the carousel (`BUGS-open.md` defect 6). It was reported as fixed once when
+it was not, so it stays open on that list until somebody rests a pointer over the
+carousel and holds left. The Windows machine can now do this in a minute.
 
-**Two of the three original entries had a wrong diagnosis on record**, and both
-wrong diagnoses cost this session time before they were caught. Read
-`BUGS-open.md` before trusting the phrase "ruled out" in any bug write-up on this
-project — the note at the top of it explains how both went wrong in the same way,
-and it is the same way twice.
+**Two of the original bug entries had a wrong diagnosis on record**, and both cost
+a session time before they were caught. Read `BUGS-open.md` before trusting the
+phrase "ruled out" in any write-up on this project — both went wrong the same
+way, and it is the same way twice: **a conclusion drawn from a measurement that
+could not see the thing it was being used to rule out.**
+
+That pattern struck again in the Windows session and was caught this time. A
+frame-by-frame trace came back completely empty and read as proof the tiles never
+moved; they had, and the log was going to a stream that was not being captured.
+The rule that keeps paying for itself: **prove your logging appears before drawing
+any inference from its absence.**
 
 Bulan is a UI/UX-focused fork of moonlight-qt targeting the Steam Deck. The client
 is a creative director who does not read code; explanations belong in plain English,
@@ -58,6 +79,7 @@ and design decisions are theirs to make, not yours to assume.
 | `SPEC-host-carousel.md` | The host screen as built: navigation table, components, decisions, and what is knowingly unfinished. |
 | `BUILDING-MAC.md` | How the design machine builds and launches the project. |
 | `BUILDING-DECK.md` | How the Steam Deck builds, installs and runs it. Read before any Deck session — the recipe hardcodes a source path and will silently build the wrong branch. |
+| `BUILDING-WINDOWS.md` | How the client's PC builds and runs it as a **review station**. Windows is not a target; this is somewhere to look at a screen without the Mac or the Deck. Carries six traps, including one that silently corrupts source files. |
 | `UI-AUDIT.md` | Upstream's interface as it was *before* this work. Historical baseline, not a current description — it says so at the top. |
 
 Design source material lives in `design/`:
@@ -157,6 +179,17 @@ These are not suggestions. They have been restated across several sessions.
 | `1ba04c01` | The Mac session write-up, and two corrected diagnoses |
 | `402b37d4` | Wake no longer offered on hosts that cannot be woken |
 
+### On `feat/carousel-engine` — built and accepted, **not yet merged**
+
+| Commit | What |
+|---|---|
+| `1d813d2e` | The carousel's engine: `PathView` dropped, tiles positioned directly |
+| `f0635789` | The host's name, status and address belong to its tile and travel with it |
+| `ee801af1` | `hostTileLabelGap` — the clear space between a circle and its name |
+| `58de72f1` | The ready count counts machines you have, not machines you have paired |
+
+Merge on the client's sign-off, then delete the branch locally and on the fork.
+
 ### The component inventory
 
 ```
@@ -224,20 +257,24 @@ Phase B, and calls it a functional loss against upstream.
 **`ROADMAP.md` is now the authority on sequencing.** It supersedes the informal
 candidate list that used to live here. The short version:
 
-Phase A (stabilise) is done apart from what only the client can do —
-**Deck checks 4–8, Game Mode verification, the wake question, and
-`REVIEW-CHECKLIST.md`.** Phase A explicitly gates construction, because
-`sizeCaption`, `atmosphereGrainOpacity` and `motionOvershoot` are global: if
-`sizeCaption` fails at arm's length it is a token change touching every screen
-built and unbuilt. **Do not start Phase B screens while those are unsettled.**
+Phase A is closed and owes nothing. The three global tokens are settled from
+observation on the real panel, Game Mode is verified, and wake works.
 
-Phase B closes the core loop: host settings menu, the Connecting state, the game
-grid, game detail, and wiring up the 220ms screen transition that
-`Bulan.motionTransitionMs` already defines and nothing uses.
+**Phase B is under way and the carousel rebuild that preceded it is done.** What
+remains, in order:
 
-`REVIEW-CHECKLIST.md` is what the remaining Phase A work looks like in practice.
-It is written to be worked top to bottom on the hardware, and its last section is
-the list of answers that need to come back.
+1. **`hostTileLabelGap` 56 → 46.** Thirty seconds, and the only outstanding
+   change to a screen the client has otherwise accepted.
+2. **Host settings menu (SELECT).** The next real task, and the client has
+   confirmed that order. It absorbs the rename / delete / test-network
+   regression, which is a functional loss against upstream today.
+3. **The top-bar flash** (`BUGS-open.md` defect 8). Worth doing before the game
+   grid is rebuilt, because the game grid is one of the screens that would have
+   to claim its own toolbar.
+4. The Connecting state, the game grid, game detail, and the 220ms screen
+   transition that `Bulan.motionTransitionMs` defines and nothing uses.
+
+The next session is scoped in `PROMPT-next-session.md`.
 
 **Phase C is no longer blocked.** The client decided the onboarding frames do not
 use the reflected mark — they use `app/res/bulan_logo_horiz.svg`, the wordmark
@@ -256,8 +293,10 @@ reference for content and copy, not for layout.
 | **`deck_*` glyphs** | 10 files. Until they land, `deck` resolves to the Xbox set via `resolveGlyphFamily()` in `sdlgamepadkeynavigation.cpp` — deleting one line is the whole change. **Detection is confirmed working on real hardware in both Desktop Mode and Game Mode**, so those 10 files are the only thing between here and Deck glyphs. |
 | **Vignette / hint-bar band** | The client confirmed hairline-only for the hint bar. No filled surface token exists; if one is ever wanted, it is theirs to specify. |
 | **Status colour on in-between states** | Red and green now carry reachability on the host status line. *Looking for your PC…*, *Connecting…* and *Not paired yet* were left on the neutral text colour, on the reasoning that red and green are verdicts and those states have not reached one. Assistant's call, flagged to the client, not yet overturned. |
-| ~~**Replacing the carousel's engine**~~ | **Decided 28 July: do it, before the host settings menu.** See `PROMPT-next-session.md`. Would retire `BUGS-open.md` defects 2, 4, 6 and 7 together, and makes two of the client's six review items cheap rather than awkward. About a session, two files. |
-| **The six carousel review items** | Given 28 July after looking at the fixed build. Listed in full in `SPEC-host-carousel.md`. Item 5 is fixed; items 1, 2 and 3 are scoped into the next session; items 4 and 6 are not. Two of them reverse decisions recorded in that spec, so read it rather than the code. |
+| ~~**Replacing the carousel's engine**~~ | **Done 28 July.** Retired `BUGS-open.md` defects 2, 4 and 7 and closed four of the six review items. |
+| **`hostTileLabelGap` should drop 56 → 46** | **Client's call, 28 July, and NOT yet applied.** The gap between a host's circle and its name was opened up by 40px this session and the client then judged it 10px too much. One number in `app/gui/Bulan.qml`. Do this first next session — it is thirty seconds and it is the only outstanding change to a screen the client has otherwise accepted. |
+| **The six carousel review items** | Listed in full in `SPEC-host-carousel.md`. **Items 1, 2, 3 and 6 are done. Item 5 is fixed but unwatched. Item 4 — the wake overlay — is untouched** and deserves its own session, because it has to resolve on the host coming back *or failing to*. |
+| **Three calls made while building the tile text** | All reversible, all the client's to overturn: the display face is used for every host name rather than only the focused one; the status line is two texts cross-faded rather than one that swaps; the address is the focused host's alone. Reasoning in `SPEC-host-carousel.md`. |
 | **"Forget PC" wording** | **Settled 28 July, client's call: it stays.** Removing a machine does not unpair it, and the client's reading is that the words already say so — Bulan forgets the host, the host does not forget Bulan. The asymmetry is intended. Do not reopen it as a bug. |
 | **Rebuilding on upstream vs. replacing it** | The client asked whether the whole thing should be rebuilt rather than skinned. Advice given: **against** — see the note below. Not re-opened since, but not formally closed either. |
 | **Review-mode copy** | Pressing A on a review-mode host now raises a *"Review mode"* panel. Placeholder wording, never seen by a real user, changeable on request. |
@@ -267,6 +306,13 @@ stays 0.03), caption size (`sizeCaption` stays 16), overshoot
 (`motionOvershoot` stays 0.7), the hint-bar reflow (accepted as built),
 **the wake question — wake works, so the "Asleep" copy stands**, and Wake being
 withheld on hosts that cannot be woken.
+
+**Also settled in the Windows session:** the carousel's new travel easing is
+**good enough for v1** — the client watched it and said so, and it is a faithful
+copy of what `PathView` used to do rather than a considered motion design. And
+**the empty band at the bottom of the screen is accepted**: moving the text onto
+the tiles vacated the lower third, the composition sits high, and the space is
+deliberate.
 
 ---
 
@@ -510,7 +556,13 @@ it to `<path>` after checking four files; three of the thirty used rects.
 by eye:** 30 files, 110 shape elements, every one carrying the token colour or
 declaring `fill:none`.
 
-### PathView spaces items `1/count` below `pathItemCount`
+### PathView spaces items `1/count` below `pathItemCount` — HISTORICAL
+
+**The carousel no longer uses `PathView`, so none of this applies to the code as
+it stands.** Kept because it is true of Qt, because it is why the rebuild
+happened, and because the next stock view this project reaches for will raise the
+same question. Skip it unless you are considering `PathView` for something.
+
 
 And `1/pathItemCount` above it. So a neighbour sits at path fraction 0.0 with two
 hosts but 1/6 with three — one fixed geometry puts it in two different places, and
@@ -548,6 +600,29 @@ as they should. Verified by frame-by-frame trace at five hosts: completely clean
   right for something that wraps and wrong for this, which clamps. Left to itself
   it sent every tile the long way round on one transition at three hosts.
   `moveBy()` in `HostCarousel.qml` now states the direction instead.
+
+### A stock view that has to be argued with is the wrong view
+
+**The carousel's rebuild, in one sentence.** `PathView` moves items endlessly
+around a closed loop; the design clamps and never wraps; three defects and two
+review items were all that one mismatch.
+
+The lesson is not "avoid `PathView`". It is about **when to stop fixing**. Two
+workarounds were written. The first was wrong and was replaced. The second was
+*correct* — it genuinely stopped the tile crossing the screen — and the client
+rejected it on sight anyway, because it traded a visible wrap for a visible
+disappearance.
+
+**When a fix can only trade one artefact for another, the component is the
+problem.** That is the signal, and it arrives one session before anyone wants to
+act on it. Replacing the engine took one session and four commits, closed
+everything at once, and required no new tokens and no regressions at any host
+count.
+
+What replaced it is worth knowing in one line: **each tile's position, scale,
+opacity and text weight are a pure function of how far its index sits from the
+selection, clamped to two slots either side.** The clamp is what creates
+off-screen room, which is what lets a departing tile leave rather than be cut.
 
 ### Hover-to-focus and a moving view are a feedback loop
 
@@ -623,6 +698,42 @@ unfounded — its virtual pad is `Vendor=28de Product=11ff` in
 `/proc/bus/input/devices`, i.e. it carries Valve's vendor ID too. Still unproven
 in **Game Mode**, which is where Steam Input actually sits in the path; the
 confirmed run was Desktop Mode.
+
+### An editor that guesses at encoding will quietly rewrite your copy
+
+**This happened on 28 July, reached a commit, and was caught by eye rather than
+by any tool.**
+
+PowerShell 5.1 reads a file without a byte-order mark as ANSI. A UTF-8 `§` or `…`
+comes back as two or three separate characters, and writing that out as UTF-8
+double-encodes it: `§` becomes `Â§` and `…` becomes `â€¦`. It also adds a BOM the
+repository does not use.
+
+The visible symptom is **garbage in on-screen copy** — *"Connectingâ€¦"* — and the
+reason it is dangerous is that the corrupted strings live in states that are hard
+to reach, so nobody sees them until a user does.
+
+Two rules. Edit source files with something that preserves encoding. And after
+any script has touched a file, check it:
+
+```
+([regex]::Matches($text, "Â|â€|Ã")).Count   # must be 0
+```
+
+Generalise it past PowerShell: **any tool that rewrites a whole file is a tool
+that can silently change every character in it.** The project's copy is
+brief §8 verbatim in places, and §8 is the part a user reads.
+
+### The build tells you what stream to read it on, and it is not always stdout
+
+The Windows binary is a GUI-subsystem executable and writes its log to **stderr**.
+Capture stdout alone and you get an empty file — which looks exactly like proof
+that nothing ran, and on 28 July was read that way for a moment.
+
+This is the same shape as the Deck's dropped `console.log` and the empty log that
+sent defect 1 down the wrong path for hours. Three platforms, three different
+mechanisms, one rule: **prove your logging appears before drawing any inference
+from its absence.** It is the single most reliably useful sentence in this file.
 
 ### There are two token files, and only one of them changes the app
 
@@ -782,6 +893,13 @@ launching the build you just made, and you review the wrong binary.
 
 After pulling: `git submodule update --init --recursive && python3 setup-deps.py`.
 
+On Windows — the client's PC, `Shoebox` — see `BUILDING-WINDOWS.md`. It is a
+**review station, not a platform**: good for proving a screen loads and behaves,
+useless for anything that depends on the Deck's panel. Note that it runs **Qt
+6.9.3** while the Mac and CI run 6.11.1, because the tool that installs Qt cannot
+reach 6.11 at all — that gap is the first thing to suspect if the two machines
+ever disagree about how something looks.
+
 On the Deck it is a Flatpak build instead — see `BUILDING-DECK.md`. Three traps
 worth knowing before you start, all of which cost time this session:
 
@@ -808,7 +926,7 @@ QT_QPA_PLATFORM=offscreen app/Moonlight.app/Contents/MacOS/Moonlight
 |---|---|
 | `MOONLIGHT_SCREENSHOT=<path>` | Pins the window to 1280×800, grabs it, exits. Also writes `<path>-toolbar.png`. |
 | `MOONLIGHT_INITIAL_VIEW=qrc:/gui/X.qml` | Boots straight to a screen. `GlyphProof.qml` and `TokenProof.qml` are the review sheets. |
-| `MOONLIGHT_FAKE_HOSTS=none\|one\|offline\|mixed\|many` | Swaps a fixed host list into the carousel, so its states can be reviewed without pairing or unpairing real machines. `mixed` is three hosts, `many` is five — the count matters, see the PathView note above. |
+| `MOONLIGHT_FAKE_HOSTS=none\|one\|two\|offline\|mixed\|many` | Swaps a fixed host list into the carousel, so its states can be reviewed without pairing or unpairing real machines. `two` is the client's real host count **and the only preset with an unpaired host in it** — that state is why the ready count was wrong, and it could not be reviewed at all until the preset existed. `mixed` is three, `many` is five. |
 
 All three are inert unless set. Note the grab captures `stackView` only — 1280×712,
 without the toolbar — because the window root has no QML engine.

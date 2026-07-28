@@ -92,22 +92,22 @@ Three defects, all in `BUGS-open.md`, none needing a Deck to reproduce. **All th
 
 **Order confirmed by the client on 28 July 2026: the host settings menu is first.**
 
-**One thing comes ahead of it, decided by the client on 28 July 2026: replacing
-the host carousel's underlying component.** The argument is in
-`SPEC-host-carousel.md`. In short, `PathView` moves items endlessly around a
-closed loop while this carousel clamps and never wraps, and every open carousel
-defect plus two of the client's six review items are that one mismatch. Two
-sessions have worked around it; the workarounds are now themselves what the client
-is objecting to. About a session, contained to two files, reviewable offline.
+~~**One thing comes ahead of it: replacing the host carousel's underlying
+component.**~~ **DONE, 28 July 2026**, on `feat/carousel-engine`. Four commits,
+verified on a real build frame by frame. `PathView` is gone; the tiles are
+positioned directly. It retired `BUGS-open.md` defects 2, 4 and 7 together and
+closed four of the client's six carousel review items. The estimate — about a
+session, two files — held. The argument that justified it is kept in
+`SPEC-host-carousel.md`, because the next stock view this project reaches for
+will raise the same question.
 
-It is listed here rather than as Phase A polish because it is no longer a defect
-fix — it is a rebuild of the screen every session starts on, and it should be
-sequenced deliberately rather than slipped in. Scoped in
-`PROMPT-next-session.md`, together with two of the client's review items that
-become cheap once it is done: the text becoming part of the carousel, and the
-ready count including unpaired hosts.
+**Also done in that session**, both client calls: the text now belongs to each
+tile and travels with it, and the ready count counts machines you have rather
+than machines you have finished setting up.
 
-- **Host settings menu** (SELECT) — absorbs the rename / delete / test-network regression, which is currently a functional loss against upstream
+**The remaining work is now the list below, in order.**
+
+- **Host settings menu** (SELECT) — absorbs the rename / delete / test-network regression, which is currently a functional loss against upstream. **This is next.**
 - **Connecting state** — designed properly, replacing the placeholder
 - **Game grid** (`AppView.qml`) — Recent and Library tabs, per the existing frames
 - **Game detail / launch** — per the flow diagram
@@ -115,7 +115,7 @@ ready count including unpaired hosts.
 
 **Exit:** launch → pick host → pick game → stream → return, with no upstream screen visible.
 
-**Six review items on the host carousel**, given by the client on 28 July after looking at the fixed build, are recorded in full in `SPEC-host-carousel.md`. Two belong to phases below rather than to the carousel itself: the **wake state should be a waiting overlay rather than a popup**, which is Phase D's *Waking PC* screen arriving early, and the **"N of M ready" count should include unpaired hosts**, which reverses a decision that spec recorded. Neither is started.
+**Six review items on the host carousel**, given by the client on 28 July, are recorded in full in `SPEC-host-carousel.md`. **Four are done, one is fixed but has never been watched by a human, and one is untouched.** The untouched one is the **wake state, which should be a waiting overlay rather than a popup** — that is Phase D's *Waking PC* screen arriving early and deserves its own session, because holding a waiting state until the host comes back *or fails to* means the screen has to notice both outcomes. The unwatched one is mouse hover no longer steering the carousel; it needs one pass with a mouse, which the Windows review station can now do.
 
 **The wording of "Forget PC" is settled — client's call, 28 July 2026.** It stays *"Forget PC"*. Removing a machine does not unpair it: the host goes on recognising this client, so it reappears as already paired if it is added back. The client's reasoning is that this is the correct reading of the words — **Bulan forgets the host; the host does not forget Bulan** — and the wording says exactly that rather than overclaiming. Recorded so the question is not reopened as a bug: the asymmetry is intended, not an oversight.
 
@@ -191,10 +191,12 @@ HDR · Windows and other platforms · the mascot · a brand rules sheet while no
 
 ~~**The carousel wraps visibly at three hosts.**~~ **Retired 28 July 2026 — fixed in `9c721e13`,** and it was two faults rather than one. Note that the entry ruling out "wrong direction" was itself wrong; see `BUGS-open.md`.
 
-**The host carousel has three open defects and they are one problem.** `BUGS-open.md` defects 4, 6 and 7. The carousel is built on a component that loops endlessly; the design clamps and never wraps. Two sessions have worked around that rather than removing it, and on 28 July the client rejected the second workaround on sight. **Two hosts is the client's real configuration**, and it is the count where the mismatch is most visible — including at rest, not only in motion. The recommendation is to position the tiles directly instead; see `SPEC-host-carousel.md`. Not yet decided.
+~~**The host carousel has three open defects and they are one problem.**~~ **Retired 28 July 2026 — the engine was replaced and all three are closed.** `BUGS-open.md` defects 4 and 7 went with the component; defect 6 was the mouse handler and survived the rebuild untouched, exactly as predicted, and is fixed but unwatched.
 
-**Being acted on:** the engine replacement above. The rest of this note is kept because the reasoning is what justified it.
+**The screen every session starts on had been reviewed twice and failed twice.** Not because either fix was wrong — the direction fault was real and is gone — but because the component underneath could not express what the design asked for, and each fix had to trade one artefact for another. **Acting on that signal rather than attempting a third workaround was correct**, and the third review passed.
 
-**The screen every session starts on has now been reviewed twice and failed twice.** Not because either fix was wrong — the direction fault was real and is gone — but because the component underneath cannot express what the design asks for, and each fix has had to trade one artefact for another. That is the signal worth acting on, rather than attempting a third workaround.
+**The lesson worth carrying is about the second fix, not the first.** The first was wrong and was replaced. The second was *correct* and was rejected anyway, because trading a visible wrap for a visible disappearance is not progress. When a fix can only trade one artefact for another, the component is the problem — and that becomes obvious one session before anyone wants to hear it.
+
+**New standing risk: upstream's top bar is on screen for the first 567ms of every launch.** `BUGS-open.md` defect 8, found by the client and measured rather than inferred. The bar defaults to visible and nothing hides it until a screen is pushed and activated, which cannot happen until early initialisation finishes. The fix inverts a default that every screen in the app currently depends on, including upstream screens this fork has not rebuilt — so it is small but wide, and it is worth doing **before** Phase B rebuilds the game grid, since the game grid is one of the screens that would have to claim its own toolbar.
 
 **A fourth pattern in the same family as the three retired above.** All three retired risks were *perceptual* estimates that ran pessimistic. This one is different and worth separating: **two of the three defect write-ups on this project had a wrong diagnosis on record**, each drawn from a measurement that could not see the thing it was being used to rule out. Both cost time this session. The estimates that have proven unreliable here are not the ones about how things will look — they are the ones about what has been eliminated.

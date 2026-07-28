@@ -1,211 +1,179 @@
-# Next session — rebuild the carousel
+# Next session — the host settings menu
 
-Written 28 July 2026, at the end of the Mac session. Branch `bulan`, which is
-pushed and matches the fork.
+Written 28 July 2026, at the end of the Windows session that rebuilt the carousel.
 
 **Read `HANDOFF.md` first**, and in it *Hard-won knowledge* before anything else.
-Then `BUGS-open.md` — two open defects, both this screen — and
-`SPEC-host-carousel.md`, which carries the argument for what you are about to do
-and the six review items driving it.
+Then `BUGS-open.md` — one open defect and one fix nobody has watched — and
+`SPEC-host-carousel.md`, which describes the screen you are about to add to.
 
-**This does not need a Steam Deck.** Everything below reproduces and is reviewable
-on the Mac with the fake host presets.
+**Branch state:** `feat/carousel-engine` carries four commits and is **not
+merged**. Merge it on the client's sign-off, delete it locally and on the fork,
+and cut a new branch from `bulan` before starting anything below.
+
+**This does not need a Steam Deck.** Everything here is reviewable on the Windows
+machine or the Mac with the fake host presets.
 
 ---
 
 ## Why this session exists
 
-The host carousel has been reviewed twice by the client and failed twice. Not
-because either fix was wrong — the wrong-direction fault was real and is gone —
-but because the component underneath cannot express what the design asks for, so
-each fix has traded one artefact for another. The client rejected the second on
-sight: *"the far tile jarringly disappears instead of shifting farther or fading
-out."*
+`ROADMAP.md` Phase B closes the core loop, and the client confirmed the order:
+the host settings menu is first. It is also the only **functional loss against
+upstream** this fork currently carries — rename, delete and test-network exist in
+`PcView.qml`, which is no longer the initial view, so today they are unreachable.
 
-`PathView` moves items endlessly around a **closed loop**. This carousel **clamps**
-at both ends and never wraps. Both open defects are that one mismatch.
-
-**The client has decided: replace the engine, before starting the host settings
-menu.** That decision is made. Do not re-open it.
+The carousel is done and accepted. Do not reopen it.
 
 ---
 
-## Objective 1 — replace the carousel's engine
+## Objective 0 — one number, first, before anything else
 
-Drop `PathView`. Position the tiles directly — a `Repeater` with an animated
-position per tile — so the screen owns every coordinate instead of asking a
-looping component for them.
+`Bulan.hostTileLabelGap`: **56 → 46.**
 
-`app/gui/HostCarousel.qml` and `app/gui/HostTile.qml`. Nothing else should need
-to change.
-
-### What it must still do
-
-Reproduce the current look exactly. All of these are already tokens in
-`app/gui/Bulan.qml` and none of them changes:
-
-| | |
-|---|---|
-| `hostTileSize` | 324 |
-| `hostTileSpread` | 338 — neighbour offset from centre |
-| `hostTileNeighbourDrop` | 75 — how far neighbours sit below the focused tile |
-| `hostTileNeighbourScale` | 0.64 |
-| `motionFocusMs` | 180 — travel and focus, one duration |
-| `motionOvershoot` | 0.7 — on the tile's own focus scale, not on travel |
-
-Neighbour opacity is 0.5 and the focused tile is 1.0; the focused tile draws above
-its neighbours.
-
-**Note the `pathStretch` hack disappears.** It exists only to compensate for
-`PathView` spacing items differently above and below three hosts. Owning the
-positions removes the thing it was compensating for. Do not port it.
-
-### What it must fix
-
-Each of these is verifiable, and none of them is a matter of opinion:
-
-1. **No tile is ever drawn crossing the screen.** There is no loop and no join,
-   so nothing has anywhere to cross to.
-2. **A tile leaving travels further out and fades.** This is the client's
-   objection to the current fix and the reason the engine is being replaced —
-   the old one cut the tile because it had nowhere to go. Now it does.
-3. **Two hosts sit on the correct sides at rest.** Focused on the first host, the
-   second is on the **right**. Today it can be drawn on the left.
-4. **Direction always follows the index.** A higher index slides the row left, a
-   lower one slides it right, always.
-5. **Movement clamps.** No wrap, at either end, ever.
-6. **Hover still does not move the selection.** Removed on the client's call this
-   session; do not reintroduce it while rewriting the mouse handling. Click still
-   selects and acts.
-
-### The one thing you have to decide rather than copy
-
-`PathView` was easing the travel itself. Positioning tiles by hand means choosing
-that easing explicitly rather than inheriting it. **Reproduce the current feel
-first and let the client judge it on screen** — do not redesign the motion in the
-same change as the engine, or neither of you will know which one they are
-reacting to.
-
-`motionOvershoot` belongs on the focused tile's scale, where it already is. Travel
-overshoot is a separate question and is not currently asked.
+The gap between a host's circle and its name was opened by 40px last session and
+the client then judged it 10px too much. That is the whole change. Its own commit,
+thirty seconds, and it clears the last outstanding note on a screen the client has
+otherwise signed off.
 
 ---
 
-## Objective 2 — the text becomes part of the carousel
+## Objective 1 — the host settings menu
 
-**Client's call, 28 July: the text belongs to each tile.**
+**SELECT currently opens a panel showing what upstream's "View Details" showed.**
+It should open a menu. The client scoped its contents in July:
 
-Every host carries its own name, status and address, and they travel sideways with
-its tile. The focused host's is large and full-strength; the neighbours' is small
-and dimmed, as their labels already are. Moving the carousel moves everything as
-one object.
+| Item | What it does | Where the behaviour already exists |
+|---|---|---|
+| Host details | What SELECT shows today | `actHostSettings()` in `HostCarousel.qml` |
+| Wake PC | What Y does today | `actWake()` |
+| Forget PC | Removes the machine from this client's list | `PcView.qml` |
 
-This unifies something currently drawn twice: `HostTile` draws a small name and
-status under unfocused tiles, and `HostCarousel` draws the focused host's name,
-status and address separately, larger, lower down. After this there is one text,
-which grows and brightens as its tile becomes focused.
+**Rename and test-network also live in `PcView.qml` and have no home.** Ask the
+client whether they belong in this menu before adding them — the July scoping
+named three items, and adding two more silently is exactly the kind of decision
+that is theirs.
 
-**Do this in the same session but as a separate commit.** It is only cheap
-*because* the engine work gives you per-tile positions, but it is a distinct
-change and should be revertible on its own.
+### What is settled and must not be reopened
 
-Watch the type sizes: `sizeTitleLg` (40) for the focused name and `sizeBodyLg`
-(26) for the status are what the detail block uses today; the neighbour labels use
-`sizeBodyLg` and `sizeBody`. Interpolating between them as a tile focuses is new
-behaviour and worth showing the client.
+- **"Forget PC" is the wording.** Client's call, 28 July. Removing a machine does
+  not unpair it: the host goes on recognising this client, so it reappears as
+  already paired if it is added back. **Bulan forgets the host; the host does not
+  forget Bulan.** The asymmetry is intended. Do not raise it as a bug.
+- **Custom components only.** There is no menu component in `app/gui/` yet, so
+  this session builds one. `HostPanel.qml` is the closest existing thing — a
+  modal overlay with scrim, surface and title — and is the right thing to model
+  it on or extend. No Qt Quick Controls.
+
+### What you have to decide with the client, not for them
+
+Everything about how it looks and behaves is theirs. At minimum, ask about:
+
+- **Where it appears** — over the carousel as an overlay, or a screen you push?
+- **What it looks like when the focused host is offline** — Wake is meaningful,
+  Forget is meaningful, details are thin.
+- **Whether Forget asks for confirmation.** It is destructive and it is one
+  button press from the screen every session starts on.
+
+Come with a recommendation for each rather than an open question.
+
+### Things that will bite
+
+- **`MOONLIGHT_FAKE_HOSTS` cannot be used past the carousel** — and everything
+  this menu does acts on a real machine **by its position in the real host
+  list**, which is exactly the shape that caused the fake-host crash. A fake
+  host's position means nothing there. `actConfirm()` already has one guard
+  covering every branch below it; **this menu needs the same, and it needs to say
+  so on screen rather than returning silently.** A silent button is
+  indistinguishable from the dead-A defect this project chased three times.
+- **A dying screen must not write global navigation state.** The settings page's
+  combo box caused defect 1 this way. If this menu is a popup, it declares that
+  it is open and nothing more.
+- **A single bad property assignment takes out the whole screen**, silently, and
+  drops the app onto upstream's interface. Suspect it whenever a screen
+  "reverts". Run `qmllint` before building — it catches this class in seconds.
 
 ---
 
-## Objective 3 — the ready count includes unpaired hosts
+## Objective 2 — the top bar on launch
 
-Small, independent of everything above, and its own commit.
+`BUGS-open.md` defect 8, found by the client and **measured at 567ms**. Upstream's
+top bar is on screen for the first half-second of every run.
 
-*"N of M ready"* counts paired hosts only, so with Steambox unpaired and Shoebox
-online it read **"1 of 1 ready"** while two machines were plainly on screen. The
-count contradicted the carousel beside it.
+The bar defaults to visible and nothing hides it until a screen is pushed and
+activated, which cannot happen until early initialisation finishes.
 
-**The client wants "1 of 2":** the denominator is machines you have, not machines
-you have finished setting up. This reverses a decision recorded in
-`SPEC-host-carousel.md`, which has been struck through there.
+**Start it hidden and let the screens that want it ask.** The cost is that this
+inverts a default the whole app depends on: four files turn the bar off, four turn
+it on, and the screens that never mention it — `AppView`, `SettingsView`,
+`PcView` — are relying on it being on. Each would have to claim it, and a missed
+one loses its toolbar silently.
 
-`recount()` in `HostCarousel.qml`.
+**Do this before the game grid is rebuilt**, because the game grid is one of the
+screens that would have to claim it, and doing it after means doing it twice.
+
+Its own commit, and worth a careful pass over every screen rather than a quick
+one.
 
 ---
 
 ## How to know it worked
 
-**Do not infer any of this from the outside.** Three sessions have been lost that
-way and the tools to avoid it now exist.
+**Do not infer any of this from the outside.** Four sessions have now been lost
+that way and the tools to avoid it exist.
 
 ### The build on screen is the one you made
 
-The log's second line says so outright:
-
-```
-Build: bulan @ deck-test-1-67-gaf4dde45 | binary built "2026-07-28T17:38:06"
-```
-
-Commit and build time, both. `-dirty` means uncommitted changes.
-
-### Nothing is drawn mid-crossing
-
-The method that found the original fault, and it is the acceptance test for
-objective 1. Add temporarily to the tile:
-
-```qml
-onXChanged: console.warn("TRACE i=" + index + " cur=" + <current>
-                         + " x=" + Math.round(x)
-                         + " op=" + opacity.toFixed(2) + " vis=" + visible)
-```
-
-plus a timer that walks the selection back and forth, then check that **no tile
-whose opacity is above zero ever jumps more than half the screen width between
-consecutive frames.** Remove both before committing.
-
-`console.log` and `console.warn` both reach the log on the Mac. On the Deck only
-`console.warn` does. Use `console.warn`.
+On the Mac and the Deck the log's second line names the commit and the build time.
+**On Windows the commit reads `unknown`** — the stamp is generated by a shell
+script inside a `unix { }` block. The timestamp still works; check it against the
+time you built.
 
 ### Every host count still loads
 
-```bash
-for SET in none one offline mixed many; do
-  MOONLIGHT_FAKE_HOSTS=$SET MOONLIGHT_SCREENSHOT=/tmp/shot-$SET.png \
-  QT_QPA_PLATFORM=offscreen app/Moonlight.app/Contents/MacOS/Moonlight
-done
-```
-
-Then read the log for QML errors. **A broken screen does not look broken — it
+Run all six presets — `none`, `one`, `two`, `offline`, `mixed`, `many` — and read
+the log for QML errors each time. **A broken screen does not look broken; it
 silently falls back to upstream's grid**, which reads as "my build didn't take".
 
-**`mixed` is three hosts and `many` is five.** The count changes the behaviour, so
-pick deliberately. **There is no two-host preset and defect 4 needs one — add
-it**, because two hosts is the client's real configuration and the case most
-likely to be missed.
+`two` is the client's real configuration and the only preset with an unpaired
+host in it.
+
+### The menu acts on the right machine
+
+The failure mode to design the test around is **not** a crash. With real hosts
+paired, a menu that addresses machines by list position will act on the *wrong
+machine* and look like it worked. That is worse than crashing and it is what
+happened last time. Prove the guard covers every branch, not just the one you
+noticed.
 
 ---
 
-## Carried forward, both needing the client
+## Carried forward, needing the client
 
-- **The hover fix is unverified.** It was reported as fixed once when it was not.
-  Hover events are no longer generated at all now, which is a stronger claim than
-  last time, but nobody has watched it. One pass with a mouse over the carousel,
-  holding left.
-- **Judgement on the new motion**, once objective 1 is on screen. The client is
-  the judge of when it reads right and expects two or three build-and-look cycles.
+- **The hover fix is unverified.** Reported as fixed once when it was not. Hover
+  events are no longer generated at all now, which is a stronger claim, but nobody
+  has watched it. One pass with a mouse resting over the carousel while holding
+  left — the Windows machine can do this in a minute.
+- **The wake overlay.** Review item 4: not a popup, a waiting state, *"perhaps
+  with 3 animated bouncing dots"*, held until the host is awake **or fails to
+  wake**. That last part makes it more than a visual change — the screen has to
+  notice both outcomes, and today `actWake()` raises a panel and never revisits
+  it. Phase D's *Waking PC* arriving early; it deserves its own session.
+- **`deck_*` glyphs.** Ten files. Until they land, `deck` resolves to the Xbox
+  set. Detection is confirmed working on hardware in both Desktop and Game Mode,
+  so those ten files are the only thing in the way.
+- **The Moonlight credit in About.** Brief §11, and a licence obligation rather
+  than a nicety. Still not done. `ROADMAP.md` sizes it at a line of text.
 
 ---
 
 ## Not this session
 
-- **The host settings menu.** It is next, and the client has confirmed that order.
-  Start it only if the carousel lands early, and ask first. Note that *"Forget
-  PC"* is settled as the wording — removing a machine is Bulan forgetting the
-  host, not the host forgetting Bulan, and the asymmetry is intended.
-- **The wake overlay.** Review item 4: not a popup, a waiting state, *"perhaps
-  with 3 animated bouncing dots"*, held until the host is awake **or fails to
-  wake**. That last part makes it more than a visual change — the screen has to
-  notice both outcomes, and today `actWake()` raises a panel and never revisits
-  it. It is Phase D's *Waking PC* arriving early and deserves its own session.
+- **The Connecting state, the game grid, game detail, screen transitions.** They
+  follow, in that order.
+- **Anything on the carousel.** It has been accepted. The travel easing is a
+  faithful copy of what `PathView` used to do rather than a considered design, and
+  the client has signed it off as good enough for v1 — revisit it deliberately or
+  not at all.
 
 ---
 
@@ -215,11 +183,14 @@ likely to be missed.
   sign-off, then delete it locally and on the fork.
 - **Never commit to `master`.** It is a clean mirror of upstream and its only job
   is to fast-forward. `origin` is the client's fork; `upstream` is never pushed to.
-- One commit per task, so each stays independently revertible.
+- One commit per task, so each stays independently revertible. **Stop and show the
+  client before moving on.**
 - Custom components only. No Qt Quick Controls.
 - Controller-first. If something only works with a mouse it is wrong.
+- Minimum focus target 64×64 at 1280×800.
 - Every value comes from the `Bulan` singleton. If a token is missing, **say so
-  and let the client add it** — never inline a value.
+  and let the client add it** — propose it with a value sourced from the brief and
+  say plainly that you have done so.
 - The client is a creative director who does not read code. Explain what the app
   does, not what the code does, and name what things cost.
 
