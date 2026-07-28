@@ -13,7 +13,7 @@ both traceable to the same component choice. None of them needs a Deck.
 | 3 | Pressing A on a fake host crashes the app | **Fixed** in `d3c57f95`. Different mechanism than recorded |
 | 4 | The carousel still wraps once per move at **two** hosts | **Open.** Pre-existing, halved by defect 2's fix, not cured |
 | 5 | The hint bar offers Wake on hosts that cannot be woken | **Fixed** in `402b37d4`, on the client's call |
-| 6 | Left arrow runs the carousel away; right arrow is fine | **Fixed** in `0a305af2`. Cause confirmed by the client. Wants one pass with a mouse |
+| 6 | Left arrow runs the carousel away; right arrow is fine | **Fixed** in `8c40e196` — hover no longer steers. The first fix, `0a305af2`, did not work |
 | 7 | The far tile vanishes instead of leaving | **Open.** Defect 2's fix, rejected on sight by the client |
 
 **Two entries in the previous version of this file sent this session down the
@@ -61,7 +61,8 @@ simply continue outward and fade, which is what was asked for.
 # 6. Left arrow runs the carousel away — fixed
 
 **Found** 28 July 2026 by the client. **Cause confirmed by the client the same
-day; fixed in `0a305af2`. Wants one pass with a mouse to close.**
+day. Fixed in `8c40e196`, at the second attempt** — the first, `0a305af2`, was
+reported as a fix and was not one. Wants one pass with a mouse to close.
 
 **Not the same problem as defects 2, 4 and 7.** This one is the mouse handler,
 not the carousel component, and it would have survived replacing that component
@@ -100,25 +101,41 @@ right arrow key is pressed".
 call it makes changed. It was reported now because the pointer happened to be
 resting over the carousel.
 
-## The fix
+## The failed fix, and why it failed
 
-**Hover-to-focus stays** — the client confirmed hovering a host should focus it.
-What changes is which hover events count.
+**`0a305af2` kept hover-to-focus and tried to filter the false events out**, on
+the theory that `entered` cannot distinguish the pointer arriving at a tile from
+a tile arriving at the pointer, but `positionChanged` fires only for genuine
+pointer movement.
 
-`entered` fires whether the pointer arrives at a tile or a tile arrives at the
-pointer, and cannot distinguish them. `positionChanged` fires only when the
-pointer itself moves. So a tile reporting that it has been entered is acted on
-only while the pointer is already driving the selection, and any real pointer
-movement takes control back immediately. Pressing a direction hands control to
-the buttons, so the tiles that slide past the cursor because of that press are
-ignored rather than obeyed.
+**That theory is wrong.** The position `positionChanged` reports is relative to
+the tile, so a tile sliding under a still cursor changes it exactly as it changes
+`entered`. The filter admitted everything it was meant to exclude.
 
-Picking the mouse back up therefore works on the first movement rather than
-needing the pointer to cross a tile boundary.
+The mistake is worth naming precisely, because it is the same one this project
+has now made three times in a week: **the evidence that `entered` fires on item
+movement is also evidence that the item's other hover signals do**, and that was
+in hand before the replacement was chosen. A conclusion was drawn from a property
+that had already been demonstrated not to hold.
 
-**Worth generalising:** any hover-to-focus on a view whose items move has this
-loop in it. It is not specific to this carousel and it will not be removed by
-replacing the carousel's component.
+**There is no local signal that distinguishes the two cases.** Telling them apart
+requires tracking the pointer in screen coordinates, above the level of any
+individual item. That is real machinery.
+
+## The fix that works
+
+**Hover no longer steers at all** — client's call, reversing the original design.
+Clicking a host still selects it and acts on it.
+
+`hoverEnabled` is off rather than filtered, so the misleading events are never
+generated and there is no path from pointer position to selection left to get
+wrong. On a screen whose whole premise is a gamepad, that was the proportionate
+answer.
+
+**Worth generalising:** any hover-to-focus on a view whose items move contains
+this loop. It is not specific to this carousel, it will not be removed by
+replacing the carousel's component, and it cannot be fixed with the hover signals
+of the moving item alone.
 
 ---
 

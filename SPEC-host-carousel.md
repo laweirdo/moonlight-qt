@@ -44,8 +44,17 @@ Supporting, not part of this screen but changed for it:
 | **START** | `Key_Hangup` | Client settings. |
 | **SELECT** | `Key_Context1` | Host settings for the focused host. |
 | **B** | `Key_Escape` | Handled by `main.qml`: quit confirmation at the root, back otherwise. |
-| Mouse hover | — | Moves focus to the hovered host. |
+| Mouse hover | — | **Nothing.** Reversed by the client on 28 July 2026; it used to move focus to the hovered host. |
 | Mouse click | — | Focuses, then confirms. |
+
+**Why hover was dropped.** The rule was that hover should move focus so the
+pointer and the D-pad could never disagree about what is selected. That assumed a
+still carousel. These tiles move, and a moving view cannot tell the pointer
+arriving at a tile apart from a tile arriving at the pointer — both raise the same
+hover events at the same item, and there is no local signal that separates them.
+Acting on them turned one keypress into a selection that walked away on its own.
+`BUGS-open.md` defect 6 carries the full account, including a filtering attempt
+that was committed as a fix and was not one.
 
 Up and Down are *accepted* rather than merely ignored. Left unaccepted they bubble
 to the StackView and drag focus into toolbar chrome that this screen hides, at
@@ -189,7 +198,7 @@ sequencing question is `ROADMAP.md`'s.
 | 2 | *"Text stays static at the bottom of the screen. The text should be part of the carousel."* | The focused host's name, status and address are drawn in a fixed block anchored above the hint bar. They should move with the selection instead of sitting still while the tiles move under them. |
 | 3 | *"It read '1 of 1 ready' instead of '1 of 2' when Steambox was unpaired."* | **Reverses a decision recorded below.** Discovered-but-unpaired hosts were deliberately excluded from both figures. The client wants them in the denominator: the count is of machines you have, not machines you have finished setting up. |
 | 4 | *"Waking should not create a popup. It should create a 'loading' overlay, perhaps with 3 animated bouncing dots, until the host is awake or fails to wake."* | `actWake()` currently raises `HostPanel` with *"Give it a moment to come back."* and returns. It should hold a determinate-feeling waiting state and resolve on the host coming back **or failing to**, which means the screen has to notice both. |
-| 5 | *"Left arrow key turns the carousel into an infinite scroll until right arrow key is pressed. Right arrow behaves correctly."* | **Fixed** in `0a305af2`. The mouse-hover handler, not the key handler — tiles slide under a stationary cursor and are treated as though the user pointed at them. Hover-to-focus is unchanged; only which hover events count. |
+| 5 | *"Left arrow key turns the carousel into an infinite scroll until right arrow key is pressed. Right arrow behaves correctly."* plus *"mouse hover still focuses the hovered host"* | **Fixed** in `8c40e196`. The mouse-hover handler, not the key handler. Hover no longer moves the selection at all — see the reversed decision below. A first attempt at keeping hover and filtering the bad events, `0a305af2`, did not work. |
 | 6 | *"On 2 hosts, even on the leftmost host selected, I see the host that would've been on the right appear faded on the left."* | `BUGS-open.md` defect 4, seen at rest rather than in motion. With two hosts the non-focused tile sits exactly on the loop's join, which is one loop position drawn at two different screen positions. |
 
 **Item 5 is fixed. Four of the remaining five — 1, 2, 4 and 6 — are cheaper after

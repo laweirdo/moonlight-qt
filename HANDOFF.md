@@ -547,6 +547,28 @@ as they should. Verified by frame-by-frame trace at five hosts: completely clean
   it sent every tile the long way round on one transition at three hosts.
   `moveBy()` in `HostCarousel.qml` now states the direction instead.
 
+### Hover-to-focus and a moving view are a feedback loop
+
+Any view that moves its items **and** moves the selection on hover contains this,
+and it is not specific to the carousel — it will survive replacing the carousel's
+component.
+
+A press moves the row, a different item slides under a cursor that has not moved,
+that item reports being entered, the selection follows it, the row moves again. It
+sustains itself. Which way it runs depends on which side of centre the cursor was
+left, so it presents as *one direction is broken and the other is fine* — which
+sends the search straight at the key handler, where the fault is not.
+
+**No hover signal on the moving item can distinguish the two cases.** `entered`
+fires whether the pointer arrived at the item or the item arrived at the pointer.
+So does `positionChanged`, because the position it reports is relative to the
+item. Separating them needs the pointer tracked in **screen** coordinates, above
+any individual item.
+
+On this project the answer was to drop hover-to-focus entirely, on a screen whose
+premise is a gamepad. `hoverEnabled` is off rather than filtered, so the
+misleading events are never generated.
+
 ### A settled value cannot tell you how something got there
 
 **This is the single most expensive mistake on record for this project, and it
