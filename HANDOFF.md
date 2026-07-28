@@ -41,14 +41,10 @@ paired host put genuinely to sleep was woken from the carousel with Y and was
 back a minute later. *"Asleep"* is a promise the app can keep, and the copy
 stands as written.
 
-**Seven defects have been found over the project's life and six are closed.** The
-only open one is the top-bar flash above. The two carousel defects were closed by
-removing the component underneath rather than working around it a third time.
-
-**One fix is done but has never been watched by a human:** mouse hover no longer
-steers the carousel (`BUGS-open.md` defect 6). It was reported as fixed once when
-it was not, so it stays open on that list until somebody rests a pointer over the
-carousel and holds left. The Windows machine can now do this in a minute.
+**Eight defects have been found over the project's life and seven are closed.**
+The only open one is the top-bar flash above. The two carousel defects were closed
+by removing the component underneath rather than working around it a third time,
+and the hover fix was confirmed by the client with a mouse.
 
 **Two of the original bug entries had a wrong diagnosis on record**, and both cost
 a session time before they were caught. Read `BUGS-open.md` before trusting the
@@ -295,7 +291,7 @@ reference for content and copy, not for layout.
 | **Status colour on in-between states** | Red and green now carry reachability on the host status line. *Looking for your PC…*, *Connecting…* and *Not paired yet* were left on the neutral text colour, on the reasoning that red and green are verdicts and those states have not reached one. Assistant's call, flagged to the client, not yet overturned. |
 | ~~**Replacing the carousel's engine**~~ | **Done 28 July.** Retired `BUGS-open.md` defects 2, 4 and 7 and closed four of the six review items. |
 | **`hostTileLabelGap` should drop 56 → 46** | **Client's call, 28 July, and NOT yet applied.** The gap between a host's circle and its name was opened up by 40px this session and the client then judged it 10px too much. One number in `app/gui/Bulan.qml`. Do this first next session — it is thirty seconds and it is the only outstanding change to a screen the client has otherwise accepted. |
-| **The six carousel review items** | Listed in full in `SPEC-host-carousel.md`. **Items 1, 2, 3 and 6 are done. Item 5 is fixed but unwatched. Item 4 — the wake overlay — is untouched** and deserves its own session, because it has to resolve on the host coming back *or failing to*. |
+| **The six carousel review items** | Listed in full in `SPEC-host-carousel.md`. **Items 1, 2, 3, 5 and 6 are done. Item 4 — the wake overlay — is untouched** and deserves its own session, because it has to resolve on the host coming back *or failing to*. |
 | **Three calls made while building the tile text** | All reversible, all the client's to overturn: the display face is used for every host name rather than only the focused one; the status line is two texts cross-faded rather than one that swaps; the address is the focused host's alone. Reasoning in `SPEC-host-carousel.md`. |
 | **"Forget PC" wording** | **Settled 28 July, client's call: it stays.** Removing a machine does not unpair it, and the client's reading is that the words already say so — Bulan forgets the host, the host does not forget Bulan. The asymmetry is intended. Do not reopen it as a bug. |
 | **Rebuilding on upstream vs. replacing it** | The client asked whether the whole thing should be rebuilt rather than skinned. Advice given: **against** — see the note below. Not re-opened since, but not formally closed either. |

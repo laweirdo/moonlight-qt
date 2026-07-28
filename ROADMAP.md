@@ -115,7 +115,7 @@ than machines you have finished setting up.
 
 **Exit:** launch → pick host → pick game → stream → return, with no upstream screen visible.
 
-**Six review items on the host carousel**, given by the client on 28 July, are recorded in full in `SPEC-host-carousel.md`. **Four are done, one is fixed but has never been watched by a human, and one is untouched.** The untouched one is the **wake state, which should be a waiting overlay rather than a popup** — that is Phase D's *Waking PC* screen arriving early and deserves its own session, because holding a waiting state until the host comes back *or fails to* means the screen has to notice both outcomes. The unwatched one is mouse hover no longer steering the carousel; it needs one pass with a mouse, which the Windows review station can now do.
+**Six review items on the host carousel**, given by the client on 28 July, are recorded in full in `SPEC-host-carousel.md`. **Five are done and one is untouched.** The untouched one is the **wake state, which should be a waiting overlay rather than a popup** — that is Phase D's *Waking PC* screen arriving early and deserves its own session, because holding a waiting state until the host comes back *or fails to* means the screen has to notice both outcomes. Mouse hover no longer steering the carousel was confirmed by the client with a mouse and is closed.
 
 **The wording of "Forget PC" is settled — client's call, 28 July 2026.** It stays *"Forget PC"*. Removing a machine does not unpair it: the host goes on recognising this client, so it reappears as already paired if it is added back. The client's reasoning is that this is the correct reading of the words — **Bulan forgets the host; the host does not forget Bulan** — and the wording says exactly that rather than overclaiming. Recorded so the question is not reopened as a bug: the asymmetry is intended, not an oversight.
 
@@ -191,7 +191,7 @@ HDR · Windows and other platforms · the mascot · a brand rules sheet while no
 
 ~~**The carousel wraps visibly at three hosts.**~~ **Retired 28 July 2026 — fixed in `9c721e13`,** and it was two faults rather than one. Note that the entry ruling out "wrong direction" was itself wrong; see `BUGS-open.md`.
 
-~~**The host carousel has three open defects and they are one problem.**~~ **Retired 28 July 2026 — the engine was replaced and all three are closed.** `BUGS-open.md` defects 4 and 7 went with the component; defect 6 was the mouse handler and survived the rebuild untouched, exactly as predicted, and is fixed but unwatched.
+~~**The host carousel has three open defects and they are one problem.**~~ **Retired 28 July 2026 — the engine was replaced and all three are closed.** `BUGS-open.md` defects 4 and 7 went with the component; defect 6 was the mouse handler and survived the rebuild untouched, exactly as predicted, and is now closed too.
 
 **The screen every session starts on had been reviewed twice and failed twice.** Not because either fix was wrong — the direction fault was real and is gone — but because the component underneath could not express what the design asked for, and each fix had to trade one artefact for another. **Acting on that signal rather than attempting a third workaround was correct**, and the third review passed.
 

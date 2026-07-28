@@ -8,6 +8,9 @@ closed the way `SPEC-host-carousel.md` argued they should be: by removing the
 component underneath rather than working around it a third time. **One new defect
 is open**, found by the client watching the app start.
 
+**Seven of the eight entries here are now closed.** Only defect 8, the top bar on
+launch, is outstanding.
+
 | # | What | Status |
 |---|---|---|
 | 1 | A is dead after dismissing the pairing PIN panel | **Closed.** Confirmed by hand in Desktop Mode, 28 July |
@@ -15,7 +18,7 @@ is open**, found by the client watching the app start.
 | 3 | Pressing A on a fake host crashes the app | **Fixed** in `d3c57f95`. Different mechanism than recorded |
 | 4 | The carousel still wraps once per move at **two** hosts | **Closed** by the engine replacement. Verified frame by frame |
 | 5 | The hint bar offers Wake on hosts that cannot be woken | **Fixed** in `402b37d4`, on the client's call |
-| 6 | Left arrow runs the carousel away; right arrow is fine | **Fixed** in `8c40e196` — hover no longer steers. **Still unwatched by a human** |
+| 6 | Left arrow runs the carousel away; right arrow is fine | **Closed.** Fixed in `8c40e196`; confirmed by the client with a mouse |
 | 7 | The far tile vanishes instead of leaving | **Closed** by the engine replacement |
 | 8 | Upstream's top bar is on screen for the first half-second | **OPEN.** Found by the client, 28 July |
 
@@ -78,22 +81,20 @@ claim it.
 
 ---
 
-# 6. Left arrow runs the carousel away — fixed, still unwatched
+# 6. Left arrow runs the carousel away — closed
 
 **Fixed** in `8c40e196`, at the second attempt — the first, `0a305af2`, was
-reported as a fix and was not one. **Nobody has watched the fix with a mouse.**
+reported as a fix and was not one. **Confirmed by the client with a mouse**, and
+recorded here on 28 July 2026 after the fact; the check had been done and simply
+never written down.
 
 Hover no longer steers at all, client's call. `hoverEnabled` is off rather than
 filtered, so the misleading events are never generated and there is no path from
-pointer position to selection left to get wrong. That is a stronger claim than
-the failed fix made, but it is still a claim.
+pointer position to selection left to get wrong.
 
 **This survived the engine replacement untouched**, as predicted: it was the
-mouse handler, not the carousel component.
-
-**To close it:** rest the pointer over the carousel and hold left. The selection
-should stop at the first host and stay there. One pass. The Windows machine can
-do this — see `BUILDING-WINDOWS.md`.
+mouse handler, not the carousel component. That prediction being right is mild
+evidence the diagnosis was right too, but the client's pass is what closed it.
 
 **Worth generalising, and it is why this entry is kept rather than deleted:** any
 hover-to-focus on a view whose items move contains this loop, it is not specific

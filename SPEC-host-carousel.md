@@ -262,7 +262,7 @@ sequencing question is `ROADMAP.md`'s.
 | 5 | *"Left arrow key turns the carousel into an infinite scroll until right arrow key is pressed."* plus *"mouse hover still focuses the hovered host"* | **Fixed** in `8c40e196`, **not yet watched by a human.** See `BUGS-open.md` defect 6. |
 | 6 | *"On 2 hosts, even on the leftmost host selected, I see the host that would've been on the right appear faded on the left."* | **Done** in `1d813d2e`. Verified frame by frame: across 338 frames at two hosts, the second tile was drawn left of centre zero times. |
 
-**Four of the six are done, one is fixed but unwatched, and one — the wake
+**Five of the six are done, and one — the wake
 overlay — is untouched and belongs to a session of its own.**
 
 Three further calls were made while building items 1–3, all reversible and all

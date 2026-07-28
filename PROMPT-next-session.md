@@ -3,7 +3,7 @@
 Written 28 July 2026, at the end of the Windows session that rebuilt the carousel.
 
 **Read `HANDOFF.md` first**, and in it *Hard-won knowledge* before anything else.
-Then `BUGS-open.md` — one open defect and one fix nobody has watched — and
+Then `BUGS-open.md` — one open defect, the top bar on launch — and
 `SPEC-host-carousel.md`, which describes the screen you are about to add to.
 
 **Branch state:** `feat/carousel-engine` carries four commits and is **not
@@ -149,10 +149,6 @@ noticed.
 
 ## Carried forward, needing the client
 
-- **The hover fix is unverified.** Reported as fixed once when it was not. Hover
-  events are no longer generated at all now, which is a stronger claim, but nobody
-  has watched it. One pass with a mouse resting over the carousel while holding
-  left — the Windows machine can do this in a minute.
 - **The wake overlay.** Review item 4: not a popup, a waiting state, *"perhaps
   with 3 animated bouncing dots"*, held until the host is awake **or fails to
   wake**. That last part makes it more than a visual change — the screen has to
