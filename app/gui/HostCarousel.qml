@@ -509,47 +509,52 @@ FocusScope {
             elide: Text.ElideRight
         }
 
-        Row {
+        // Status carries its own colour rather than a separate indicator: the
+        // dot said the same thing the line already said, so it was two marks for
+        // one fact. Reachability is the fact, and the status swatches are what
+        // the design system has for it.
+        Text {
+            id: statusText
             anchors.horizontalCenter: parent.horizontalCenter
-            spacing: Bulan.spaceXs
-
-            Rectangle {
-                anchors.verticalCenter: parent.verticalCenter
-                width: Bulan.space2xs
-                height: Bulan.space2xs
-                radius: width / 2
-                visible: statusText.text !== ""
-                color: root.hostOnline ? Bulan.accentPrimary : Bulan.secondary
-            }
-
-            Text {
-                id: statusText
-                anchors.verticalCenter: parent.verticalCenter
-                // Copy is brief §8 verbatim wherever it specifies a line.
-                text: {
-                    if (root.host === null) {
-                        return ""
-                    }
-                    if (root.connectingIndex === pathView.currentIndex) {
-                        // MINIMAL / NOT YET DESIGNED -- flagged in the spec.
-                        return qsTr("Connecting…")
-                    }
-                    if (root.host.statusUnknown) {
-                        return qsTr("Looking for your PC…")
-                    }
-                    if (!root.host.online) {
-                        return qsTr("Couldn't reach %1. Still on the same network?")
-                                   .arg(root.host.hostName)
-                    }
-                    if (!root.host.paired) {
-                        return qsTr("Not paired yet.")
-                    }
-                    return qsTr("Ready when you are.")
+            // Copy is brief §8 verbatim wherever it specifies a line.
+            text: {
+                if (root.host === null) {
+                    return ""
                 }
-                color: root.hostOnline ? Bulan.accentPrimary : Bulan.textSecondary
-                font.family: Bulan.familyUi
-                font.pixelSize: Bulan.sizeBodyLg
+                if (root.connectingIndex === pathView.currentIndex) {
+                    // MINIMAL / NOT YET DESIGNED -- flagged in the spec.
+                    return qsTr("Connecting…")
+                }
+                if (root.host.statusUnknown) {
+                    return qsTr("Looking for your PC…")
+                }
+                if (!root.host.online) {
+                    return qsTr("Couldn't reach %1").arg(root.host.hostName)
+                }
+                if (!root.host.paired) {
+                    return qsTr("Not paired yet.")
+                }
+                return qsTr("Ready when you are.")
             }
+            // Red and green state only what is settled: unreachable, or ready.
+            // In-between states -- still looking, connecting, not yet paired --
+            // are not a verdict, so they stay on the neutral text colour rather
+            // than claiming a success or a failure that has not happened.
+            color: {
+                if (root.host === null || root.connectingIndex === pathView.currentIndex
+                        || root.host.statusUnknown) {
+                    return Bulan.textSecondary
+                }
+                if (!root.host.online) {
+                    return Bulan.statusError
+                }
+                if (!root.host.paired) {
+                    return Bulan.textSecondary
+                }
+                return Bulan.statusSuccess
+            }
+            font.family: Bulan.familyUi
+            font.pixelSize: Bulan.sizeBodyLg
         }
 
         Text {
