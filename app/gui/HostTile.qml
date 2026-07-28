@@ -154,7 +154,7 @@ Item {
         // dip, so the gap below the artwork stays constant through all three
         // instead of the text drifting when any of them changes.
         anchors.top: parent.verticalCenter
-        anchors.topMargin: (tile.height / 2) * circle.scale + Bulan.spaceMd
+        anchors.topMargin: (tile.height / 2) * circle.scale + Bulan.hostTileLabelGap
         spacing: Bulan.space2xs
 
         Text {
