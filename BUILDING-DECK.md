@@ -6,7 +6,17 @@ running SteamOS, and how to run it.
 You don't need to understand any of the code. Every command here can be copied
 and pasted exactly as written.
 
-Verified on 26 July 2026 against `dev/token-proof`, on a Steam Deck OLED.
+Verified on 28 July 2026 against `bulan`, on a Steam Deck OLED, in both Desktop
+Mode and Game Mode.
+
+**These commands run on the Deck itself.** Earlier planning assumed a design
+machine driving the Deck over SSH. That is not how the July 2026 sessions
+worked, and no SSH setup exists on either machine: the assistant runs on the
+Deck, builds there, and reads the log there — including from Game Mode, which
+has no terminal of its own. If a future session does want SSH, know that SteamOS
+ships it switched off with no password on the `deck` account, so enabling it
+means setting a password and starting a service, and a SteamOS update can switch
+it back off again.
 
 ---
 
@@ -92,8 +102,25 @@ build fails without them. In the folder you are about to build:
 git submodule update --init --recursive
 ```
 
-There are four, and `moonlight-common-c` has two of its own nested inside it
-(`enet` and `nanors`), which is why `--recursive` matters.
+There are **three** — `moonlight-common-c`, `qmdnsengine` and
+`app/SDL_GameControllerDB` — and `moonlight-common-c` has two of its own nested
+inside it (`enet` and `nanors`), which is why `--recursive` matters. Five in
+total. `git submodule status --recursive` should list all five with no leading
+`-` or `+`.
+
+There used to be a fourth. The July 2026 upstream sync replaced the
+`h264bitstream` submodule with source committed directly into the repository,
+and that leaves an **untracked leftover directory** behind from the old
+submodule checkout:
+
+```bash
+rm -rf h264bitstream/h264bitstream
+```
+
+It is safe to delete — the code that matters is now tracked in
+`h264bitstream/` itself, one level up. You will notice it because `git checkout`
+prints `warning: unable to rmdir 'h264bitstream/h264bitstream': Directory not
+empty`.
 
 You do **not** need to re-run the asset scripts. `scripts/import-controller-glyphs.py`
 and `scripts/gen-atmosphere-textures.py` write their output into `app/res/`, and
@@ -239,8 +266,46 @@ In Desktop Mode, open Steam and go **Games → Add a Non-Steam Game to My Librar
 
 It will then launch from Game Mode.
 
-Note that in Game Mode, Steam Input sits between the hardware and the app. That
-changes what the app sees from the controller — relevant when checking glyphs.
+### Reading the log from Game Mode
+
+Game Mode has no terminal, so the app's output has to be captured to a file.
+
+**Do not put a shell pipe in Launch Options.** Steam does not run Launch Options
+through a shell, so `2>&1 | tee somewhere.log` is passed to the app as arguments
+and silently produces no log at all. Use a launcher script instead —
+`/home/deck/Documents/bulan-gamemode.sh` already exists and does this:
+
+```bash
+#!/bin/bash
+exec flatpak run io.github.laweirdo.MoonlightFork \
+  > /home/deck/Documents/bulan-gamemode.log 2>&1
+```
+
+Point the shortcut's **Target** at that script and leave **Launch Options
+empty**. In Steam's file picker, switch the filter to **All Files** or the
+script will not be listed.
+
+The log can then be read live from Desktop Mode, or by an assistant running on
+the Deck, while Game Mode is in use.
+
+### What Steam Input does to the controller
+
+In Game Mode, Steam Input sits between the hardware and the app and presents a
+**virtual** controller. Verified 28 July 2026:
+
+| | Desktop Mode | Game Mode |
+|---|---|---|
+| Name | `Steam Deck Controller` | `Steam Virtual Gamepad` |
+| Product | `1205` | `11ff` |
+| Vendor | `28de` | `28de` |
+
+The name and product both change; **the Valve vendor ID does not**, and that is
+what glyph detection keys on. So detection reports `detected deck` in both modes,
+and all five button bindings arrive intact in both. This was the project's
+largest untested assumption and it held.
+
+Check `gamescope` is running if you need to be certain you are really in Game
+Mode: `pgrep -c gamescope`.
 
 ---
 
@@ -248,15 +313,55 @@ changes what the app sees from the controller — relevant when checking glyphs.
 
 ### The app looks like the old version after a successful build
 
-You built the wrong folder. See "Which folder gets built" above.
+**This has three causes and they stack. On 28 July 2026 all three were in play at
+once and it cost most of a session.** Work down the list in order.
 
-To confirm what actually went into the installed app:
+**1. An old copy is still running.** `flatpak run` on an already-running instance
+raises the existing window instead of starting the new build, so you can be
+looking at a process from three builds ago. Same trap as `open -n` on macOS.
 
 ```bash
-grep -ac Bulan /home/deck/.local/share/flatpak/app/io.github.laweirdo.MoonlightFork/current/active/files/bin/moonlight
+flatpak ps | grep -c MoonlightFork     # must be 0 before you launch, 1 after
 ```
 
-A number in the dozens means the Bulan code is in there. `0` means it isn't.
+To stop them — do **not** use `pkill -f` with the app ID, it matches its own
+command line and kills your shell:
+
+```bash
+flatpak kill io.github.laweirdo.MoonlightFork
+```
+
+**2. The interface is being served from a stale cache.** The app caches its
+compiled interface on disk, and that cache can outlive many rebuilds. Files
+dated days ago while the build is minutes old is the tell.
+
+```bash
+rm -rf ~/.var/app/io.github.laweirdo.MoonlightFork/cache/Moonlight\ Game\ Streaming\ Project/Moonlight/qmlcache
+```
+
+Relaunch and confirm the directory reappears with today's date.
+
+**3. You built the wrong folder.** See "Which folder gets built" above.
+
+### Confirming what is actually in the installed app
+
+**Do not grep the binary for QML identifiers.** Interface code is not stored as
+plain text in there, so the grep returns zero for code that has been in the file
+for weeks — it looks like proof of a stale build and is not. This produced two
+wrong conclusions in one session.
+
+**Read the log instead. It says so in plain language.** A screen that fails to
+load prints exactly what failed and why:
+
+```
+QML StackView: push: qrc:/gui/HostCarousel.qml:473 Type HostTile unavailable
+qrc:/gui/HostTile.qml:83 Invalid property assignment: "interactionScale" is a read-only property
+```
+
+If a Bulan screen fails to load, the app **falls back to upstream's interface** —
+the old grid, no hosts. That looks like "the build didn't take" and is actually
+"the build took and the screen is broken". Check the log before concluding
+anything about the build.
 
 ### "org.kde.Sdk/x86_64/6.10 not installed" — but it *is* installed
 

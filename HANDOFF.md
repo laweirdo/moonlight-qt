@@ -1,22 +1,29 @@
 # Bulan — handoff
 
 Context for whoever picks this up next, human or otherwise. Current as of
-**27 July 2026**, branch `bulan`.
+**28 July 2026**, branch `bulan`.
 
-The first Steam Deck verification session has happened, and the defects it found
-are fixed. Deck checks 1–3 are done; checks 4–8 are still open and need the
-client's eyes on the real panel. See "Deck checks the Mac cannot perform" at the
-end.
+**Two Steam Deck sessions have happened and Phase A is closed.** See
+"Deck verification — what has actually been checked" near the end for the
+results, and `REVIEW-CHECKLIST.md` for the full answers.
 
-**Roadmap Phase A is complete except for the parts only the client can do.**
-Defects 1–4 are fixed and merged, the source documents are in the repo, `bulan`
-exists as the known-good baseline, and upstream has been merged. What Phase A
-still wants: Deck checks 4–8 reported, Game Mode verified, the wake question
-answered. `REVIEW-CHECKLIST.md` now exists and is what that session should work
-from. **The three global tokens are still
-unsettled** — `sizeCaption`, `atmosphereGrainOpacity` and `motionOvershoot` are
-frozen pending real observation, and `ROADMAP.md` is explicit that construction
-should not start before they are.
+**The three global tokens are settled**, from observation on the real panel
+rather than arithmetic: `atmosphereGrainOpacity` stays **0.03**, `sizeCaption`
+stays **16**, `motionOvershoot` stays **0.7**. `motionFocusMs` moved **140 → 180**
+on the client's call. **Construction is no longer gated** — `ROADMAP.md` Phase B
+can start.
+
+**Game Mode is verified** and it passed, which closes the project's largest
+untested assumption: Steam Input interposes a virtual controller but carries
+Valve's vendor ID through, so glyph detection and all five bindings survive.
+
+Two things Phase A still owes, neither of them blocking:
+
+- **The wake question is unanswered.** It needs a host that can genuinely be put
+  to sleep and the only paired host was busy. It does **not** need the Deck.
+- **Three defects are open** in `BUGS-open.md`, one of which — the carousel's
+  third tile wrapping visibly — the client called out as reading unpolished. It
+  reproduces off hardware.
 
 Bulan is a UI/UX-focused fork of moonlight-qt targeting the Steam Deck. The client
 is a creative director who does not read code; explanations belong in plain English,
@@ -150,17 +157,33 @@ Still upstream's, restyled but not rebuilt: `AppView.qml` (the game grid),
 
 ---
 
-## Defects from the Deck session
+## Defects from the Deck sessions
 
-Defects 1–4 are **fixed and merged** (`fix/input-defects`, merged 27 July 2026).
-Defect 5 is a design task, not a bug, and is scheduled as Phase B work.
+Defects 1–4 were fixed on `fix/input-defects` (merged 27 July 2026) and **all
+four were then confirmed by hand on real hardware** on 28 July. Defect 5 is a
+design task, not a bug, and is scheduled as Phase B work.
 
 | # | What it was | Status |
 |---|---|---|
-| 1 | A was a dead button after a Client Settings round trip | Fixed |
-| 2 | The hint bar offered Wake on hosts that were already awake | Fixed — the hint is hidden on an online host |
+| 1 | A was a dead button after a Client Settings round trip | Fixed. Hardware-confirmed — but see below, hardware found a *third* cause |
+| 2 | The hint bar offered Wake on hosts that were already awake | Fixed. Hardware-confirmed; reflow accepted as built |
 | 3 | `actConfirm()` pushed the game grid without checking it loaded | Fixed — both failure paths now report |
-| 4 | Glyphs followed the most recently *attached* pad, not the most recently *used* | Fixed |
+| 4 | Glyphs followed the most recently *attached* pad, not the most recently *used* | Fixed. Hardware-confirmed |
+
+**Defect 1 had a third mechanism the original diagnosis missed**, found on
+hardware and fixed in `be874bf8`: a popup elsewhere in the window restores focus
+to a control that no longer exists on the way back, landing *after* the carousel
+has claimed it. The carousel now reclaims focus whenever it loses it rather than
+claiming it once, which cannot be raced.
+
+That symptom — **exactly one button dead, everything else fine** — has now come
+from three different causes. It happens because A is the only button with no
+window-level shortcut behind it, so anything that stops the screen listening
+takes out A alone and leaves everything looking healthy. Do not read it as a
+pairing or binding problem. See `BUGS-open.md`.
+
+**Three defects are currently open**, all in `BUGS-open.md`, none of which needs
+a Deck to reproduce.
 
 ### 5. Host Settings (SELECT) shows details, but should be a menu — STILL OPEN
 
@@ -209,16 +232,96 @@ reference for content and copy, not for layout.
 
 | Thing | Detail |
 |---|---|
-| **`deck_*` glyphs** | 10 files. Until they land, `deck` resolves to the Xbox set via `resolveGlyphFamily()` in `sdlgamepadkeynavigation.cpp` — deleting one line is the whole change. **Detection is now confirmed working on real hardware**, so those 10 files are the only thing between here and Deck glyphs. |
-| **Grain intensity** | `atmosphereGrainOpacity` is at 0.03, the midpoint of the brief's 2–4%. The brief itself lists this as "Still Open" pending a real Deck panel. |
-| **Deck verification** | Checks 1–3 done — see the end of this document. Checks 4–8 need the client's eyes on the panel and are still open, and `ROADMAP.md` gates all construction on them. Game Mode is check 9. |
+| **`deck_*` glyphs** | 10 files. Until they land, `deck` resolves to the Xbox set via `resolveGlyphFamily()` in `sdlgamepadkeynavigation.cpp` — deleting one line is the whole change. **Detection is confirmed working on real hardware in both Desktop Mode and Game Mode**, so those 10 files are the only thing between here and Deck glyphs. |
+| **The wake question** | The one Phase A item still owed. Needs a host that can genuinely be put to sleep — `Shoebox` was busy on 28 July. Does **not** need the Deck. If wake does not work, the "Asleep" wording is a copy decision and theirs. |
 | **Vignette / hint-bar band** | The client confirmed hairline-only for the hint bar. No filled surface token exists; if one is ever wanted, it is theirs to specify. |
+| **Status colour on in-between states** | Red and green now carry reachability on the host status line. *Looking for your PC…*, *Connecting…* and *Not paired yet* were left on the neutral text colour, on the reasoning that red and green are verdicts and those states have not reached one. Assistant's call, flagged to the client, not yet overturned. |
+
+**Settled 28 July, no longer waiting:** grain intensity (`atmosphereGrainOpacity`
+stays 0.03), caption size (`sizeCaption` stays 16), overshoot
+(`motionOvershoot` stays 0.7), and the hint-bar reflow (accepted as built).
 
 ---
 
 ## Hard-won knowledge — do not rediscover these
 
 These each cost real time. They are the reason several files look the way they do.
+
+### A rebuild can install perfectly and still not be what you are looking at
+
+**This cost most of the 28 July session and produced three wrong conclusions in a
+row.** Three separate things can put an old interface in front of you, and they
+stack:
+
+1. **An old instance is still running.** `flatpak run` on a running app raises
+   the existing window instead of starting the new build. Exactly the trap `-n`
+   solves on macOS. Check `flatpak ps | grep -c MoonlightFork` is 0 before
+   launching and 1 after.
+2. **The interface is served from a stale on-disk cache** that survives
+   rebuilds. Files days older than the build is the tell. Path and removal
+   command are in `BUILDING-DECK.md`.
+3. **A broken screen falls back to upstream's interface.** If a Bulan screen
+   fails to load, the app quietly shows upstream's grid instead. That reads as
+   "my build didn't take" and is actually "my build took and my screen is
+   broken".
+
+**The recovery is always the same: read the log.** It states load failures in
+plain language, with file and line. Two sessions have now been lost to inferring
+build state from the outside when the app was saying it outright.
+
+### Do not grep the binary to check what is in a build
+
+Interface code is not stored as plain text in the executable. `grep` returns zero
+for identifiers that have been in a file for weeks, which looks exactly like
+proof of a stale build. It is not proof of anything. This directly caused a wrong
+diagnosis on 28 July.
+
+The log is the source of truth for what loaded.
+
+### QML `console.log` never reaches the log; `console.warn` does
+
+Debug output from the interface layer is dropped. Warnings are not, and print as
+`Qt Warning:` lines. `qDebug()` from C++ also arrives.
+
+An empty log was read as "the handler never fired" when the handler had run
+perfectly and the logging was the thing that never arrived — the opposite
+conclusion, and it sent a diagnosis down the wrong path for hours. **Prove your
+logging appears before drawing any inference from its absence.**
+
+### A `Behavior` cannot animate a `readonly property`
+
+Marking one readonly and attaching a `Behavior` makes the whole component fail to
+load, which cascades: the component using it fails, its screen fails, and the app
+falls back to upstream's interface with no hosts. The visible symptom looks
+nothing like a motion bug.
+
+This is worth generalising: **in this codebase a single bad property assignment
+takes out an entire screen, silently, and lands you on upstream's UI.** Suspect
+it whenever a screen "reverts".
+
+### `pkill -f` with the app ID kills your own shell
+
+The pattern matches the command line of the shell running it. Use
+`flatpak kill io.github.laweirdo.MoonlightFork`, or kill by PID from
+`flatpak ps`. Cost two aborted commands in one session.
+
+### Battery readings are silently zero on mains power
+
+`current_now` reads 0 whenever the charger is connected, so the arithmetic
+produces a confident, entirely fictional **0.00 W**. Check
+`/sys/class/power_supply/ACAD/online` is `0` and `BAT1/status` is `Discharging`
+before trusting anything. Note also that **there is no `bc`** on this machine —
+use `awk`.
+
+Do not sample while a build is running; compiling swamps the reading.
+
+### `MOONLIGHT_FAKE_HOSTS` cannot be used past the carousel
+
+Its hosts are marked online and paired, so pressing A walks past the pairing
+branch and tries to open a game library for a machine that does not exist. **The
+app crashes.** Fake hosts are for reviewing the carousel and nothing beyond it;
+anything that needs A pressed to completion needs a real host. See
+`BUGS-open.md` defect 3.
 
 ### Qt renders SVG Tiny, and it does not honour `<clipPath>`
 
@@ -505,78 +608,105 @@ cannot be produced without either faking or damaging their config.
 
 ---
 
-## Deck checks the Mac cannot perform
+## Deck verification — what has actually been checked
 
-First verification session done **26 July 2026** on a Steam Deck OLED
-("Galileo"), Desktop Mode, real hosts on the client's network.
+Two sessions on a Steam Deck OLED ("Galileo"), with the client pressing the
+buttons. **26 July 2026** covered checks 1-3 in Desktop Mode. **28 July 2026**
+covered the regression pass, the judgement calls, and Game Mode.
 
-### 1. Glyph detection on the built-in controls — PASSED
+`REVIEW-CHECKLIST.md` is the working document for these and carries the full
+answers. Summary:
 
-Confirmed `Controller glyphs: deck -> xinput`. Valve's vendor ID **is** seen and
-the built-in controls are correctly identified as `deck`. It resolves to
-`xinput` only because no `deck_*` art exists yet.
+### Regression — the fixes held
 
-This was predicted to be "most likely failure of the lot". It was not a failure.
+| Check | Result |
+|---|---|
+| 1.1 A after a plain Client Settings round trip | **Passed** |
+| 1.2 A after opening the Resolution dropdown | **Failed, then fixed** in `be874bf8`, retested by hand, passes |
+| 1.3 Wake shown only where it does something | **Passed.** Reflow reads as responsive, not twitchy -- accepted as built |
+| 1.4 Glyphs follow the pad in use | **Passed** |
+| 1.5 Detection reported at startup | **Passed** -- `detected deck` |
 
-One caveat remains: this was **Desktop Mode**. Game Mode, where Steam Input
-actually sits in the path, is still unverified — `ROADMAP.md` lists it as check
-9. The old caveat about the line being unobservable is gone: detection is now
-printed unconditionally at startup, so reading the log is enough.
+1.2 failing turned out to be a **third** mechanism behind the same one-dead-button
+symptom, not a regression of defect 1: a popup elsewhere in the window restores
+focus to a control that no longer exists on the way back, landing after the
+carousel has already claimed it. The screen now takes focus back whenever it
+loses it rather than claiming it once, which cannot be raced.
 
-### 2. The Y / SELECT remap on physical buttons — PASSED, but see defects
+### Judgement calls — the three global tokens are settled
 
-All five bindings arrive and fire the right handler, including the two that were
-structurally broken before this work (Y and START sharing a keycode, SELECT
-unmapped entirely). **Steam Input has not rebound them.** "Swap face buttons" was
-confirmed off, ruling out that confounder.
+| Token | Outcome |
+|---|---|
+| `atmosphereGrainOpacity` | **Stays 0.03.** Judged fine on the panel |
+| `sizeCaption` | **Stays 16.** Legible at holding distance, no squinting |
+| `motionOvershoot` | **Stays 0.7** |
 
-| Press | Sends | Result |
-|---|---|---|
-| A | `Key_Return` | Works — but see defect 1, it dies after a Client Settings round-trip |
-| Y | `Key_Call` | Binding correct; silently returns on online hosts — defect 2 |
-| X | `Key_Menu` | Opens "Add a PC" |
-| START | `Key_Hangup` | Opens Client Settings |
-| SELECT | `Key_Context1` | Opens Host Settings — the destination is unbuilt, defect 5 |
-| B | `Key_Escape` | Back / close |
+**Both standing risks in `ROADMAP.md` were wrong, and in the reassuring
+direction.** `sizeCaption: 16` was predicted to fail at arm's length by
+calculation and does not. Grain at 0.03 was predicted to be invisible on this
+panel and is not. **The arithmetic was more pessimistic than the eye** -- worth
+remembering before the next value gets argued from a spreadsheet.
 
-The remap is sound. What the session found was two problems sitting *behind*
-correct bindings.
+Two changes did come out of it, both client calls from observation:
 
-### 3. Hot-swap — PASSED, one question open
+- `motionFocusMs` **140 -> 180**. The brief's figure read a touch too fast.
+- The host status line: shorter copy, the status swatches carrying
+  reachability, and the redundant dot removed.
 
-Connecting a DualSense with the app open switched the glyphs live. Disconnecting
-reverted them.
+Also fixed, and it was a real fault rather than a preference: the tile's scale-up
+lagged its travel because an animation was chasing a value that was itself still
+animating.
 
-What it also exposed was defect 4: glyphs did **not** switch back when the
-built-in controls resumed input while the DualSense was still connected. That is
-now fixed — they follow the pad most recently used. **Re-test on hardware**: with
-a DualSense connected, press something on the Deck itself and the glyphs should
-revert without unplugging anything.
+### Game Mode — check 9, passed
 
-Still unanswered: did *every* glyph in the hint bar change, or did any stay Xbox?
+**The largest untested assumption in the project, and it held.** Verified 28 July
+2026 with `gamescope` confirmed running.
 
-### 4–8. Judgement calls needing the real panel — STILL OPEN
+Steam Input does interpose a virtual controller -- the app sees
+`Steam Virtual Gamepad` with product `11ff`, not `Steam Deck Controller` with
+`1205`. But **the Valve vendor ID `28de` is carried through**, and that is what
+detection keys on, so it reports `detected deck` exactly as in Desktop Mode. All
+five bindings arrive and fire the right handler.
 
-Not yet reported by the client. Predictions from the hardware, so the next
-session knows what "wrong" looks like:
+`BUILDING-DECK.md` records how to capture the log from Game Mode. The short
+version: Steam does not run Launch Options through a shell, so use the launcher
+script at `/home/deck/Documents/bulan-gamemode.sh`.
 
-4. **Grain density.** `atmosphereGrainOpacity: 0.03`, 128×128 tile. Expect
-   **invisible**, not coarse — see the Galileo note above. Look at the flat area
-   mid-screen at 50 cm, then again at 25 cm.
-5. **Colour banding.** **Cannot be completed on this hardware** — the concern
-   targets the LCD and this is an OLED. What can be checked is the darkest region
-   of the gradient, above the hint bar, for stepping or colour cast. If a Deck LCD
-   is in scope, this stays open.
-6. **Type at arm's length.** `sizeCaption: 16` is the one at risk (~13.7 arcmin at
-   50 cm). Read the address line under the host name, and the hint bar labels, at
-   normal holding distance.
-7. **Motion feel.** `motionOvershoot: 0.7`, `motionFocusMs: 140`. Hold left/right
-   to run the carousel fast — soft landing or visible bounce? Then a single tap:
-   immediate or laggy?
-8. **Menu battery cost.** Baseline with the app closed is 3.92 W. Note the
-   compile-time-switch problem above: an on/off comparison costs two builds.
+### Colour banding — cannot be completed on this hardware
 
----
+The brief's concern targets the **LCD** Deck and this is an **OLED**; the two
+fail differently. Stays open unless an LCD Deck comes into scope. Nothing was
+observed on the OLED that needed action.
+
+### Menu battery cost — provisional
+
+**4.31 W** on the carousel against a **3.92 W** baseline with the app closed, so
+roughly **0.4 W**, about a tenth. Treat as indicative, not settled: the app
+crashed part-way through the sampling window, so some readings are of an idle
+machine and the true figure is likely a little higher.
+
+Sampling must be done with the Deck **actually unplugged** -- `current_now` reads
+0 whenever mains is connected, which produces a confident-looking 0.00 W. Check
+`/sys/class/power_supply/ACAD/online` is 0 first. There is no `bc` on this
+machine; use `awk`.
+
+### Still owed: can Bulan actually wake a sleeping PC?
+
+**The one Phase A item not answered.** It needs a host that can genuinely be put
+to sleep, and the only host paired into this build is `Shoebox`, which was busy.
+Waking an already-awake machine proves nothing, so there is no partial credit
+here.
+
+**What right looks like:** put a paired host to sleep properly. It should appear
+offline in the carousel with **Y Wake** offered. Press Y; the machine wakes and
+the carousel reflects it coming back.
+
+**What wrong means:** if it does not work, the "Asleep" state the app shows is a
+promise it cannot keep, and the wording has to change -- that is a copy decision
+and the client's.
+
+This does not need the Deck. Any machine running the app against a sleepable
+host can answer it.
 
 ## Things to be careful about
 

@@ -52,18 +52,36 @@ Public release is a v2 conversation.
 
 Each phase ends on the Deck before the next begins. That cadence is the point, not a formality.
 
-### Phase A — Stabilise
+### Phase A — Stabilise ✅ **CLOSED 28 July 2026**
 *Nothing new gets built until the foundation is trustworthy.*
 
-- Defects 1, 3, 4 fixed; decision made on 2
-- Unconditional glyph-detection log at startup
-- Deck checks 4–8 reported, plus Game Mode (check 9) and the wake question
-- Brief, flow diagram and onboarding frames moved into the repo
-- **Merge to `bulan`** — first known-good baseline
-- Upstream sync — fast-forward `master` from upstream, then merge `master` into `bulan`
-- `REVIEW-CHECKLIST.md`
+- ✅ Defects 1, 3, 4 fixed; decision made on 2 — **and all four confirmed by hand on hardware**
+- ✅ Unconditional glyph-detection log at startup
+- ✅ Deck checks 4–8 reported, plus Game Mode (check 9)
+- ⏳ **The wake question — still owed.** The only item not closed. It needs a host that can genuinely be put to sleep, and does **not** need a Deck. Carried into Phase B rather than holding the gate, because nothing depends on the answer except one line of copy.
+- ✅ Brief, flow diagram and onboarding frames moved into the repo
+- ✅ **Merge to `bulan`** — first known-good baseline
+- ✅ Upstream sync — fast-forward `master` from upstream, then merge `master` into `bulan`
+- ✅ `REVIEW-CHECKLIST.md`
 
-**Exit:** `bulan` exists, the carousel is defect-free on hardware, and global tokens (grain, `sizeCaption`, overshoot) are settled from real observation rather than arithmetic.
+**Exit:** met. `bulan` exists, the carousel's defects are fixed and hardware-confirmed, and the global tokens are settled from real observation.
+
+#### The settled tokens
+
+Judged on a Steam Deck OLED ("Galileo") on 28 July 2026, by the client, on the real panel.
+
+| Token | Value | Outcome |
+|---|---|---|
+| `atmosphereGrainOpacity` | **0.03** | Unchanged. Judged fine — visible and doing its job |
+| `sizeCaption` | **16** | Unchanged. Legible at holding distance without leaning in |
+| `motionOvershoot` | **0.7** | Unchanged |
+| `motionFocusMs` | **180** | Changed from 140. The brief's figure read a touch too fast |
+
+**Both standing risks below were wrong, and in the reassuring direction.** Recorded because the lesson generalises: `sizeCaption: 16` was predicted by calculation to fail at arm's length and does not, and grain at 0.03 was predicted to be invisible on this panel and is not. **The arithmetic was more pessimistic than the eye.** Worth remembering before the next value is argued from a spreadsheet rather than looked at.
+
+#### What Phase A also produced
+
+Three open defects, all in `BUGS-open.md`, none needing a Deck to reproduce. One of them — the carousel's third tile wrapping visibly on every move — the client called out as reading unpolished, and it is worth clearing early in Phase B since it sits on the screen every session starts with.
 
 **Branch names.** This originally said "merge to `main`". There is no `main`: the fork's default branch is `master` and it is kept as a clean mirror of upstream, while `bulan` is the integration branch and the baseline. Corrected here so nobody goes looking for a branch that does not exist. See `HANDOFF.md` § *How this repository is branched*.
 
@@ -138,8 +156,16 @@ HDR · Windows and other platforms · the mascot · a brand rules sheet while no
 
 ## Standing risks
 
-**`sizeCaption: 16` may fail at arm's length.** It sits under the comfort threshold at 50cm by calculation. If it fails, it's a token change touching every screen built and unbuilt. This is why Phase A precedes all construction.
+~~**`sizeCaption: 16` may fail at arm's length.**~~ **Retired 28 July 2026 — did not happen.** Read comfortably on the panel. Stays 16.
 
-**Grain at 0.03 may be invisible on the OLED**, not coarse. If so, the brief's 2–4% range is wrong for this panel and §4 needs revising — grain that can't be seen can't break the banding it exists to break.
+~~**Grain at 0.03 may be invisible on the OLED.**~~ **Retired 28 July 2026 — did not happen.** Visible and doing its job. Stays 0.03. The brief's 2–4% range needs no revision.
 
-**Steam Input sits between hardware and app in Game Mode**, and nothing has been verified there. Everything to date was Desktop Mode.
+~~**Steam Input sits between hardware and app in Game Mode.**~~ **Retired 28 July 2026 — verified and passed.** Steam Input does interpose a virtual controller (`Steam Virtual Gamepad`, product `11ff` rather than `1205`), but carries Valve's vendor ID `28de` through, which is what detection keys on. All five bindings arrive. See `BUILDING-DECK.md`.
+
+**All three of the risks this document carried were retired by one afternoon of looking at the hardware, and all three had been more frightening on paper than in fact.** The pattern is worth keeping in view: this project's estimates of its own perceptual risks have run pessimistic. That argues for reaching hardware earlier, not for trusting the estimates less.
+
+### Current standing risks
+
+**Wake is unproven.** Bulan offers to wake a sleeping host and nobody has ever seen it work. If it does not, the "Asleep" state is a promise the app cannot keep and the copy has to change. Cheap to answer, and does not need a Deck.
+
+**The carousel wraps visibly at three hosts.** `BUGS-open.md` defect 2. Cosmetic, on the screen every session begins with, and the fix is not yet attempted.

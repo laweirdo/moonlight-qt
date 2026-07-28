@@ -283,6 +283,78 @@ Answers to these, in whatever form suits you:
 | Hint bar reflow | Reads as responsive, or needs one of the alternatives |
 | Every glyph in the hint bar | Did they all change on hot-swap, or did some stay Xbox |
 
-Once the three tokens are settled, Phase A closes and construction can start.
-Until then it should not — `ROADMAP.md` says why, and the reason is that
-`sizeCaption` failing would mean redoing every screen built in the meantime.
+---
+
+# Results — 28 July 2026
+
+Steam Deck OLED ("Galileo"), Desktop Mode and Game Mode, client pressing the
+buttons, assistant running on the Deck itself and reading the log live.
+
+**Phase A closed on these answers.** `ROADMAP.md` records the settled values.
+
+### Part 1 — regression
+
+| Check | Result |
+|---|---|
+| 1.1 A after a plain settings round trip | **Pass** |
+| 1.2 A after opening the Resolution dropdown | **FAIL**, then fixed in `be874bf8` and retested by hand — now passes |
+| 1.3 Wake shown only where it does something | **Pass.** Reflow judged responsive, not twitchy — **accepted as built**, no glyph artwork or new token needed |
+| 1.4 Glyphs follow the pad in use | **Pass** |
+| 1.5 Detection reported at startup | **Pass** — `detected deck` |
+
+**1.2 was the hard stop and it triggered.** The cause was a *third* mechanism
+behind the same symptom, not a regression: a popup elsewhere in the window
+restores focus to a control that no longer exists on the way back, landing after
+the carousel has already claimed it. Fixed by having the carousel reclaim focus
+whenever it loses it, which cannot be raced.
+
+**Not answered:** whether *every* glyph in the hint bar changes on hot-swap, or
+whether any stay Xbox. Carried forward — it is one look along the bar with a
+DualSense connected.
+
+### Part 2 — the judgement calls
+
+| Check | Answer |
+|---|---|
+| 2.1 Grain | **Keep 0.03.** Visible, doing its job. The prediction that it would be invisible on this panel was wrong |
+| 2.2 Banding | **Cannot be completed** — OLED, and the concern targets the LCD. Nothing needing action observed |
+| 2.3 Type | **Keep `sizeCaption: 16`.** Legible without leaning in. The calculation that said it would fail was wrong |
+| 2.4 Motion | **Keep `motionOvershoot: 0.7`.** `motionFocusMs` **140 → 180** — the brief's figure read a touch too fast. "May need fine tuning in future" |
+| 2.5 Battery | **Provisional: 4.31 W** on the carousel vs **3.92 W** app-closed baseline — roughly 0.4 W. Not settled; the app crashed part-way through sampling |
+
+2.3 also produced three design corrections to the host status line, now built:
+shorter copy on unreachable hosts, the status swatches carrying reachability
+(red unreachable, green ready), and the redundant status dot removed.
+
+### Part 3 — Game Mode and wake
+
+| Check | Answer |
+|---|---|
+| 3.1 Game Mode | **PASS.** `detected deck` in Game Mode with `gamescope` confirmed running. All five bindings arrive |
+| 3.2 Wake | **NOT ANSWERED.** The only paired host was busy. Still owed |
+
+Game Mode was the project's largest untested assumption. Steam Input **does**
+interpose a virtual controller — `Steam Virtual Gamepad`, product `11ff` rather
+than `1205` — but carries Valve's vendor ID `28de` through, and detection keys
+on the vendor ID. So it survives.
+
+---
+
+## For whoever runs this next
+
+Keep this document; it is the template. Four things learned about running the
+session itself, which cost more time than the checks did:
+
+1. **Confirm exactly one instance is running before believing anything on
+   screen.** `flatpak ps | grep -c MoonlightFork`. An old process in front of you
+   invalidates every observation made against it.
+2. **Clear the interface cache after installing**, or the app may show you a
+   build from days ago. Path in `BUILDING-DECK.md`.
+3. **Read the log before concluding a build did not take.** A screen that fails
+   to load says so, with file and line, and drops the app back to upstream's
+   interface — which looks exactly like a stale build and is not one.
+4. **Fake hosts cannot be used past the carousel** — pressing A on one crashes
+   the app. Plan any check that needs A pressed to completion around a real host.
+
+Part 0 should gain a step: after installing and before handing the Deck over,
+verify one instance, a cleared cache, and a clean log.
