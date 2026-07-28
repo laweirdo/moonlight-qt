@@ -30,8 +30,10 @@ Item {
 
     property bool isCurrent: false
 
-    // Interpolated along the PathView path, so neighbours are smaller.
-    property real pathScale: 1.0
+    // Set by the carousel: 1.0 for the focused tile, the neighbour scale for the
+    // rest. The carousel animates it, so this is a plain value here -- see the
+    // note on `interactionScale` below for why it is not eased twice.
+    property real tileScale: 1.0
 
     signal activated()
 
@@ -67,11 +69,12 @@ Item {
 
         // Two scales multiplied, and only one of them is animated here.
         //
-        // pathScale is already being interpolated by the PathView as the carousel
-        // moves. Running it through a Behavior as well animated an animation: the
-        // tile chased a value that was itself still moving, so the grow arrived
-        // after the tile had finished travelling and read as a transform applied
-        // on arrival rather than as the tile responding to the press.
+        // tileScale is already being animated by the carousel, on the same clock
+        // as the tile's travel. Running it through a Behavior here as well would
+        // animate an animation: the tile would chase a value that was itself
+        // still moving, so the grow would arrive after the tile had finished
+        // travelling and read as a transform applied on arrival rather than as
+        // the tile responding to the press. That was a real fault once.
         //
         // The interaction scale -- focus and press -- does change in one step, so
         // that is the part that wants easing.
@@ -91,7 +94,7 @@ Item {
             }
         }
 
-        scale: tile.pathScale * interactionScale
+        scale: tile.tileScale * interactionScale
 
         Behavior on border.color {
             ColorAnimation { duration: Bulan.motionFocusMs }
@@ -120,7 +123,7 @@ Item {
         // Sits below the circle's *scaled* edge, so it does not drift when the
         // neighbour scale changes.
         anchors.top: parent.verticalCenter
-        anchors.topMargin: (tile.height / 2) * tile.pathScale + Bulan.spaceMd
+        anchors.topMargin: (tile.height / 2) * tile.tileScale + Bulan.spaceMd
         spacing: Bulan.space2xs
 
         Text {
