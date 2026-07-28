@@ -609,6 +609,15 @@ FocusScope {
 
                 isCurrent: index === root.currentIndex
 
+                // Drives the tile's own text from neighbour size and dimness to
+                // focused size and full strength. Animated below on the same
+                // clock as the travel, so the label grows as the tile arrives
+                // rather than snapping when it gets there.
+                focusAmount: distance === 0 ? 1.0 : 0.0
+
+                // The tile draws the connecting state; the carousel knows about it.
+                connecting: root.connectingIndex === index
+
                 // One clock for the whole move: position, drop, scale and fade
                 // all run for motionFocusMs on the same curve, so a tile travels,
                 // shrinks and dims as one object instead of four.
@@ -646,6 +655,13 @@ FocusScope {
                         easing.type: Easing.InOutQuad
                     }
                 }
+                Behavior on focusAmount {
+                    enabled: hostTile.settled
+                    NumberAnimation {
+                        duration: Bulan.motionFocusMs
+                        easing.type: Easing.InOutQuad
+                    }
+                }
 
                 // False until this tile has been placed once, so the first frame
                 // is a position rather than a journey from the top-left corner.
@@ -663,84 +679,6 @@ FocusScope {
         }
     }
 
-    // --- focused host detail -------------------------------------------------
-    // Anchored up from the hint bar rather than down from the carousel: the
-    // neighbours' labels overhang the band by a variable amount, so chaining off
-    // the carousel band's bottom would let this block drift.
-    Column {
-        anchors.bottom: hintBar.top
-        anchors.bottomMargin: Bulan.spaceXl
-        anchors.horizontalCenter: parent.horizontalCenter
-        width: parent.width - Bulan.layoutScreenMarginX * 2
-        spacing: Bulan.space2xs
-        visible: root.hasHosts
-
-        Text {
-            width: parent.width
-            horizontalAlignment: Text.AlignHCenter
-            text: root.host !== null ? root.host.hostName : ""
-            color: Bulan.textPrimary
-            font.family: Bulan.familyDisplay
-            font.pixelSize: Bulan.sizeTitleLg
-            elide: Text.ElideRight
-        }
-
-        // Status carries its own colour rather than a separate indicator: the
-        // dot said the same thing the line already said, so it was two marks for
-        // one fact. Reachability is the fact, and the status swatches are what
-        // the design system has for it.
-        Text {
-            id: statusText
-            anchors.horizontalCenter: parent.horizontalCenter
-            // Copy is brief §8 verbatim wherever it specifies a line.
-            text: {
-                if (root.host === null) {
-                    return ""
-                }
-                if (root.connectingIndex === root.currentIndex) {
-                    // MINIMAL / NOT YET DESIGNED -- flagged in the spec.
-                    return qsTr("Connecting…")
-                }
-                if (root.host.statusUnknown) {
-                    return qsTr("Looking for your PC…")
-                }
-                if (!root.host.online) {
-                    return qsTr("Couldn't reach %1").arg(root.host.hostName)
-                }
-                if (!root.host.paired) {
-                    return qsTr("Not paired yet.")
-                }
-                return qsTr("Ready when you are.")
-            }
-            // Red and green state only what is settled: unreachable, or ready.
-            // In-between states -- still looking, connecting, not yet paired --
-            // are not a verdict, so they stay on the neutral text colour rather
-            // than claiming a success or a failure that has not happened.
-            color: {
-                if (root.host === null || root.connectingIndex === root.currentIndex
-                        || root.host.statusUnknown) {
-                    return Bulan.textSecondary
-                }
-                if (!root.host.online) {
-                    return Bulan.statusError
-                }
-                if (!root.host.paired) {
-                    return Bulan.textSecondary
-                }
-                return Bulan.statusSuccess
-            }
-            font.family: Bulan.familyUi
-            font.pixelSize: Bulan.sizeBodyLg
-        }
-
-        Text {
-            anchors.horizontalCenter: parent.horizontalCenter
-            text: root.host !== null ? (root.host.address || "") : ""
-            color: Bulan.secondary
-            font.family: Bulan.familyUi
-            font.pixelSize: Bulan.sizeBody
-        }
-    }
 
     // --- zero hosts ----------------------------------------------------------
     // Two stacked elements, per spec. The copy is deliberately off-register from
