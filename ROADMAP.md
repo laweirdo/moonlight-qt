@@ -58,7 +58,7 @@ Each phase ends on the Deck before the next begins. That cadence is the point, n
 - ✅ Defects 1, 3, 4 fixed; decision made on 2 — **and all four confirmed by hand on hardware**
 - ✅ Unconditional glyph-detection log at startup
 - ✅ Deck checks 4–8 reported, plus Game Mode (check 9)
-- ⏳ **The wake question — still owed.** The only item not closed. It needs a host that can genuinely be put to sleep, and does **not** need a Deck. Carried into Phase B rather than holding the gate, because nothing depends on the answer except one line of copy.
+- ✅ **The wake question — answered 28 July 2026, and wake works.** A paired host put genuinely to sleep was woken from the carousel with Y and was back a minute later. The *"Asleep"* copy stands as written, so the one line that depended on the answer needs no change. Answered on the Mac; it never needed a Deck.
 - ✅ Brief, flow diagram and onboarding frames moved into the repo
 - ✅ **Merge to `bulan`** — first known-good baseline
 - ✅ Upstream sync — fast-forward `master` from upstream, then merge `master` into `bulan`
@@ -97,6 +97,8 @@ Three open defects, all in `BUGS-open.md`, none needing a Deck to reproduce. One
 - Screen transitions wired up (220ms, brief §6 — the token exists and is unused)
 
 **Exit:** launch → pick host → pick game → stream → return, with no upstream screen visible.
+
+**One thing learned on 28 July that changes how the host settings menu should be scoped.** Removing a PC in Moonlight does **not** unpair it — the host goes on recognising this client, so the machine reappears as already paired. Whatever "Forget PC" means in the menu, it cannot mean "unpair", and a user who chooses it expecting the machine to stop trusting them will be wrong. That is a copy and behaviour question worth settling before the screen is drawn, not after. See `HANDOFF.md`.
 
 ### Phase C — First run
 *Runs once, invisible in daily testing, breaks the spell if missing.*
@@ -166,6 +168,10 @@ HDR · Windows and other platforms · the mascot · a brand rules sheet while no
 
 ### Current standing risks
 
-**Wake is unproven.** Bulan offers to wake a sleeping host and nobody has ever seen it work. If it does not, the "Asleep" state is a promise the app cannot keep and the copy has to change. Cheap to answer, and does not need a Deck.
+~~**Wake is unproven.**~~ **Retired 28 July 2026 — it works.** Woken by hand from the carousel on a host that was genuinely asleep. The *"Asleep"* copy stands. Note for anyone testing it again: only `Steambox` is wakeable, because `Shoebox` never supplies a hardware address.
 
-**The carousel wraps visibly at three hosts.** `BUGS-open.md` defect 2. Cosmetic, on the screen every session begins with, and the fix is not yet attempted.
+~~**The carousel wraps visibly at three hosts.**~~ **Retired 28 July 2026 — fixed in `9c721e13`,** and it was two faults rather than one. Note that the entry ruling out "wrong direction" was itself wrong; see `BUGS-open.md`.
+
+**The carousel still wraps once per move at two hosts.** `BUGS-open.md` defect 4, and **two hosts is the client's real configuration** — this is what the screen does in daily use. Halved by the three-host fix, not cured, because the trick that fixes three cannot apply when every tile is a neighbour of every other. Curing it properly means feeding the carousel a padded list, which is most of a session and carries real regression risk on the first screen a user sees. Worth a decision before it is started.
+
+**A fourth pattern in the same family as the three retired above.** All three retired risks were *perceptual* estimates that ran pessimistic. This one is different and worth separating: **two of the three defect write-ups on this project had a wrong diagnosis on record**, each drawn from a measurement that could not see the thing it was being used to rule out. Both cost time this session. The estimates that have proven unreliable here are not the ones about how things will look — they are the ones about what has been eliminated.
