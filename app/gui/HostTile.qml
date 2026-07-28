@@ -34,6 +34,7 @@ Item {
     property real pathScale: 1.0
 
     signal hoverEntered()
+    signal hoverMoved()
     signal activated()
 
     width: Bulan.hostTileSize
@@ -150,11 +151,20 @@ Item {
     // --- mouse ---------------------------------------------------------------
     // Hover moves focus rather than lighting a second highlight, so there is only
     // ever one focused thing on screen and the pointer and the D-pad agree.
+    //
+    // Two signals rather than one, because `entered` alone cannot tell the
+    // difference between the pointer arriving at a tile and a tile arriving at
+    // the pointer. The tiles move; a stationary cursor is entered and left
+    // repeatedly as they slide past it, and acting on that turns one keypress
+    // into a selection that walks away on its own. `positionChanged` only fires
+    // when the pointer itself moves, which is the thing the screen actually
+    // wants to follow.
     MouseArea {
         id: mouse
         anchors.fill: circle
         hoverEnabled: true
         onEntered: tile.hoverEntered()
+        onPositionChanged: tile.hoverMoved()
         onClicked: tile.activated()
     }
 }
