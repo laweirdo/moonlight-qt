@@ -33,8 +33,6 @@ Item {
     // Interpolated along the PathView path, so neighbours are smaller.
     property real pathScale: 1.0
 
-    signal hoverEntered()
-    signal hoverMoved()
     signal activated()
 
     width: Bulan.hostTileSize
@@ -149,22 +147,30 @@ Item {
     }
 
     // --- mouse ---------------------------------------------------------------
-    // Hover moves focus rather than lighting a second highlight, so there is only
-    // ever one focused thing on screen and the pointer and the D-pad agree.
+    // Click only. Hover deliberately does NOT move the selection -- client's
+    // call, 28 July 2026, reversing the original design.
     //
-    // Two signals rather than one, because `entered` alone cannot tell the
-    // difference between the pointer arriving at a tile and a tile arriving at
-    // the pointer. The tiles move; a stationary cursor is entered and left
-    // repeatedly as they slide past it, and acting on that turns one keypress
-    // into a selection that walks away on its own. `positionChanged` only fires
-    // when the pointer itself moves, which is the thing the screen actually
-    // wants to follow.
+    // The original reasoning was that hover should move focus so the pointer and
+    // the D-pad could never disagree about what is selected. That assumed a still
+    // carousel. These tiles move, and a moving view cannot tell the pointer
+    // arriving at a tile apart from a tile arriving at the pointer: both raise
+    // the same hover events at the same item. Acting on them turned one keypress
+    // into a selection that walked away on its own.
+    //
+    // Two attempts were made to keep hover and filter the false events. The first
+    // trusted `entered`; the second trusted `positionChanged` on the theory that
+    // it only fires for real pointer movement. It does not -- the position it
+    // reports is relative to the tile, so a tile sliding under a still cursor
+    // changes it too. **There is no local signal that distinguishes them**, which
+    // is the durable finding here: telling them apart needs the pointer tracked
+    // in screen coordinates, above the level of any one item.
+    //
+    // Rather than build that on a controller-first screen, hover simply does not
+    // steer any more. `hoverEnabled` stays off, so the false events are not even
+    // generated.
     MouseArea {
         id: mouse
         anchors.fill: circle
-        hoverEnabled: true
-        onEntered: tile.hoverEntered()
-        onPositionChanged: tile.hoverMoved()
         onClicked: tile.activated()
     }
 }
