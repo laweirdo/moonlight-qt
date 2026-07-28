@@ -1,8 +1,10 @@
 # Bulan — open defects
 
-Everything here was found on hardware and is **still open**. All three came out
-of the Deck review session on **28 July 2026**, on a Steam Deck OLED
-("Galileo"), Desktop Mode, with the client pressing the buttons.
+All three were found on hardware during the Deck review session on **28 July
+2026**, on a Steam Deck OLED ("Galileo"), with the client pressing the buttons.
+**Two are open; the third appears fixed and wants one confirming press.**
+
+None of them needs a Deck to reproduce or to fix.
 
 | # | What | Status |
 |---|---|---|
