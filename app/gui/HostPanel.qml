@@ -31,6 +31,12 @@ FocusScope {
     visible: false
     z: 100
 
+    // A hidden panel must not be able to hold focus. Qt will not give active
+    // focus to a disabled item, and relinquishes it if an item holding focus
+    // becomes disabled -- so this is what stops focus being trapped on a panel
+    // that has closed, which leaves the screen underneath listening to nothing.
+    enabled: visible
+
     function show(t, b) {
         title = t
         body = b
@@ -46,6 +52,14 @@ FocusScope {
     }
 
     function close() {
+        // Release this scope's focus BEFORE handing it back. A FocusScope gives
+        // active focus to whichever child last held it, so leaving this set means
+        // the parent hands focus straight back into a panel that is now invisible.
+        // An invisible panel runs no key handlers, and neither does the screen
+        // underneath, so every button the screen owns goes dead.
+        field.focus = false
+        panel.focus = false
+
         visible = false
         field.text = ""
         dismissed()

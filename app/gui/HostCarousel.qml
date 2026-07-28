@@ -275,6 +275,41 @@ FocusScope {
         toolBar.visible = true
     }
 
+    // Focus recovery.
+    //
+    // A FocusScope reports activeFocus while anything inside it holds focus, so
+    // this going false means focus left the screen entirely. That happens when a
+    // popup elsewhere in the window is torn down and restores focus to a control
+    // that no longer exists -- the settings page's Resolution dropdown does it on
+    // the way back here. Nothing is then listening for A, and A is the only button
+    // with no window-level shortcut standing behind it, so it alone goes dead and
+    // stays dead until the app restarts.
+    //
+    // Deliberately reactive rather than ordered. Claiming focus once in
+    // onActivated loses any race against a popup that tears down afterwards, and
+    // reasoning about which handler runs last is what made defect 1 intermittent.
+    // Reclaiming whenever focus is lost cannot be raced. callLater defers to the
+    // end of the current pass so this does not fight something mid-teardown.
+    onActiveFocusChanged: {
+        if (!activeFocus && StackView.status === StackView.Active) {
+            Qt.callLater(reclaimFocus)
+        }
+    }
+
+    // Take focus back for this screen. Guarded on no overlay being open rather
+    // than on activeFocus, because a panel is a CHILD of this scope: while focus
+    // is stuck on a closed panel, root.activeFocus is still true and testing it
+    // would decline to act in exactly the case that needs acting on.
+    function reclaimFocus() {
+        if (root.StackView.status !== StackView.Active) {
+            return
+        }
+        if (messagePanel.visible || pinPanel.visible || addPcPanel.visible) {
+            return
+        }
+        root.forceActiveFocus()
+    }
+
     Atmosphere { anchors.fill: parent }
 
     // --- header --------------------------------------------------------------
@@ -655,9 +690,14 @@ FocusScope {
     }
 
     // --- overlays ------------------------------------------------------------
+    // Every panel hands focus back on the way out. Doing it here as well as in
+    // HostPanel.close() covers the paths that hide a panel by setting visible
+    // directly and so never run close() at all -- pairingComplete() is one.
+    // callLater defers until the panel has finished going away.
     HostPanel {
         id: messagePanel
         anchors.fill: parent
+        onVisibleChanged: if (!visible) Qt.callLater(root.reclaimFocus)
     }
 
     HostPanel {
@@ -667,6 +707,7 @@ FocusScope {
         property string hostName: ""
         title: qsTr("Pair with %1").arg(hostName)
         body: qsTr("Enter %1 on your PC. This closes itself when pairing finishes.").arg(pin)
+        onVisibleChanged: if (!visible) Qt.callLater(root.reclaimFocus)
     }
 
     HostPanel {
@@ -675,6 +716,7 @@ FocusScope {
         title: qsTr("Add a PC")
         body: qsTr("Type its address.")
         editable: true
+        onVisibleChanged: if (!visible) Qt.callLater(root.reclaimFocus)
         onSubmitted: {
             if (text) {
                 ComputerManager.addNewHostManually(text.trim())
