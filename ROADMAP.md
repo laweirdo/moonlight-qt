@@ -114,7 +114,7 @@ sequenced deliberately rather than slipped in.
 
 **Six review items on the host carousel**, given by the client on 28 July after looking at the fixed build, are recorded in full in `SPEC-host-carousel.md`. Two belong to phases below rather than to the carousel itself: the **wake state should be a waiting overlay rather than a popup**, which is Phase D's *Waking PC* screen arriving early, and the **"N of M ready" count should include unpaired hosts**, which reverses a decision that spec recorded. Neither is started.
 
-**One thing learned on 28 July that changes how the host settings menu should be scoped.** Removing a PC in Moonlight does **not** unpair it — the host goes on recognising this client, so the machine reappears as already paired. Whatever "Forget PC" means in the menu, it cannot mean "unpair", and a user who chooses it expecting the machine to stop trusting them will be wrong. That is a copy and behaviour question worth settling before the screen is drawn, not after. See `HANDOFF.md`.
+**The wording of "Forget PC" is settled — client's call, 28 July 2026.** It stays *"Forget PC"*. Removing a machine does not unpair it: the host goes on recognising this client, so it reappears as already paired if it is added back. The client's reasoning is that this is the correct reading of the words — **Bulan forgets the host; the host does not forget Bulan** — and the wording says exactly that rather than overclaiming. Recorded so the question is not reopened as a bug: the asymmetry is intended, not an oversight.
 
 ### Phase C — First run
 *Runs once, invisible in daily testing, breaks the spell if missing.*
