@@ -1,7 +1,24 @@
-# Bug — A is dead after dismissing the pairing PIN panel
+# Bulan — open defects
 
-**Found** 28 July 2026, on a Steam Deck OLED ("Galileo"), Desktop Mode, by the
-client, during the Deck review session. **Still open.** Two fix attempts failed.
+Everything here was found on hardware and is **still open**. All three came out
+of the Deck review session on **28 July 2026**, on a Steam Deck OLED
+("Galileo"), Desktop Mode, with the client pressing the buttons.
+
+| # | What | Severity |
+|---|---|---|
+| 1 | A is dead after dismissing the pairing PIN panel | Makes the app feel broken in normal use |
+| 2 | The carousel's third tile wraps visibly on every move | Cosmetic, but "screams unpolished" — client's words |
+| 3 | Pressing A on a fake host crashes the app | Review tooling only; no real user hits it |
+
+**Read "Instrumenting this" under defect 1 before adding any logging.** It
+records which logging call actually reaches the Deck log, and which silently
+does not. Getting that wrong cost most of a session.
+
+---
+
+# 1. A is dead after dismissing the pairing PIN panel
+
+**Found** 28 July 2026 by the client. **Still open.** Two fix attempts failed.
 
 This is **not** a regression of defect 1. Defect 1's fix is present and working,
 and the related failure it shares a symptom with — check 1.2, the Client Settings
@@ -99,27 +116,22 @@ focus, disabling it should have released it. Either it is not the panel, or
 
 ---
 
-## The instrumentation failed — read this before adding more
+## Instrumenting this — solved, use `console.warn`
 
-An attempt was made to log which item held focus on every A press, using
-`console.log()` from QML.
+**`console.log()` from QML does not reach the Deck log. `console.warn()` does.**
 
-**Not one line was emitted**, including at a moment when A demonstrably worked
-(pairing started, which only happens through the A handler). So the handler ran
-and the log stayed empty.
+This was established the hard way. A first attempt logged focus state on every A
+press with `console.log()` and produced **not one line** — including at a moment
+when A demonstrably worked, since pairing had started and that only happens
+through the A handler. The handler ran; the log stayed empty. That silence was
+briefly read as "the handler never fired", which is the opposite of the truth and
+sent the diagnosis down the wrong path entirely.
 
-**QML `console.log()` does not reach the Deck log.** `qDebug()` from C++ does —
-`Qt Debug: Current Moonlight version:` appears at startup — so the message
-handler is not filtering everything, but QML debug output is not arriving.
+`console.warn()` was later used for defect 2 and worked immediately, printing as
+`Qt Warning:` lines. Use it. `qDebug()` from C++ also reaches the log.
 
-Anyone instrumenting this next should **verify their logging appears at all**
-before drawing conclusions from its absence. An empty log was briefly read here
-as "the handler never fired", which is the opposite of what was true.
-
-Suggested alternatives, untested:
-- `console.warn()` or `console.error()` instead of `console.log()`.
-- A `Q_INVOKABLE` on an existing C++ singleton that calls `qInfo()`, which is
-  known to reach the log.
+**Verify your logging appears at all before drawing any conclusion from its
+absence.** That is the whole lesson.
 
 ---
 
@@ -153,3 +165,94 @@ works today and is only a warning, but when that injection is eventually removed
 those statements will throw, and each one sits **after** the action it guards —
 so the visible behaviour would survive while key propagation silently broke.
 Worth fixing before it becomes a mystery. Not urgent, not related to this bug.
+
+---
+
+# 2. The carousel's third tile wraps visibly on every move
+
+**Found** 28 July 2026 by the client, who described it as: *"navigating to the
+3rd PC appears to animate in the incorrect direction. It should smoothly
+transition into the center from the right, but it seems to roll over toward the
+right and come in from the left."* **Still open. Not yet attempted.**
+
+Reproduce with `MOONLIGHT_FAKE_HOSTS=mixed`, which gives exactly three hosts.
+Press left and right; the effect is clearest arriving on the third.
+
+## What the diagnostics proved
+
+`console.warn` was added to `PathView.onCurrentIndexChanged` logging
+`currentIndex`, `offset` and `count`, plus a 400ms timer logging the settled
+offset. The full trace is reproducible in a minute; the finding was:
+
+| currentIndex | settled offset |
+|---|---|
+| 0 | 0.000 |
+| 1 | 2.000 |
+| 2 | 1.000 |
+
+So `offset = (count - index) mod count`, and **every single-step press moves the
+offset by exactly one unit** — never two. Observed across roughly twenty presses
+in both directions with no exception.
+
+**This rules out the obvious explanation.** If the carousel were choosing the
+wrong way round the loop, a one-step press would move the offset by two units.
+It never does. The selected tile genuinely travels the short way and enters from
+the correct side.
+
+## What is actually happening
+
+`pathItemCount` is 3 and there are 3 hosts, so the items fill the entire path
+loop with no slack. On every move, the tile that is not one of the two visible
+neighbours must wrap from one end of the path to the other — it crosses from the
+left slot to the right slot, or back, in a single frame.
+
+`HostCarousel.qml` already mitigates this: delegates draw only when
+`|index − currentIndex| <= 1`, which is meant to hide exactly that tile. The
+binding re-evaluates the instant `currentIndex` changes, i.e. at the *start* of
+the animation, so on paper the wrapping tile is hidden before it moves.
+
+It is evidently not quite hidden in time. **This is a frame-timing problem, not a
+direction problem** — which is why it reads as a roll rather than as an obvious
+jump.
+
+Three is the worst possible host count for this. `HANDOFF.md` already records
+that `PathView` changes its spacing behaviour at exactly three items and that
+working this out cost a session; this is the same component and the same
+threshold.
+
+## Suggested approaches, in the order they seem worth trying
+
+1. **Give the loop slack.** If `pathItemCount` exceeds `count`, the items no
+   longer fill the path and the wrapping tile can sit in the gap instead of
+   crossing the visible arc. **Careful:** `pathStretch` in this file exists
+   precisely because spacing is `1/count` below `pathItemCount` and
+   `1/pathItemCount` above it, so changing `pathItemCount` changes the geometry
+   the neighbours depend on. Expect to re-derive `pathStretch`.
+2. **Hide the wrapping tile more decisively** than a `visible` binding — for
+   example holding it at zero opacity through the transition, so there is no
+   frame in which it can be drawn mid-wrap.
+3. **Confirm the host count is the trigger** by testing with four or five fake
+   hosts. If the artefact disappears above three, that confirms the loop-is-full
+   reading and points squarely at approach 1.
+
+Budget two or three build-and-look cycles. This does **not** need real hardware —
+it reproduces against the fake host list on any machine, which is why it was
+deferred out of the hardware session rather than chased there.
+
+---
+
+# 3. Pressing A on a fake host crashes the app
+
+**Found** 28 July 2026, incidentally, during defect 2's diagnosis.
+
+`MOONLIGHT_FAKE_HOSTS` marks its hosts as online and paired, so `actConfirm()`
+walks past the pairing branch and tries to open the game library for a machine
+that does not exist. The app dies.
+
+**Consequence for review sessions:** fake host mode is usable for the carousel
+and nothing beyond it. Any check that involves pressing A to completion needs a
+real host. Worth knowing before planning a session around it.
+
+`actConfirm()` already returns early on fake hosts in the *unpaired* branch
+(`if (root.useFakeHosts) return`). The same guard is missing on the path that
+opens the library.
