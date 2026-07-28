@@ -23,8 +23,8 @@ back a minute later. *"Asleep"* is a promise the app can keep, and the copy
 stands as written.
 
 **The three defects `BUGS-open.md` was opened for are all closed.** Four more were
-found on the way; one is fixed and **three are open, all on the host carousel and
-all one underlying problem.** The client reviewed the fixed carousel and did not
+found on the way; two are fixed and **two are open, both on the host carousel and
+both one underlying problem.** The client reviewed the fixed carousel and did not
 accept it.
 
 **The recommendation the next session should decide on first** is in
@@ -256,6 +256,7 @@ reference for content and copy, not for layout.
 | **Status colour on in-between states** | Red and green now carry reachability on the host status line. *Looking for your PC…*, *Connecting…* and *Not paired yet* were left on the neutral text colour, on the reasoning that red and green are verdicts and those states have not reached one. Assistant's call, flagged to the client, not yet overturned. |
 | **Replacing the carousel's engine** | Recommended and not yet decided — see `SPEC-host-carousel.md`. Would retire `BUGS-open.md` defects 2, 4, 6 and 7 together, and makes two of the client's six review items cheap rather than awkward. About a session, two files. |
 | **The six carousel review items** | Given 28 July after looking at the fixed build. Listed in full in `SPEC-host-carousel.md`. None started. Two of them reverse or replace decisions recorded in that spec, so read it rather than the code. |
+| **"Forget PC" wording** | **Settled 28 July, client's call: it stays.** Removing a machine does not unpair it, and the client's reading is that the words already say so — Bulan forgets the host, the host does not forget Bulan. The asymmetry is intended. Do not reopen it as a bug. |
 | **Rebuilding on upstream vs. replacing it** | The client asked whether the whole thing should be rebuilt rather than skinned. Advice given: **against** — see the note below. Not re-opened since, but not formally closed either. |
 | **Review-mode copy** | Pressing A on a review-mode host now raises a *"Review mode"* panel. Placeholder wording, never seen by a real user, changeable on request. |
 

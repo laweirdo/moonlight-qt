@@ -313,6 +313,28 @@ FocusScope {
         pathView.currentIndex = next
     }
 
+    // Whether the pointer is the thing currently driving the selection.
+    //
+    // Hover-to-focus and a moving carousel are a feedback loop: a press moves
+    // the row, a different tile slides under a cursor that has not moved, that
+    // tile reports being entered, the selection follows it, the row moves again.
+    // It sustains itself, and which way it runs depends on which side of centre
+    // the cursor was left -- which is why it looked like left was broken and
+    // right was fine.
+    //
+    // The distinction that fixes it is between the pointer arriving at a tile
+    // and a tile arriving at the pointer. Only the first is the user pointing at
+    // something. A tile being entered is trusted only once the pointer has
+    // actually moved; pressing a direction hands control back to the buttons.
+    property bool pointerDriving: false
+
+    function focusFromPointer(index) {
+        pointerDriving = true
+        if (index !== pathView.currentIndex) {
+            moveBy(index - pathView.currentIndex)
+        }
+    }
+
     function actAddPc() {
         addPcPanel.visible = true
     }
@@ -620,11 +642,16 @@ FocusScope {
 
             // Hover moves focus, so there is only ever one highlight and the
             // pointer and the D-pad always agree about what is selected.
-            // Routed through moveBy so the pointer states its direction the same
-            // way the D-pad does, rather than leaving the carousel to guess.
-            onHoverEntered: root.moveBy(index - pathView.currentIndex)
+            //
+            // Being entered is only acted on while the pointer is already the
+            // thing driving, because tiles slide under a stationary cursor and
+            // report being entered when nobody pointed at anything. Actual
+            // pointer movement always takes control, so picking the mouse back
+            // up works on the first movement.
+            onHoverEntered: if (root.pointerDriving) root.focusFromPointer(index)
+            onHoverMoved: root.focusFromPointer(index)
             onActivated: {
-                root.moveBy(index - pathView.currentIndex)
+                root.focusFromPointer(index)
                 root.actConfirm()
             }
         }
@@ -791,8 +818,16 @@ FocusScope {
     // --- input ---------------------------------------------------------------
     // Movement clamps rather than wrapping, which is why it is done here instead
     // of through PathView's own increment/decrement -- those wrap by design.
-    Keys.onLeftPressed: moveBy(-1)
-    Keys.onRightPressed: moveBy(1)
+    // Pressing a direction hands control back to the buttons, so the tiles that
+    // slide past the cursor as a result are ignored rather than obeyed.
+    Keys.onLeftPressed: {
+        pointerDriving = false
+        moveBy(-1)
+    }
+    Keys.onRightPressed: {
+        pointerDriving = false
+        moveBy(1)
+    }
 
     // Inert, and swallowed. Without accepting them they bubble to the StackView
     // and drag focus into chrome this screen does not have.

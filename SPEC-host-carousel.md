@@ -189,11 +189,11 @@ sequencing question is `ROADMAP.md`'s.
 | 2 | *"Text stays static at the bottom of the screen. The text should be part of the carousel."* | The focused host's name, status and address are drawn in a fixed block anchored above the hint bar. They should move with the selection instead of sitting still while the tiles move under them. |
 | 3 | *"It read '1 of 1 ready' instead of '1 of 2' when Steambox was unpaired."* | **Reverses a decision recorded below.** Discovered-but-unpaired hosts were deliberately excluded from both figures. The client wants them in the denominator: the count is of machines you have, not machines you have finished setting up. |
 | 4 | *"Waking should not create a popup. It should create a 'loading' overlay, perhaps with 3 animated bouncing dots, until the host is awake or fails to wake."* | `actWake()` currently raises `HostPanel` with *"Give it a moment to come back."* and returns. It should hold a determinate-feeling waiting state and resolve on the host coming back **or failing to**, which means the screen has to notice both. |
-| 5 | *"Left arrow key turns the carousel into an infinite scroll until right arrow key is pressed. Right arrow behaves correctly."* | See `BUGS-open.md` defect 6. The key handler is **not** at fault — it clamps, proven by test. |
+| 5 | *"Left arrow key turns the carousel into an infinite scroll until right arrow key is pressed. Right arrow behaves correctly."* | **Fixed** in `0a305af2`. The mouse-hover handler, not the key handler — tiles slide under a stationary cursor and are treated as though the user pointed at them. Hover-to-focus is unchanged; only which hover events count. |
 | 6 | *"On 2 hosts, even on the leftmost host selected, I see the host that would've been on the right appear faded on the left."* | `BUGS-open.md` defect 4, seen at rest rather than in motion. With two hosts the non-focused tile sits exactly on the loop's join, which is one loop position drawn at two different screen positions. |
 
-**Four of these six — 1, 2, 4 and 6 — are cheaper after the carousel's engine is
-replaced than before it.** 1 and 6 are the loop's join; 2 needs per-tile
+**Item 5 is fixed. Four of the remaining five — 1, 2, 4 and 6 — are cheaper after
+the carousel's engine is replaced than before it.** 1 and 6 are the loop's join; 2 needs per-tile
 positions the current component does not expose. See the note below.
 
 ---

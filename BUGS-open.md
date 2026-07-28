@@ -2,9 +2,9 @@
 
 Current as of **28 July 2026**, after the Mac session.
 
-**The three defects this file was created for are all closed**, and so is one of
-the two found while closing them. **Three are open**, all on the host carousel and
-all traceable to the same component choice. None of them needs a Deck.
+**The three defects this file was created for are all closed**, and so are two of
+the four found while closing them. **Two are open**, both on the host carousel and
+both traceable to the same component choice. None of them needs a Deck.
 
 | # | What | Status |
 |---|---|---|
@@ -13,7 +13,7 @@ all traceable to the same component choice. None of them needs a Deck.
 | 3 | Pressing A on a fake host crashes the app | **Fixed** in `d3c57f95`. Different mechanism than recorded |
 | 4 | The carousel still wraps once per move at **two** hosts | **Open.** Pre-existing, halved by defect 2's fix, not cured |
 | 5 | The hint bar offers Wake on hosts that cannot be woken | **Fixed** in `402b37d4`, on the client's call |
-| 6 | Left arrow runs the carousel away; right arrow is fine | **Open.** Not the key handler — that clamps, proven |
+| 6 | Left arrow runs the carousel away; right arrow is fine | **Fixed** in `0a305af2`. Cause confirmed by the client. Wants one pass with a mouse |
 | 7 | The far tile vanishes instead of leaving | **Open.** Defect 2's fix, rejected on sight by the client |
 
 **Two entries in the previous version of this file sent this session down the
@@ -22,7 +22,7 @@ conclusion was drawn from a measurement that could not see the thing it was bein
 used to rule out. That is the transferable lesson, and it is worth more than
 either bug.
 
-**Defects 2, 4, 6 and 7 are very likely one problem.** `PathView` moves items
+**Defects 2, 4 and 7 are very likely one problem.** `PathView` moves items
 endlessly around a **closed loop**; this carousel **clamps** and never wraps.
 `SPEC-host-carousel.md` carries the argument and a recommendation to position the
 tiles directly instead. Two sessions have now worked around the mismatch rather
@@ -58,9 +58,14 @@ simply continue outward and fade, which is what was asked for.
 
 ---
 
-# 6. Left arrow runs the carousel away
+# 6. Left arrow runs the carousel away — fixed
 
-**Found** 28 July 2026 by the client. **Open, and not reproduced in isolation.**
+**Found** 28 July 2026 by the client. **Cause confirmed by the client the same
+day; fixed in `0a305af2`. Wants one pass with a mouse to close.**
+
+**Not the same problem as defects 2, 4 and 7.** This one is the mouse handler,
+not the carousel component, and it would have survived replacing that component
+untouched.
 
 > *"Left arrow key turns the carousel into an infinite scroll until right arrow
 > key is pressed. Right arrow behaves correctly."*
@@ -76,9 +81,10 @@ project.
 So the index is not running away by itself. Something else is moving it, or the
 motion is visual rather than a selection change.
 
-## The leading hypothesis — unconfirmed
+## The cause — confirmed
 
-**The mouse-hover handler is feeding back into itself.**
+**The mouse-hover handler feeds back into itself.** The client confirmed it: with
+the pointer moved off the carousel, the left arrow behaves correctly.
 
 `HostTile` has `hoverEnabled: true` and moves the selection on hover, so the
 pointer and the D-pad agree about what is focused. But the tiles **move under a
@@ -90,19 +96,29 @@ reported: which way it runs depends on which side of centre the pointer is
 resting, and any other input can knock it out of phase — which matches "until
 right arrow key is pressed".
 
-**This is probably not new.** The handler had the same shape before this
-session's changes; only the call it makes changed. It needs one reproduction to
-confirm rather than assume.
+**This is not new.** The handler had the same shape before this session; only the
+call it makes changed. It was reported now because the pointer happened to be
+resting over the carousel.
 
-## How to confirm it in one minute
+## The fix
 
-Park the mouse pointer **off the carousel entirely** — over the hint bar, or
-outside the window — and press left repeatedly. If it clamps correctly, it is the
-hover loop and the fix is to make hover-to-focus ignore tiles that arrive under a
-pointer that has not itself moved.
+**Hover-to-focus stays** — the client confirmed hovering a host should focus it.
+What changes is which hover events count.
 
-If it still runs away with the pointer parked, the hypothesis is wrong and the
-next thing to look at is whether the key event is reaching more than one handler.
+`entered` fires whether the pointer arrives at a tile or a tile arrives at the
+pointer, and cannot distinguish them. `positionChanged` fires only when the
+pointer itself moves. So a tile reporting that it has been entered is acted on
+only while the pointer is already driving the selection, and any real pointer
+movement takes control back immediately. Pressing a direction hands control to
+the buttons, so the tiles that slide past the cursor because of that press are
+ignored rather than obeyed.
+
+Picking the mouse back up therefore works on the first movement rather than
+needing the pointer to cross a tile boundary.
+
+**Worth generalising:** any hover-to-focus on a view whose items move has this
+loop in it. It is not specific to this carousel and it will not be removed by
+replacing the carousel's component.
 
 ---
 
