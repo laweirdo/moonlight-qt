@@ -4,21 +4,38 @@ Everything here was found on hardware and is **still open**. All three came out
 of the Deck review session on **28 July 2026**, on a Steam Deck OLED
 ("Galileo"), Desktop Mode, with the client pressing the buttons.
 
-| # | What | Severity |
+| # | What | Status |
 |---|---|---|
-| 1 | A is dead after dismissing the pairing PIN panel | Makes the app feel broken in normal use |
-| 2 | The carousel's third tile wraps visibly on every move | Cosmetic, but "screams unpolished" — client's words |
-| 3 | Pressing A on a fake host crashes the app | Review tooling only; no real user hits it |
+| 1 | A is dead after dismissing the pairing PIN panel | **Appears fixed** — confirmed in Game Mode, unconfirmed in Desktop Mode |
+| 2 | The carousel's third tile wraps visibly on every move | Open. Cosmetic, but "screams unpolished" — client's words |
+| 3 | Pressing A on a fake host crashes the app | Open. Review tooling only; no real user hits it |
 
 **Read "Instrumenting this" under defect 1 before adding any logging.** It
 records which logging call actually reaches the Deck log, and which silently
 does not. Getting that wrong cost most of a session.
 
+**Read "The stale QML cache" under defect 1 too.** It is the reason defect 1 was
+wrongly recorded as unfixed, and it will waste a whole session for anyone who
+does not know about it.
+
 ---
 
 # 1. A is dead after dismissing the pairing PIN panel
 
-**Found** 28 July 2026 by the client. **Still open.** Two fix attempts failed.
+**Found** 28 July 2026 by the client. **Appears fixed** in `be874bf8`, confirmed
+by hand in Game Mode on 28 July 2026.
+
+**This entry was originally written up as an unfixed bug with two failed fix
+attempts. That was wrong, and the reason is worth more than the bug.** The
+second fix attempt was tested against a build whose interface was being served
+from a stale on-disk cache, so the fix was never actually running. It was
+recorded as "no effect" when it had almost certainly worked. Everything below is
+kept because the diagnosis is still useful and the mechanism may recur — but read
+it knowing the conclusion was reversed.
+
+**Still worth one check:** it is confirmed in Game Mode, on a host part-way
+through pairing. Press it once in Desktop Mode to be sure the fix is real and not
+mode-specific.
 
 This is **not** a regression of defect 1. Defect 1's fix is present and working,
 and the related failure it shares a symptom with — check 1.2, the Client Settings
@@ -93,26 +110,66 @@ consumed or transformed, not about the screen going deaf.
 
 ---
 
-## Fix attempts that did not work
+## The stale QML cache — the reason this was misdiagnosed
 
-Both are committed in `be874bf8`, because both are correct independently and one
-of them fixed check 1.2. Neither fixed this bug.
+**The app caches its compiled interface on disk, and that cache can survive
+rebuilds.** It lives at:
+
+```
+~/.var/app/io.github.laweirdo.MoonlightFork/cache/Moonlight Game Streaming Project/Moonlight/qmlcache/
+```
+
+On 28 July 2026 that directory held 19 files dated **25 July** — three days and
+many rebuilds old. The app was loading those in preference to the interface in
+the freshly installed build. Every rebuild genuinely installed; the app genuinely
+ignored it.
+
+**Symptoms, all of which were misread at the time:**
+
+- Screens do not change no matter how many times you rebuild.
+- A fix "does not work" when it is in fact never running.
+- The build output is clean and reports recompiling — because it is. The build is
+  not the problem.
+
+**Clear it, and confirm it regenerates with today's date:**
+
+```bash
+rm -rf ~/.var/app/io.github.laweirdo.MoonlightFork/cache/Moonlight\ Game\ Streaming\ Project/Moonlight/qmlcache
+```
+
+**A second, compounding trap:** `flatpak run` on an already-running instance
+raises the existing window rather than starting the new build, so an old process
+can sit in front of you looking like the new one. Always check
+`flatpak ps | grep -c MoonlightFork` is 0 before launching, and 1 after. This is
+the same trap `BUILDING-MAC.md` records for `open -n` on macOS.
+
+Between them these two cost most of a session and produced three wrong
+conclusions in a row.
+
+---
+
+## Fix attempts, and what actually happened
+
+Both are committed in `be874bf8`. Attempt 1 demonstrably fixed check 1.2.
+Attempt 2 was recorded as having no effect, but was tested against the stale
+cache described above and is the most likely reason this defect is now gone.
 
 1. **Clearing the panel's own focus before handing it back.** A `FocusScope`
    gives active focus to whichever child last held it, so handing focus back to
    the parent could route it straight back into the panel that had just closed.
-   Clearing first should prevent that. No effect on this bug.
+   Clearing first prevents that. **Fixed check 1.2**, the Client Settings
+   dropdown route, confirmed by hand.
 
 2. **`enabled: visible` on `HostPanel`, plus a focus handback on every hide.**
-   A disabled item cannot hold active focus, so a hidden panel should be
-   incapable of keeping it. The second half covers `pairingComplete()`, which
-   hides the PIN panel by setting `visible` directly and therefore never runs
-   `close()` or its handback at all. No effect on this bug.
+   A disabled item cannot hold active focus, so a hidden panel is incapable of
+   keeping it. The second half covers `pairingComplete()`, which hides the PIN
+   panel by setting `visible` directly and therefore never runs `close()` or its
+   handback at all. **Almost certainly the fix for this defect** — it was tested
+   against the stale cache and wrongly recorded as having no effect.
 
-The fact that attempt 2 changed nothing is itself evidence, and is the main
-reason the hypothesis above is not yet confirmed: if the panel really is holding
-focus, disabling it should have released it. Either it is not the panel, or
-`enabled: visible` is not doing what it is expected to do here.
+The hypothesis above — that the dismissed panel keeps focus and swallows the one
+key it handles — is therefore probably correct, and attempt 2 is what addressed
+it. It was never disproved; it was never actually tested.
 
 ---
 
