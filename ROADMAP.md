@@ -81,7 +81,7 @@ Judged on a Steam Deck OLED ("Galileo") on 28 July 2026, by the client, on the r
 
 #### What Phase A also produced
 
-Three open defects, all in `BUGS-open.md`, none needing a Deck to reproduce. One of them — the carousel's third tile wrapping visibly on every move — the client called out as reading unpolished, and it is worth clearing early in Phase B since it sits on the screen every session starts with.
+Three defects, all in `BUGS-open.md`, none needing a Deck to reproduce. **All three are now closed**, cleared in the Mac session on 28 July before any Phase B work started — including the carousel's third tile wrapping, which the client had called out as reading unpolished. One new defect remains open there: the same wrap still occurs once per move at **two** hosts, which is the client's real host count.
 
 **Branch names.** This originally said "merge to `main`". There is no `main`: the fork's default branch is `master` and it is kept as a clean mirror of upstream, while `bulan` is the integration branch and the baseline. Corrected here so nobody goes looking for a branch that does not exist. See `HANDOFF.md` § *How this repository is branched*.
 
@@ -89,6 +89,8 @@ Three open defects, all in `BUGS-open.md`, none needing a Deck to reproduce. One
 
 ### Phase B — Close the core loop
 *The path a user walks every single session.*
+
+**Order confirmed by the client on 28 July 2026: the host settings menu is first.**
 
 - **Host settings menu** (SELECT) — absorbs the rename / delete / test-network regression, which is currently a functional loss against upstream
 - **Connecting state** — designed properly, replacing the placeholder
@@ -168,7 +170,7 @@ HDR · Windows and other platforms · the mascot · a brand rules sheet while no
 
 ### Current standing risks
 
-~~**Wake is unproven.**~~ **Retired 28 July 2026 — it works.** Woken by hand from the carousel on a host that was genuinely asleep. The *"Asleep"* copy stands. Note for anyone testing it again: only `Steambox` is wakeable, because `Shoebox` never supplies a hardware address.
+~~**Wake is unproven.**~~ **Retired 28 July 2026 — it works.** Woken by hand from the carousel on a host that was genuinely asleep. The *"Asleep"* copy stands. Note for anyone testing it again: only `Steambox` is wakeable, because `Shoebox` never supplies a hardware address — and as of `402b37d4` the hint bar no longer offers Wake where it cannot work.
 
 ~~**The carousel wraps visibly at three hosts.**~~ **Retired 28 July 2026 — fixed in `9c721e13`,** and it was two faults rather than one. Note that the entry ruling out "wrong direction" was itself wrong; see `BUGS-open.md`.
 

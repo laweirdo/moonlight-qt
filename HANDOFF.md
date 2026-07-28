@@ -22,12 +22,16 @@ paired host put genuinely to sleep was woken from the carousel with Y and was
 back a minute later. *"Asleep"* is a promise the app can keep, and the copy
 stands as written.
 
-**The three defects `BUGS-open.md` was opened for are all closed.** Two smaller
-ones took their place and are recorded there. **Two of the three closed entries
-had a wrong diagnosis on record**, and both wrong diagnoses cost this session
-time before they were caught. Read `BUGS-open.md` before trusting the phrase
-"ruled out" in any bug write-up on this project — the section at the top of it
-explains how both went wrong in the same way.
+**The three defects `BUGS-open.md` was opened for are all closed.** Two more were
+found while closing them; one of those is fixed too, and **one is still open** —
+the carousel still wraps once per move at **two** hosts, which is the client's
+real host count.
+
+**Two of the three original entries had a wrong diagnosis on record**, and both
+wrong diagnoses cost this session time before they were caught. Read
+`BUGS-open.md` before trusting the phrase "ruled out" in any bug write-up on this
+project — the note at the top of it explains how both went wrong in the same way,
+and it is the same way twice.
 
 Bulan is a UI/UX-focused fork of moonlight-qt targeting the Steam Deck. The client
 is a creative director who does not read code; explanations belong in plain English,
@@ -142,6 +146,8 @@ These are not suggestions. They have been restated across several sessions.
 | `7e8506c1` | The build stamp — the log now names the commit and build time it is running |
 | `d3c57f95` | The fake-host crash, and `MOONLIGHT_FAKE_HOSTS=many` |
 | `9c721e13` | The carousel's visible wrap at three hosts |
+| `1ba04c01` | The Mac session write-up, and two corrected diagnoses |
+| `402b37d4` | Wake no longer offered on hosts that cannot be woken |
 
 ### The component inventory
 
@@ -242,14 +248,14 @@ reference for content and copy, not for layout.
 | **`deck_*` glyphs** | 10 files. Until they land, `deck` resolves to the Xbox set via `resolveGlyphFamily()` in `sdlgamepadkeynavigation.cpp` — deleting one line is the whole change. **Detection is confirmed working on real hardware in both Desktop Mode and Game Mode**, so those 10 files are the only thing between here and Deck glyphs. |
 | **Vignette / hint-bar band** | The client confirmed hairline-only for the hint bar. No filled surface token exists; if one is ever wanted, it is theirs to specify. |
 | **Status colour on in-between states** | Red and green now carry reachability on the host status line. *Looking for your PC…*, *Connecting…* and *Not paired yet* were left on the neutral text colour, on the reasoning that red and green are verdicts and those states have not reached one. Assistant's call, flagged to the client, not yet overturned. |
-| **Wake offered where it cannot work** | `BUGS-open.md` defect 5. The hint bar offers **Y Wake** on any unreachable host, including ones the app knows it cannot wake — `Shoebox` is one, because Sunshine never gives it a hardware address. One clause fixes it. Left alone because it changes what is on screen. |
 | **The two-host carousel wrap** | `BUGS-open.md` defect 4. Still visible once per move at the client's real host count. Curing it properly is most of a session and carries real regression risk on the first screen. Worth a decision before it is started. |
 | **Review-mode copy** | Pressing A on a review-mode host now raises a *"Review mode"* panel. Placeholder wording, never seen by a real user, changeable on request. |
 
 **Settled 28 July, no longer waiting:** grain intensity (`atmosphereGrainOpacity`
 stays 0.03), caption size (`sizeCaption` stays 16), overshoot
-(`motionOvershoot` stays 0.7), the hint-bar reflow (accepted as built), and
-**the wake question — wake works, so the "Asleep" copy stands.**
+(`motionOvershoot` stays 0.7), the hint-bar reflow (accepted as built),
+**the wake question — wake works, so the "Asleep" copy stands**, and Wake being
+withheld on hosts that cannot be woken.
 
 ---
 
@@ -408,8 +414,8 @@ least one of the client's machines, over HTTPS too.
 
 The practical consequence: **`Steambox` is wakeable and `Shoebox` is not**, and no
 amount of app-side work changes that. Any future wake testing has to use
-Steambox. The hint bar does not currently check `wakeable` before offering Wake —
-`BUGS-open.md` defect 5.
+Steambox. The hint bar checks `wakeable` before offering Wake as of `402b37d4`; before
+that it offered Wake on `Shoebox` and could only ever refuse.
 
 Wake itself broadcasts on every network interface as well as to the addresses it
 knows, so a host known only by a VPN address is still wakeable provided it is

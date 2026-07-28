@@ -2,8 +2,8 @@
 
 Current as of **28 July 2026**, after the Mac session.
 
-**The three defects this file was created for are all closed.** Two new ones are
-open, both found while closing the others. None of them needs a Deck.
+**The three defects this file was created for are all closed**, and so is one of
+the two found while closing them. **One is open.** None of them needs a Deck.
 
 | # | What | Status |
 |---|---|---|
@@ -11,7 +11,7 @@ open, both found while closing the others. None of them needs a Deck.
 | 2 | The carousel's third tile wraps visibly on every move | **Fixed** in `9c721e13`. Two faults, not one — see below |
 | 3 | Pressing A on a fake host crashes the app | **Fixed** in `d3c57f95`. Different mechanism than recorded |
 | 4 | The carousel still wraps once per move at **two** hosts | **Open.** Pre-existing, halved by defect 2's fix, not cured |
-| 5 | The hint bar offers Wake on hosts that cannot be woken | **Open.** Awaiting a decision from the client |
+| 5 | The hint bar offers Wake on hosts that cannot be woken | **Fixed** in `402b37d4`, on the client's call |
 
 **Two entries in the previous version of this file sent this session down the
 wrong path.** Both are corrected below, and both failed the same way: a
@@ -81,35 +81,26 @@ session begins with.
 
 ---
 
-# 5. The hint bar offers Wake on hosts that cannot be woken
+# 5. The hint bar offers Wake on hosts that cannot be woken — fixed
 
-**Found** 28 July 2026 on the Mac, while answering the wake question. **Open —
-this is a design decision, not a bug to fix unilaterally.**
+**Found** 28 July 2026 on the Mac, while answering the wake question.
+**Fixed** the same day in `402b37d4`, on the client's decision.
 
-The hint bar offers **Y Wake** on any host that is unreachable:
+The hint bar offered **Y Wake** on any unreachable host without checking whether
+the app could actually wake it. It can only wake a machine whose hardware address
+it has learned, and it learns that from the host's own reply. **Shoebox never
+provides one** — Sunshine reports all zeroes, which Moonlight correctly refuses
+to store — so Y on Shoebox could only ever answer *"Shoebox didn't tell us how to
+wake it."* `Steambox` does provide one (`e8:9c:25:7d:14:9d`) and wake works there.
 
-```qml
-{ action: "alternate", label: qsTr("Wake"), visible: !root.hostOnline }
-```
+This was the rule the client settled on the Deck in July with one case missed:
+*offer Wake only where waking means something.* That fix covered hosts already
+awake; this covers hosts that cannot be woken at all.
 
-It does not check whether the app can actually wake that host. It can only wake a
-machine whose hardware address it has learned, and it learns that from the host's
-own reply. **Shoebox never provides one** — Sunshine reports all zeroes, which
-Moonlight correctly refuses to store — so Y on Shoebox will always answer
-*"Shoebox didn't tell us how to wake it."*
-
-`Steambox` does provide one (`e8:9c:25:7d:14:9d`) and wake works there,
-confirmed by hand.
-
-This is the rule the client already settled on the Deck in July with one case
-missed: *offer Wake only where waking means something.* That fix covered hosts
-already awake; this is hosts that cannot be woken at all. Upstream's `PcView.qml`
-checks both (`!model.online && model.wakeable`), which suggests an oversight
-rather than a choice.
-
-**The fix is one clause** — adding a `wakeable` test to that line. Not applied
-because it changes what is on screen, and the hint bar's reflow is something the
-client judged by eye and accepted as built.
+The review-mode `offline` list now leads with a host in exactly that state, so it
+is on screen when the preset opens. Until this change nothing could show the case
+at all — the fake hosts derived `wakeable` from being offline, which is precisely
+the assumption at fault.
 
 ---
 
