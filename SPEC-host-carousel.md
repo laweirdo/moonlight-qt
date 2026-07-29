@@ -5,10 +5,10 @@ what exists, what was decided along the way, and what is deliberately unfinished
 
 Screen targets **1280×800**, the Steam Deck panel.
 
-**Rebuilt 28 July 2026 on `feat/carousel-engine`.** `PathView` is gone; the tiles
-are positioned directly. The host's name, status and address now belong to its
-own tile and travel with it, rather than being drawn separately near the bottom
-of the screen. Four commits:
+**Rebuilt 28 July 2026, merged into `bulan` and pushed.** `PathView` is gone; the
+tiles are positioned directly. The host's name, status and address now belong to
+its own tile and travel with it, rather than being drawn separately near the
+bottom of the screen. Four commits:
 
 | Commit | What |
 |---|---|

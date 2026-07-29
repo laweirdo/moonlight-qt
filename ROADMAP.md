@@ -93,7 +93,7 @@ Three defects, all in `BUGS-open.md`, none needing a Deck to reproduce. **All th
 **Order confirmed by the client on 28 July 2026: the host settings menu is first.**
 
 ~~**One thing comes ahead of it: replacing the host carousel's underlying
-component.**~~ **DONE, 28 July 2026**, on `feat/carousel-engine`. Four commits,
+component.**~~ **DONE, 28 July 2026, merged into `bulan` and pushed.** Four commits,
 verified on a real build frame by frame. `PathView` is gone; the tiles are
 positioned directly. It retired `BUGS-open.md` defects 2, 4 and 7 together and
 closed four of the client's six carousel review items. The estimate — about a

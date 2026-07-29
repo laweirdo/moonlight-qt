@@ -6,9 +6,10 @@ Written 28 July 2026, at the end of the Windows session that rebuilt the carouse
 Then `BUGS-open.md` — one open defect, the top bar on launch — and
 `SPEC-host-carousel.md`, which describes the screen you are about to add to.
 
-**Branch state:** `feat/carousel-engine` carries four commits and is **not
-merged**. Merge it on the client's sign-off, delete it locally and on the fork,
-and cut a new branch from `bulan` before starting anything below.
+**Branch state:** the carousel rebuild is **merged and pushed** — `bulan` is at
+`942e3d02` and matches the fork. `feat/carousel-engine` is deleted. **The carousel
+is finished; do not reopen it.** Cut a new branch from `bulan` before starting
+anything below.
 
 **This does not need a Steam Deck.** Everything here is reviewable on the Windows
 machine or the Mac with the fake host presets.

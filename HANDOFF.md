@@ -11,9 +11,9 @@ for the full answers.
 **The host carousel has been rebuilt and the client has accepted it.** This was
 the 28 July Windows session and it is the first time this screen has passed
 review. `PathView` is gone — the tiles are positioned directly, so there is no
-loop, no join and no direction to guess. Four commits on `feat/carousel-engine`,
-**not yet merged, awaiting the client's sign-off.** Details in
-`SPEC-host-carousel.md`; the verification is in `BUGS-open.md`.
+loop, no join and no direction to guess. **Merged into `bulan` and pushed on 28
+July**; the task branch is deleted. Details in `SPEC-host-carousel.md`; the
+verification is in `BUGS-open.md`.
 
 **There is now a third machine: the client's Windows PC, which is `Shoebox`.**
 It builds and runs the app, and it is a **review station, not a platform** —
@@ -175,7 +175,7 @@ These are not suggestions. They have been restated across several sessions.
 | `1ba04c01` | The Mac session write-up, and two corrected diagnoses |
 | `402b37d4` | Wake no longer offered on hosts that cannot be woken |
 
-### On `feat/carousel-engine` — built and accepted, **not yet merged**
+### The carousel rebuild — merged into `bulan` on 28 July 2026
 
 | Commit | What |
 |---|---|
@@ -183,8 +183,12 @@ These are not suggestions. They have been restated across several sessions.
 | `f0635789` | The host's name, status and address belong to its tile and travel with it |
 | `ee801af1` | `hostTileLabelGap` — the clear space between a circle and its name |
 | `58de72f1` | The ready count counts machines you have, not machines you have paired |
+| `f32ec616` | The documents brought up to date; `BUILDING-WINDOWS.md` added |
+| `201e1f3a` | Defect 6 closed — the hover check had been done and never written down |
+| `942e3d02` | The merge |
 
-Merge on the client's sign-off, then delete the branch locally and on the fork.
+`feat/carousel-engine` is deleted, locally and on the fork. `bulan` is pushed and
+matches `origin/bulan`.
 
 ### The component inventory
 
