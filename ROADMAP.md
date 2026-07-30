@@ -1,202 +1,188 @@
-# Bulan — Roadmap
+# Bulan — roadmap
 
-**Status:** draft, 27 July 2026
+**Current as of:** 30 July 2026
+
 **Owner:** Lao
 
----
+**Current phase:** Phase B — Close the core loop
 
-## What v1 is
+**Next milestone:** Host settings menu
 
-> **A complete, unembarrassing loop from cold launch to streaming and back, on a Steam Deck, with no screen along the way that still looks like upstream Moonlight.**
+This file governs v1 scope, phase order, exit conditions, and the next
+milestone. It does not govern live repository state (`HANDOFF.md`), the active
+work order (`TASK-BRIEF.md`), navigation edges (`FLOW.md`), or screen-level
+implementation decisions (`SPEC-*.md`).
 
-The test is a first-time user on a fresh install: they should never hit a screen that breaks the spell. That's the line. Anything a user encounters on the way to a game is v1. Anything that makes an already-working thing nicer is v1.x.
+## Definition of v1
 
-**What v1 is not:** a public release. See *Distribution* below.
+> **A complete, unembarrassing loop from cold launch to streaming and back, on
+> a Steam Deck, with no screen along the way that still looks like upstream
+> Moonlight.**
 
----
+The test is a first-time user on a fresh install: they should never hit a screen
+that breaks the spell. Anything encountered on the way to a game is v1.
+Improvements to an already coherent loop are v1.x.
+
+Private v1 targets both Steam Deck models: the 7-inch LCD and 7.4-inch OLED.
+OLED hardware has been used for visual validation. LCD visual validation is
+deferred until hardware is available and does not block private v1.
+
+Private v1 is not a public release.
 
 ## Scope decisions
 
-These are the calls that were open. Recorded here so they stop being re-derived.
+| Area | v1 decision |
+|---|---|
+| Technical foundation | Retain upstream discovery, pairing, streaming, and platform infrastructure. Replace individual UI components only when the approved design justifies it. |
+| Host libraries | Keep a separate library for each host. A merged multi-host library may be reconsidered after v1. |
+| Onboarding | Include the designed first-run path and manual-address escape hatch. |
+| Settings | Provide a Bulan shell and usable spatial controller navigation. A full re-architecture of every setting is not required. |
+| Stream overlay | Defer Bulan's proposed overlay until its summon binding can be checked against real games. Retain upstream streaming infrastructure. |
+| Splash | Ship a static splash; animation is v1.x. |
+| Sound and ambient motion | v1.x. They are differentiators, not dependencies for closing the loop. |
+| Custom Steam Deck glyph art | Not required for v1 because the practical shapes are identical to the current XInput glyphs. |
+| Mascot | Deferred beyond v1. |
+| HDR and non-Deck product targets | Out of scope. |
 
-| Question | Decision | Reasoning |
-|---|---|---|
-| Multiple hosts → one merged library? | **No. Separate libraries per host.** | The carousel already establishes host as the primary axis. Merging contradicts it and roughly doubles the game grid's complexity. Revisit for v1.x if it ever feels wrong in use. |
-| Sound pack (brief §7) | **v1.x** | 8–12 cues is a genuine production effort, and nothing breaks without it. It's a differentiator, not a dependency — which makes it the first thing to build after the loop is closed, not part of closing it. |
-| Onboarding | **v1** | Already designed, and without it first launch is upstream's bare grid. It runs once and is invisible in daily testing, which is exactly why it needs scheduling rather than remembering. |
-| Settings redesign | **v1, partial** | Full re-architecture of 37 controls is out of scope. But the flat 37-step D-pad chain is a real controller usability bug, and stock Qt Quick Controls is the largest standing violation of the custom-components rule. v1 gets a Bulan shell and working navigation. |
-| Stream overlay (Start+Select) | **Deferred pending hardware check** | The binding is an untested guess and upstream's overlay presumably works. If the Deck check shows it's broken, it becomes v1. |
-| Boot animation | **v1.x** | Static splash ships in v1. Animating it is additive. |
-| Mascot (brief Direction C) | **Deferred** — already decided in brief | |
-| Ambient background motion | **v1.x** | Battery cost unmeasured, and the atmosphere layer already carries the mood without it. |
-| HDR | **Not doing** | Brief-level complexity for marginal gain on this panel. |
-| Windows / other platforms | **Not doing** | Steam Deck is the product. |
-
----
+The creative brief's deliverables remain the long-term creative list and a guide
+when a visual decision is stuck. They do not all define private-v1 scope.
 
 ## Distribution
 
-**v1 is for Lao and a handful of people, installed by hand as a non-Steam game via Flatpak.**
+Private v1 is for Lao and a handful of people, installed by hand as a non-Steam
+game through Flatpak.
 
-This sizes several things that were otherwise unsizeable:
+- The app must carry its licence and a clear “Built on Moonlight” credit. A
+  simple About treatment is sufficient for private v1.
+- The app icon and Steam artwork are v1 because the non-Steam library entry
+  should not look unfinished.
+- Public-facing release preparation, a full brand rules sheet, and broader
+  contributor guidance are later work.
+- The root README keeps its upstream content. A concise Bulan-fork notice is
+  documentation orientation, not public-release marketing.
 
-- **"Built on Moonlight" in About** — still required, still a licence obligation, but it does not need a polished About screen. A line of text satisfies it.
-- **App icon and Steam artwork** — needed, because a non-Steam game entry with no artwork looks broken in the library. In v1.
-- **README, brand rules sheet, reproducible builds** — v1.x or never. These matter when other people contribute or install, and nobody does yet.
+Public release is a v2 decision.
 
-Public release is a v2 conversation.
+## Milestones
 
----
+### Phase A — Stabilise — completed 28 July 2026
 
-## Phases
+The first known-good `bulan` baseline was established after controller, wake,
+Game Mode, and visual checks on available hardware. The upstream sync policy,
+review checklist, build procedures, and design sources were recorded.
 
-Each phase ends on the Deck before the next begins. That cadence is the point, not a formality.
+The OLED review settled the live values below:
 
-### Phase A — Stabilise ✅ **CLOSED 28 July 2026**
-*Nothing new gets built until the foundation is trustworthy.*
+| Token | Validated value |
+|---|---|
+| `atmosphereGrainOpacity` | `0.03` |
+| `sizeCaption` | `16` |
+| `motionOvershoot` | `0.7` |
+| `motionFocusMs` | `180` |
 
-- ✅ Defects 1, 3, 4 fixed; decision made on 2 — **and all four confirmed by hand on hardware**
-- ✅ Unconditional glyph-detection log at startup
-- ✅ Deck checks 4–8 reported, plus Game Mode (check 9)
-- ✅ **The wake question — answered 28 July 2026, and wake works.** A paired host put genuinely to sleep was woken from the carousel with Y and was back a minute later. The *"Asleep"* copy stands as written, so the one line that depended on the answer needs no change. Answered on the Mac; it never needed a Deck.
-- ✅ Brief, flow diagram and onboarding frames moved into the repo
-- ✅ **Merge to `bulan`** — first known-good baseline
-- ✅ Upstream sync — fast-forward `master` from upstream, then merge `master` into `bulan`
-- ✅ `REVIEW-CHECKLIST.md`
+The first three values were confirmed; `motionFocusMs` deliberately evolved
+from the brief's original `140` after hardware review.
 
-**Exit:** met. `bulan` exists, the carousel's defects are fixed and hardware-confirmed, and the global tokens are settled from real observation.
+**Exit:** met. The integration baseline existed, the original stabilization
+defects were resolved and checked, and the global tokens were judged on a real
+OLED Steam Deck.
 
-#### The settled tokens
+### Phase B — Close the core loop — current
 
-Judged on a Steam Deck OLED ("Galileo") on 28 July 2026, by the client, on the real panel.
+The accepted carousel rebuild is the completed Phase B milestone. Its durable
+design and engineering reasoning is in `SPEC-host-carousel.md`.
 
-| Token | Value | Outcome |
-|---|---|---|
-| `atmosphereGrainOpacity` | **0.03** | Unchanged. Judged fine — visible and doing its job |
-| `sizeCaption` | **16** | Unchanged. Legible at holding distance without leaning in |
-| `motionOvershoot` | **0.7** | Unchanged |
-| `motionFocusMs` | **180** | Changed from 140. The brief's figure read a touch too fast |
+Remaining work, in order:
 
-**Both standing risks below were wrong, and in the reassuring direction.** Recorded because the lesson generalises: `sizeCaption: 16` was predicted by calculation to fail at arm's length and does not, and grain at 0.03 was predicted to be invisible on this panel and is not. **The arithmetic was more pessimistic than the eye.** Worth remembering before the next value is argued from a spreadsheet rather than looked at.
+1. **Host settings menu** — next. Restore the host actions lost when the
+   upstream computers grid stopped being the initial screen. The active work
+   order is `TASK-BRIEF.md`.
+2. **Connecting state** — replace the placeholder with the approved experience.
+3. **Game grid** — Recent and Library views.
+4. **Game detail and launch** — follow the navigation authority in `FLOW.md`.
+5. **Screen transitions** — wire the existing 220 ms transition token into the
+   completed core route.
 
-#### What Phase A also produced
+The host-settings work order also includes the startup-toolbar defect because
+the fix must preserve inherited toolbars. That defect is tracked in
+`BUGS-open.md`.
 
-Three defects, all in `BUGS-open.md`, none needing a Deck to reproduce. **All three are now closed**, cleared in the Mac session on 28 July before any Phase B work started — including the carousel's third tile wrapping, which the client had called out as reading unpolished. One new defect remains open there: the same wrap still occurs once per move at **two** hosts, which is the client's real host count.
-
-**Branch names.** This originally said "merge to `main`". There is no `main`: the fork's default branch is `master` and it is kept as a clean mirror of upstream, while `bulan` is the integration branch and the baseline. Corrected here so nobody goes looking for a branch that does not exist. See `HANDOFF.md` § *How this repository is branched*.
-
-**Sync, not rebase.** This originally said "upstream rebase". `bulan` is pushed and shared, so rebasing it would rewrite history other checkouts already have. The sync is a merge in one direction only, which is why `master` must never carry Bulan work — that is what keeps the first half a fast-forward.
-
-### Phase B — Close the core loop
-*The path a user walks every single session.*
-
-**Order confirmed by the client on 28 July 2026: the host settings menu is first.**
-
-~~**One thing comes ahead of it: replacing the host carousel's underlying
-component.**~~ **DONE, 28 July 2026, merged into `bulan` and pushed.** Four commits,
-verified on a real build frame by frame. `PathView` is gone; the tiles are
-positioned directly. It retired `BUGS-open.md` defects 2, 4 and 7 together and
-closed four of the client's six carousel review items. The estimate — about a
-session, two files — held. The argument that justified it is kept in
-`SPEC-host-carousel.md`, because the next stock view this project reaches for
-will raise the same question.
-
-**Also done in that session**, both client calls: the text now belongs to each
-tile and travels with it, and the ready count counts machines you have rather
-than machines you have finished setting up.
-
-**The remaining work is now the list below, in order.**
-
-- **Host settings menu** (SELECT) — absorbs the rename / delete / test-network regression, which is currently a functional loss against upstream. **This is next.**
-- **Connecting state** — designed properly, replacing the placeholder
-- **Game grid** (`AppView.qml`) — Recent and Library tabs, per the existing frames
-- **Game detail / launch** — per the flow diagram
-- Screen transitions wired up (220ms, brief §6 — the token exists and is unused)
-
-**Exit:** launch → pick host → pick game → stream → return, with no upstream screen visible.
-
-**Six review items on the host carousel**, given by the client on 28 July, are recorded in full in `SPEC-host-carousel.md`. **Five are done and one is untouched.** The untouched one is the **wake state, which should be a waiting overlay rather than a popup** — that is Phase D's *Waking PC* screen arriving early and deserves its own session, because holding a waiting state until the host comes back *or fails to* means the screen has to notice both outcomes. Mouse hover no longer steering the carousel was confirmed by the client with a mouse and is closed.
-
-**The wording of "Forget PC" is settled — client's call, 28 July 2026.** It stays *"Forget PC"*. Removing a machine does not unpair it: the host goes on recognising this client, so it reappears as already paired if it is added back. The client's reasoning is that this is the correct reading of the words — **Bulan forgets the host; the host does not forget Bulan** — and the wording says exactly that rather than overclaiming. Recorded so the question is not reopened as a bug: the asymmetry is intended, not an oversight.
+**Exit:** launch → pick host → pick game → stream → return, with no screen in
+the user journey that still reads as upstream Moonlight.
 
 ### Phase C — First run
-*Runs once, invisible in daily testing, breaks the spell if missing.*
 
-- Splash
-- "Let's find your PC"
-- "Looking for your PC"
+- Static splash
+- “Let's find your PC”
+- “Looking for your PC”
 - PIN entry
-- **Manual IP entry** — referenced by two designed screens as "Enter an address instead" and currently undesigned. Needs deliberate handling of Steam's on-screen keyboard in Game Mode.
-- First-run routing logic — what "first launch" means mechanically, and where pairing lands the user
+- Manual IP entry, including deliberate Steam on-screen-keyboard handling
+- First-run routing and the post-pairing destination
 
-**Logo composition — decided, 27 July 2026.** The reflected mark is not used in these frames. They use the wordmark already in the repo, `app/res/bulan_logo_horiz.svg`, which is the same mark the carousel already draws. This unblocks the phase, and it means all four frames need recomposing: they were laid out around a tall centred element and the wordmark is small and horizontal, so the vertical space it vacates has to be deliberately reallocated rather than left as a gap. The frames in `design/` are the *old* composition and are now reference for content and copy, not for layout.
+The reflected-moon mark is superseded. Existing onboarding boards remain useful
+for content and copy, but their composition must be revisited around the current
+horizontal wordmark.
+
+**Exit:** a first-time user can discover or enter a host, pair, and arrive in
+the normal loop without encountering an upstream screen.
 
 ### Phase D — Edges
-*Where the flow diagram already says things are missing.*
 
 - Couldn't reach PC
 - Couldn't start stream
-- Library empty state for a paired host with no games — flagged on the board as not drawn
+- Empty library for a paired host
 - Zero hosts
-- **Waking PC** — the client has scoped this on 28 July: not a popup, a waiting overlay, *"perhaps with 3 animated bouncing dots"*, held until the host is awake **or fails to wake**. Today `actWake()` raises a panel saying *"Give it a moment to come back."* and never revisits it. Resolving it needs the screen to notice both outcomes, so this is more than a visual change.
-- Quit / disconnect confirmation
+- Waking PC waiting overlay, held until success or failure
+- Quit and disconnect confirmation
+
+**Exit:** every reachable failure or empty state has a designed, controller-safe
+route back to the loop.
 
 ### Phase E — Settings and About
-- Settings in a Bulan shell, custom components
-- D-pad navigation that follows the visual layout instead of a flat 37-step chain
-- Toggles for the atmosphere effects that already have flags wired but no UI
-- About, with the Moonlight credit
 
-### Phase F — Ship
-- App icon, five sizes
-- Steam Deck artwork set — capsule, wide capsule, hero, transparent logo
-- Flatpak packaged and installing cleanly
-- Full `REVIEW-CHECKLIST.md` pass on the Deck
-- Brief reconciled one final time; `Decisions Made` complete
+- Settings in a Bulan shell using custom components
+- D-pad navigation that follows the visual layout
+- Controls for the existing atmosphere-effect flags
+- About with the Moonlight credit
 
----
+**Exit:** required settings and legal attribution are reachable and usable
+without a mouse.
 
-## v1.x — the queue after
+### Phase F — Ship private v1
 
-Ordered by expected value, not effort.
+- App icon in required sizes
+- Steam Deck artwork set
+- Flatpak installs cleanly
+- Full `REVIEW-CHECKLIST.md` pass on available Deck hardware
+- Creative brief reconciled with deliberate evolution clearly labelled
 
-1. **Sound pack** — the largest single differentiator still unbuilt
+**Exit:** the private build installs, presents correctly in Steam, completes the
+full loop, and has an honest validation record.
+
+## After private v1
+
+Ordered by expected value, not effort:
+
+1. Sound pack
 2. Boot animation
 3. Ambient background motion
-4. Stream overlay, if hardware testing showed it needed
-5. Merged multi-host library, if separate libraries prove annoying in use
-6. README and public release preparation
-
----
-
-## Not doing
-
-HDR · Windows and other platforms · the mascot · a brand rules sheet while nobody else contributes
-
----
+4. Stream overlay, if hardware validation shows Bulan needs one
+5. Merged multi-host library, if separate libraries prove awkward in use
+6. Public-release preparation
 
 ## Standing risks
 
-~~**`sizeCaption: 16` may fail at arm's length.**~~ **Retired 28 July 2026 — did not happen.** Read comfortably on the panel. Stays 16.
+- **Startup toolbar:** changing its visible-by-default behavior is small in code
+  but can silently remove navigation from inherited screens. The active task
+  requires checking every screen that should retain it.
+- **Manual address entry:** the onboarding escape hatch still needs a design
+  that works with Steam's on-screen keyboard in Game Mode.
+- **Stream overlay input:** `Start+Select` remains an unvalidated proposed
+  binding. The Bulan overlay is deferred rather than allowed to block v1.
+- **LCD appearance:** LCD-specific visual validation remains outstanding until
+  hardware is available. It does not block private v1, but must not be reported
+  as passed.
 
-~~**Grain at 0.03 may be invisible on the OLED.**~~ **Retired 28 July 2026 — did not happen.** Visible and doing its job. Stays 0.03. The brief's 2–4% range needs no revision.
-
-~~**Steam Input sits between hardware and app in Game Mode.**~~ **Retired 28 July 2026 — verified and passed.** Steam Input does interpose a virtual controller (`Steam Virtual Gamepad`, product `11ff` rather than `1205`), but carries Valve's vendor ID `28de` through, which is what detection keys on. All five bindings arrive. See `BUILDING-DECK.md`.
-
-**All three of the risks this document carried were retired by one afternoon of looking at the hardware, and all three had been more frightening on paper than in fact.** The pattern is worth keeping in view: this project's estimates of its own perceptual risks have run pessimistic. That argues for reaching hardware earlier, not for trusting the estimates less.
-
-### Current standing risks
-
-~~**Wake is unproven.**~~ **Retired 28 July 2026 — it works.** Woken by hand from the carousel on a host that was genuinely asleep. The *"Asleep"* copy stands. Note for anyone testing it again: only `Steambox` is wakeable, because `Shoebox` never supplies a hardware address — and as of `402b37d4` the hint bar no longer offers Wake where it cannot work.
-
-~~**The carousel wraps visibly at three hosts.**~~ **Retired 28 July 2026 — fixed in `9c721e13`,** and it was two faults rather than one. Note that the entry ruling out "wrong direction" was itself wrong; see `BUGS-open.md`.
-
-~~**The host carousel has three open defects and they are one problem.**~~ **Retired 28 July 2026 — the engine was replaced and all three are closed.** `BUGS-open.md` defects 4 and 7 went with the component; defect 6 was the mouse handler and survived the rebuild untouched, exactly as predicted, and is now closed too.
-
-**The screen every session starts on had been reviewed twice and failed twice.** Not because either fix was wrong — the direction fault was real and is gone — but because the component underneath could not express what the design asked for, and each fix had to trade one artefact for another. **Acting on that signal rather than attempting a third workaround was correct**, and the third review passed.
-
-**The lesson worth carrying is about the second fix, not the first.** The first was wrong and was replaced. The second was *correct* and was rejected anyway, because trading a visible wrap for a visible disappearance is not progress. When a fix can only trade one artefact for another, the component is the problem — and that becomes obvious one session before anyone wants to hear it.
-
-**New standing risk: upstream's top bar is on screen for the first 567ms of every launch.** `BUGS-open.md` defect 8, found by the client and measured rather than inferred. The bar defaults to visible and nothing hides it until a screen is pushed and activated, which cannot happen until early initialisation finishes. The fix inverts a default that every screen in the app currently depends on, including upstream screens this fork has not rebuilt — so it is small but wide, and it is worth doing **before** Phase B rebuilds the game grid, since the game grid is one of the screens that would have to claim its own toolbar.
-
-**A fourth pattern in the same family as the three retired above.** All three retired risks were *perceptual* estimates that ran pessimistic. This one is different and worth separating: **two of the three defect write-ups on this project had a wrong diagnosis on record**, each drawn from a measurement that could not see the thing it was being used to rule out. Both cost time this session. The estimates that have proven unreliable here are not the ones about how things will look — they are the ones about what has been eliminated.
+Retired risks and their reusable lessons belong in
+`docs/retrospectives/DEBUGGING-LESSONS.md`, not in the active roadmap. Detailed
+carousel decisions remain in `SPEC-host-carousel.md`.

@@ -12,10 +12,10 @@ sequencing is in the roadmap; the implementation work order is in
 | Item | State |
 |---|---|
 | Current branch | `codex/docs-architecture` |
-| Current HEAD | `d49d3a90` — `docs: add permanent agent instructions` |
+| Current HEAD before the Stage 3 review diff | `b7eeb09f` — `docs: simplify current handoff and task brief` |
 | Documentation branch baseline | `bulan` at `30aaa57d` |
 | Integration branch | `bulan`, matching `origin/bulan` at `30aaa57d` when this branch was created |
-| Working tree | **Dirty by design:** Stage 2 replaces this handoff and renames/simplifies the active task brief; awaiting client review |
+| Working tree | **Dirty by design:** Stage 3 simplifies the roadmap, reconciles the flow, and moves general lessons into one retrospective; awaiting client review |
 | Configured remotes | `origin` only in this checkout |
 | Application source changes on this branch | None |
 
@@ -26,14 +26,15 @@ permanent rules or specifications.
 
 ### Documentation
 
-Stage 1 of the documentation reorganization is complete in `d49d3a90`:
+Stages 1 and 2 of the documentation reorganization are complete:
 
-- created `AGENTS.md` as the permanent operating authority;
-- moved branch, commit, client-boundary, interface, validation, and
-  contradiction rules out of mutable session documents; and
-- retained the first upstream-sync account as explicitly historical.
+- `d49d3a90` created `AGENTS.md` as the permanent operating authority and moved
+  stable rules out of mutable session documents.
+- `b7eeb09f` reduced this handoff and replaced
+  `PROMPT-next-session.md` with the single active `TASK-BRIEF.md`.
 
-No application file changed and no application build was needed for Stage 1.
+No application file changed and no application build was needed for either
+stage.
 
 ### Application
 
@@ -52,16 +53,20 @@ The rebuilt carousel:
 
 ## Work currently in progress
 
-The documentation-architecture task is in **Stage 2 — current state and active
-task**. This stage:
+The documentation-architecture task is in **Stage 3 — roadmap and flow**. The
+review diff:
 
-- reduces this handoff to current operational state;
-- renames `PROMPT-next-session.md` to `TASK-BRIEF.md`;
-- records that host-settings implementation has not started; and
-- removes permanent-rule and full-project-state duplication from the task brief.
+- narrows `ROADMAP.md` to scope, sequencing, milestones, exits, and genuine
+  standing risks;
+- gives `FLOW.md` an explicit authority header;
+- resolves or defers the old flow questions using the client's settled
+  decisions; and
+- moves reusable historical lessons to
+  `docs/retrospectives/DEBUGGING-LESSONS.md`.
 
-Stages 3–6 have not started. The documentation is therefore **not yet fully
-reconciled**.
+Stages 4–6 have not started. The documentation is therefore **not yet fully
+reconciled**, and `BUGS-open.md`, the creative brief, specifications, and README
+still await their scheduled stages.
 
 ## Active implementation task
 
@@ -112,6 +117,7 @@ or 2 because they do not change application files.
 | Carousel hover | Client-confirmed with a mouse; closed |
 | LCD visual validation | Deferred until LCD hardware is available; not a private-v1 blocker |
 | Stage 1 documentation | UTF-8, whitespace, staged-diff, and documentation-only scope checks passed |
+| Stage 2 documentation | UTF-8, whitespace, staged-diff, and documentation-only scope checks passed |
 
 The relevant `BUILDING-*.md` file must be read before the next application
 build. Do not infer that an old validation covers new application changes.
@@ -192,9 +198,10 @@ authority.
 
 For the current documentation task:
 
-1. Review this Stage 2 diff.
+1. Review this Stage 3 diff.
 2. If approved, commit it as a separate documentation-only change.
-3. Begin Stage 3 by simplifying `ROADMAP.md` and reconciling `FLOW.md`.
+3. Begin Stage 4 by separating the open startup-toolbar defect from the closed
+   carousel investigations.
 
 For the later host-settings implementation:
 
@@ -214,4 +221,5 @@ For the later host-settings implementation:
 - Build procedures, except where a later documentation stage explicitly moves
   duplicated historical material without changing commands
 
-Stage 3 is documentation architecture only: roadmap and flow.
+Stage 3 is documentation architecture only: roadmap, flow, and relocation of
+their durable historical lessons.

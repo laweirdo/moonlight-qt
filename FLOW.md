@@ -1,10 +1,24 @@
 # Bulan — navigation flow
 
-The board this came from is `design/navigation-flow-board.png`. It is committed
-alongside because Mermaid lays out its own graph and will not reproduce the
-spatial arrangement — the board reads left to right as a journey, and that
-reading is lost here. **When the two disagree about layout, the board is right.
-When they disagree about edges, this file is the one being maintained.**
+**Last reconciled:** 30 July 2026
+
+This file governs intended navigation states, transitions, and flow decisions.
+It does not report which screens are implemented, which task is active, or how
+an individual screen is laid out. Those belong in `HANDOFF.md`,
+`TASK-BRIEF.md`, and the relevant `SPEC-*.md`.
+
+The exported board is `design/navigation-flow-board.png`. It is committed
+alongside this file because Mermaid chooses its own graph layout and cannot
+reproduce the board's left-to-right spatial journey.
+
+- **For spatial layout, grouping, and visual placement, the exported board
+  wins.**
+- **For state names, navigation edges, and written flow decisions, this
+  Markdown file wins.**
+
+The board has not been re-exported during the documentation reorganization.
+Any future edge change requires a client decision and a later board
+reconciliation.
 
 The board carries two diagrams. The first is Bulan as designed. The second is
 upstream Moonlight as it exists today, which is what the first replaces.
@@ -230,28 +244,24 @@ should be. Bulan's diagram is not simpler by accident.
 
 ---
 
-## Open questions
+## Settled and deferred flow decisions
 
-These were sticky notes on the board. They are decisions that have not been
-made, not things that were forgotten.
+These items were open questions on the exported board and are retained here so
+their resolution is not lost.
 
-**Can Bulan actually wake a sleeping PC?** If it cannot, the Asleep state shown
-on Your PCs is a lie and needs different wording. This is now partly answered:
-Wake is wired and correct, and the hint for it is hidden on hosts that are
-already awake. **What remains untested is whether waking a genuinely sleeping
-machine works end to end** — that needs a host that can actually be put to
-sleep.
+- **Wake works.** A genuinely sleeping, wakeable host returned after the action
+  was tested end to end on 28 July 2026. The “Asleep” state is accurate. The
+  designed destination is a waiting overlay that resolves on success or
+  failure.
+- **Libraries remain separate by host for v1.** A merged multi-host library is
+  deferred unless the separate model proves awkward after use.
+- **The Bulan stream overlay is deferred pending input validation.**
+  `Start+Select` remains a proposed, unvalidated summon binding. The Overlay
+  node records the intended flow; it does not claim that the binding works or
+  that the screen is in v1.
 
-**Should multiple paired hosts ever merge into one library grid, or stay
-separate?** Simpler to say no for v1, but worth deciding rather than defaulting
-into. The carousel as built assumes separate.
+## Unresolved flow design
 
-**The library empty state is not drawn** — a paired host with no games detected.
-It is reachable in the real app and has no design.
-
-**Overlay summon is unvalidated.** SteamOS owns the Steam and QAM buttons, and
-every other input forwards to the host during a stream. `Start plus Select` held
-is a guess until it is tested on hardware against real games. This is the one
-open question on the board that could invalidate a screen rather than just leave
-it undesigned: if the combination cannot be claimed, the Overlay has no way in
-and the Session group needs rethinking.
+**The library empty state is not drawn.** A paired host can have no games
+detected, so this is a reachable state and needs a designed route before Phase
+D can exit.
