@@ -12,10 +12,10 @@ sequencing is in the roadmap; the implementation work order is in
 | Item | State |
 |---|---|
 | Current branch | `codex/docs-architecture` |
-| Current HEAD before the Stage 5 review diff | `2fbdfc9f` — `docs: split open defects from retrospectives` |
+| Documentation state | Stages 1 through 6 are committed on this branch; inspect Git for the exact HEAD |
 | Documentation branch baseline | `bulan` at `30aaa57d` |
 | Integration branch | `bulan`, matching `origin/bulan` at `30aaa57d` when this branch was created |
-| Working tree | **Dirty by design:** Stage 5 reconciles the creative brief, roadmap logo dependency, and host-carousel specification; awaiting client review |
+| Working tree after the approved Stage 6 commit | Clean |
 | Configured remotes | `origin` only in this checkout |
 | Application source changes on this branch | None |
 
@@ -26,16 +26,22 @@ permanent rules or specifications.
 
 ### Documentation
 
-Stages 1 through 4 of the documentation reorganization are complete:
+Stages 1 through 6 of the documentation reorganization are complete:
 
 - `d49d3a90` created `AGENTS.md` as the permanent operating authority and moved
   stable rules out of mutable session documents.
-- `b7eeb09f` reduced this handoff and replaced
-  `PROMPT-next-session.md` with the single active `TASK-BRIEF.md`.
+- `b7eeb09f` reduced this handoff and established `TASK-BRIEF.md` as the single
+  active work order.
 - `87d305f9` separated roadmap sequencing from project history, reconciled the
   flow questions, and created the cross-cutting debugging retrospective.
 - `2fbdfc9f` separated the open startup-toolbar defect from the closed carousel
   investigations and preserved the ledger as a detected Git rename.
+- `141462d2` reconciled deliberate creative evolution, logo roles, hardware
+  validation, and the durable carousel specification.
+- The final consistency commit added the Bulan README notice, reconciled stale
+  review and build references, and completed the repository-wide Markdown
+  validation. Inspect Git for its exact hash because this handoff is part of
+  that commit.
 
 No application file changed and no application build was needed for these
 stages.
@@ -55,24 +61,22 @@ The rebuilt carousel:
 
 `SPEC-host-carousel.md` is the durable authority for that surface.
 
-## Work currently in progress
+## Documentation task status
 
-The documentation-architecture task is in **Stage 5 — brief and
-specifications**. The review diff:
+The documentation-architecture task is **complete**. Stage 6:
 
-- adds a current-interpretation section without rewriting the original creative
-  exploration;
-- records deliberate OLED-validated evolution and deferred LCD validation;
-- distinguishes the final horizontal corner wordmark from client-supplied
-  centred-logo assets;
-- clarifies the long-term deliverables and custom Deck glyph decisions;
-- labels carousel decisions as invariants, v1 decisions, accepted compromises,
-  provisional work, or superseded history; and
-- removes duplicated debugging narrative and mutable merge/push status from the
-  carousel specification.
+- adds a concise Bulan orientation notice without rewriting the upstream
+  README;
+- makes `UI-AUDIT.md` explicitly historical rather than tied to an obsolete
+  branch;
+- removes stale handoff references from machine build instructions and records
+  all six fake-host presets;
+- reconciles the hardware checklist with the later Wake pass, 180 ms focus
+  timing, private-v1 glyph decision, and fake-host guard; and
+- checks all 18 tracked project Markdown files and their local references.
 
-Stage 6 has not started. The documentation is therefore **not yet fully
-reconciled**; the README notice and final cross-file consistency pass remain.
+The client approved the Stage 6 result and it is committed. No documentation
+stage is awaiting review.
 
 ## Active implementation task
 
@@ -113,7 +117,7 @@ reconcile the documents rather than expanding this summary.
 ## Last known build and validation status
 
 No application build or runtime test was performed for documentation Stages 1
-through 5 because they do not change application files.
+through 6 because they do not change application files.
 
 | Validation | Last known result |
 |---|---|
@@ -127,7 +131,8 @@ through 5 because they do not change application files.
 | Stage 2 documentation | UTF-8, whitespace, staged-diff, and documentation-only scope checks passed |
 | Stage 3 documentation | UTF-8, whitespace, reference, Mermaid-fence, and documentation-only scope checks passed |
 | Stage 4 documentation | UTF-8, whitespace, reference, open/closed separation, rename-detection, and documentation-only scope checks passed |
-| Stage 5 review diff | UTF-8, whitespace, reference, source-value, logo-placement, and documentation-only scope checks passed |
+| Stage 5 documentation | Committed as `141462d2` after UTF-8, whitespace, reference, source-value, logo-placement, and documentation-only checks passed |
+| Stage 6 documentation | All 18 tracked project Markdown files reread; UTF-8, whitespace, local links, code fences, stale-state scans, and documentation-only scope checks passed |
 
 The relevant `BUILDING-*.md` file must be read before the next application
 build. Do not infer that an old validation covers new application changes.
@@ -172,8 +177,7 @@ dependency for the relevant onboarding and artwork work.
 
 ## Decisions made in the latest documentation session
 
-These decisions are settled and must be carried into the remaining
-documentation stages:
+These decisions are settled and must be carried into future work:
 
 | Topic | Decision |
 |---|---|
@@ -191,52 +195,45 @@ documentation stages:
 | Historical organization | Use a small retrospective set and preserve Git-aware moves |
 | Root README | Keep upstream content and add a concise Bulan orientation notice without public-release marketing |
 
-The Stage 5 review diff applies the remaining brief and specification decisions.
-The root README notice and final consistency work remain for Stage 6.
+Stage 6 applied the agreed README notice and objective cross-file corrections.
+It introduced no new product or design decision.
 
 ## Required reading
 
-Read in this order before the next documentation stage:
+Read in this order before the next product task:
 
 1. `AGENTS.md`
-2. This file
-3. `TASK-BRIEF.md` when discussing the next application task
-4. `bulan-creative-brief.md`
-5. `FLOW.md`
-6. `ROADMAP.md`
-7. `BUGS.md`
-8. `SPEC-host-carousel.md`
-9. The relevant `BUILDING-*.md` before any build
+2. Inspect the branch, HEAD, remotes, and working tree.
+3. `bulan-creative-brief.md`
+4. `FLOW.md`
+5. `ROADMAP.md`
+6. This file
+7. `TASK-BRIEF.md`
+8. `BUGS.md`
+9. `SPEC-host-carousel.md`
+10. The relevant `BUILDING-*.md` before any build
 
 `UI-AUDIT.md` is an upstream historical baseline, not a current implementation
 authority.
 
 ## Next recommended action
 
-For the current documentation task:
+The documentation branch is ready for the client to merge into `bulan`. Do not
+merge or push it without explicit approval.
 
-1. Review this Stage 5 diff.
-2. If approved, commit it as a separate documentation-only change.
-3. Begin Stage 6 by adding the concise README notice and performing the full
-   Markdown consistency pass.
+For the host-settings implementation after that merge:
 
-For the later host-settings implementation:
+1. Ask the four client questions in `TASK-BRIEF.md`.
+2. Inspect the latest approved `bulan` and create the implementation branch.
+3. Record that exact branch and baseline here.
+4. Implement and validate one approved logical change at a time.
 
-1. Finish and merge the documentation reorganization first.
-2. Ask the four client questions in `TASK-BRIEF.md`.
-3. Inspect the latest approved `bulan` and create the implementation branch.
-4. Record that exact branch and baseline here.
-5. Implement and validate one approved logical change at a time.
-
-## Do not touch during the next documentation stage
+## Do not touch before the host-settings implementation
 
 - Application source, QML, C++, build logic, assets, or design files
 - Host discovery, pairing, streaming, or platform infrastructure
 - The accepted carousel implementation
-- The host-settings implementation
-- The active startup-toolbar defect
-- Build procedures, except where a later documentation stage explicitly moves
-  duplicated historical material without changing commands
+- Build procedures
 
-Stage 5 is documentation architecture only: creative interpretation, durable
-surface decisions, and known unfinished work.
+The host-settings task brief owns the exact implementation scope, including the
+startup-toolbar defect.

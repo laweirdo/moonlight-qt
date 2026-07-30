@@ -14,7 +14,7 @@ those to a developer to point them at the exact spot.
 > redesign is measured against, and several of its findings are the reasons
 > particular decisions were later made.
 >
-> Superseded since, on the `dev/token-proof` branch:
+> Superseded in the Bulan fork:
 >
 > - **Screen 1, "Computers"** — the card grid described below is no longer the host
 >   screen. `HostCarousel.qml` replaced it; see `SPEC-host-carousel.md`. `PcView.qml`
@@ -25,8 +25,10 @@ those to a developer to point them at the exact spot.
 > - **Section 3's D-pad map** — Y and START no longer share `Key_Hangup`, and SELECT
 >   is now mapped at all. See the input table in `SPEC-host-carousel.md`.
 >
-> Everything else here — the app grid, Settings, the segue screens, the string
-> inventory, the 1280x800 measurements — still describes the current build.
+> The remaining material is the upstream baseline and a catalogue of historical
+> redesign findings. It is not an active Bulan defect list or a current-state
+> tracker. Use `BUGS.md` for accepted open defects and `HANDOFF.md` for the live
+> repository state.
 
 **A note on vocabulary.** Moonlight's interface is built as a *stack of screens*, like a
 deck of cards. Opening something pushes a new card on top; going back throws the top card

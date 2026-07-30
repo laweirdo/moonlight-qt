@@ -1,8 +1,13 @@
 # Bulan — Deck review checklist
 
-For a session on the hardware. Everything here needs a real Steam Deck; nothing
-here can be answered on the design machine, which is why it exists as a list
-rather than as something a session just gets round to.
+This is the reusable procedure and dated record for review on real Steam Deck
+hardware. It does not own current repository state, open defects, or settled
+token values; use `HANDOFF.md`, `BUGS.md`, and `ROADMAP.md` for those.
+
+The procedure preserves the questions that were taken into the first hardware
+session. The results section records what happened, including later same-day
+follow-up. When reusing the checklist, test the intended branch and commit
+rather than treating the old results as coverage for a new build.
 
 **Work top to bottom.** Part 1 is regression — if a fix did not survive contact
 with hardware, the judgement calls in Part 2 are being made about a build that is
@@ -20,13 +25,14 @@ Every check says what **right** looks like and what **wrong** looks like. Where
 warns about, repeated here because they cost a session each:
 
 - The recipe **hardcodes the source path**. It will happily build a different
-  branch than the one you have open, without saying so. Confirm you are building
-  `bulan`.
+  checkout or branch than the one you have open, without saying so. Confirm the
+  recipe points at the exact checkout, branch, and commit intended for review.
 - The offscreen screenshot hooks need `--filesystem=home` or the file silently
   never appears.
 
-**You need to see the log for checks 1 and 9.** On the Deck, Bulan writes its log
-to the terminal rather than to a file, so launch it from Konsole in Desktop Mode:
+**You need to see the log for the startup glyph check and the Game Mode check.**
+On the Deck, Bulan writes its log to the terminal rather than to a file, so
+launch it from Konsole in Desktop Mode:
 
 ```bash
 flatpak run io.github.laweirdo.MoonlightFork 2>&1 | tee ~/Documents/bulan.log
@@ -42,9 +48,8 @@ online host and one offline host visible at the same time.
 
 ## Part 1 — Regression: did the fixes survive?
 
-These four defects were found on the Deck, fixed on the Mac, and **have never
-been pressed on real hardware**. The fixes were verified by driving the app
-programmatically, which is not the same thing as a thumb on a button.
+These checks originated as four defects found on the Deck and repaired on the
+Mac. The dated results below record their later hardware outcomes.
 
 ### 1.1 — A still works after visiting Client Settings
 
@@ -119,7 +124,9 @@ Controller glyphs: detected deck, drawing xinput
 ```
 
 `detected deck` is the answer that matters — it means Valve's vendor ID was
-seen. `drawing xinput` is expected and correct until Deck glyph artwork exists.
+seen. `drawing xinput` is expected and correct for private v1: the client judged
+the practical Deck shapes identical to the accepted XInput set, so custom Deck
+art is not required.
 
 **Wrong:** `detected fallback` while a controller is attached. That means the
 hardware was not recognised.
@@ -132,12 +139,11 @@ missing entirely, you are running an old build.
 
 ## Part 2 — The judgement calls
 
-These are yours. They are not pass/fail — they are decisions that have been
-waiting on your eyes, and **three of them settle tokens that are frozen until you
-answer**. Nothing new gets built until they are settled, because all three are
-global: changing them later touches every screen, built and unbuilt.
+These began as client judgement calls rather than pass/fail tests. The first
+hardware session settled the three global token questions; their results remain
+below as validation evidence and as a procedure for later panel checks.
 
-### 2.1 — Grain density  → settles `atmosphereGrainOpacity`
+### 2.1 — Grain density → reviews `atmosphereGrainOpacity`
 
 Currently `0.03`, the midpoint of the brief's 2–4%.
 
@@ -165,12 +171,13 @@ bar, for stepped bands or a colour cast.
 **Important limitation:** the brief's banding concern targets the **LCD** Deck,
 and the one in hand is an **OLED**. The two panels fail differently — LCD shows
 wide steps, OLED tends to crush toward black and tint. **This check cannot be
-completed on this hardware.** If an LCD Deck is ever in scope, it stays open.
+completed on this hardware.** LCD validation remains deferred until that
+hardware is available and does not block private v1.
 
 What you *can* answer here is whether the OLED shows crushing or tinting in the
 darkest region, which is a different problem with a different fix.
 
-### 2.3 — Type at arm's length  → settles `sizeCaption`
+### 2.3 — Type at arm's length → reviews `sizeCaption`
 
 **The single riskiest item in this document.**
 
@@ -184,14 +191,14 @@ darkest region, which is a different problem with a different fix.
 **What it costs if wrong:** `sizeCaption` is 16px, which by calculation sits just
 under the comfort threshold at 50cm. It is used across every screen. Changing it
 is a token change touching everything built and everything not yet built — which
-is exactly why the roadmap puts this before construction rather than after.
+is why this was reviewed before construction rather than after.
 `sizeBody` at 22px and up is not at risk.
 
-### 2.4 — Motion feel  → settles `motionOvershoot`
+### 2.4 — Motion feel → reviews `motionOvershoot`
 
-Currently `0.7`, about 3% overshoot, with a 140ms focus transition. The brief
-says "barely-there" and gives no number, so this is an interpretation awaiting
-your eye.
+The session began with `motionOvershoot` at `0.7`, about 3% overshoot, and a
+140 ms focus transition. The client kept the overshoot and changed the live
+focus duration to 180 ms after this check.
 
 **Do:** Hold left or right to run the carousel fast, then let go. Then a single
 deliberate tap.
@@ -224,9 +231,9 @@ change — say so and it gets done.
 
 ### 3.1 — Game Mode (check 9)
 
-**Everything to date has been Desktop Mode.** Game Mode is where Steam Input
-actually sits between the hardware and the app, and none of it has been verified
-there. This is the largest untested assumption in the project.
+Before the first review session, **everything had been Desktop Mode.** Game Mode
+is where Steam Input actually sits between the hardware and the app, so this was
+the largest untested assumption in the project.
 
 **Do:** Add Bulan as a non-Steam game (`BUILDING-DECK.md` has the steps), switch
 to Game Mode, and launch it. To capture the log where there is no terminal, set
@@ -252,9 +259,9 @@ that does not work.
 
 ### 3.2 — Can Bulan actually wake a sleeping PC?
 
-Open since the flow board. **Needs a host you can genuinely put to sleep** — the
-online path proves nothing, because waking an awake machine correctly does
-nothing.
+This was open when the checklist was written. **The procedure needs a host you
+can genuinely put to sleep** — the online path proves nothing, because waking
+an awake machine correctly does nothing.
 
 **Do:** Put a paired host to sleep properly. On the carousel it should appear
 offline, and the hint bar should now offer **Y Wake**. Press it.
@@ -331,7 +338,7 @@ shorter copy on unreachable hosts, the status swatches carrying reachability
 | Check | Answer |
 |---|---|
 | 3.1 Game Mode | **PASS.** `detected deck` in Game Mode with `gamescope` confirmed running. All five bindings arrive |
-| 3.2 Wake | **NOT ANSWERED.** The only paired host was busy. Still owed |
+| 3.2 Wake | **Not answered in the first pass; passed later on 28 July.** A genuinely sleeping, wakeable host returned after Y was pressed |
 
 Game Mode was the project's largest untested assumption. Steam Input **does**
 interpose a virtual controller — `Steam Virtual Gamepad`, product `11ff` rather
@@ -353,8 +360,9 @@ session itself, which cost more time than the checks did:
 3. **Read the log before concluding a build did not take.** A screen that fails
    to load says so, with file and line, and drops the app back to upstream's
    interface — which looks exactly like a stale build and is not one.
-4. **Fake hosts cannot be used past the carousel** — pressing A on one crashes
-   the app. Plan any check that needs A pressed to completion around a real host.
+4. **Fake hosts are review inputs, not action targets.** The current guard stops
+   A and Wake from touching a real machine and gives visible review-mode
+   feedback. Use a real host for any end-to-end action check.
 
 Part 0 should gain a step: after installing and before handing the Deck over,
 verify one instance, a cleared cache, and a clean log.

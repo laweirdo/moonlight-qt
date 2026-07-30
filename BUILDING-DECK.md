@@ -159,8 +159,8 @@ including editing this very file. That's normal.
 
 ## Reviewing screens without pressing buttons
 
-The three debug hooks described in `HANDOFF.md` work inside the Flatpak, but
-they need one extra flag.
+The three review hooks below work inside the Flatpak, but they need one extra
+flag.
 
 ```bash
 flatpak run --filesystem=home \
@@ -179,7 +179,7 @@ This is the flag people forget.
 |---|---|
 | `MOONLIGHT_SCREENSHOT=<path>` | Pins the window to 1280×800, grabs it, exits. Also writes `<path>-toolbar.png`. |
 | `MOONLIGHT_INITIAL_VIEW=qrc:/gui/X.qml` | Boots straight to a screen. `GlyphProof.qml` and `TokenProof.qml` are the review sheets. |
-| `MOONLIGHT_FAKE_HOSTS=none\|one\|offline\|mixed` | Swaps a fixed host list into the carousel. |
+| `MOONLIGHT_FAKE_HOSTS=none\|one\|two\|offline\|mixed\|many` | Swaps a fixed host list into the carousel. |
 
 Two things about this that look like bugs and aren't:
 
@@ -190,7 +190,8 @@ Two things about this that look like bugs and aren't:
   expected under `QT_QPA_PLATFORM=offscreen` and does not stop the screenshot.
 
 Offscreen mode cannot render shader effects, which is why glyph colour is baked
-in at import time rather than tinted at runtime. See `HANDOFF.md`.
+in at import time rather than tinted at runtime. The durable review-model notes
+are in `SPEC-host-carousel.md`.
 
 ---
 

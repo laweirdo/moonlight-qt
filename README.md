@@ -1,5 +1,15 @@
 # Moonlight PC
 
+> [!NOTE]
+> **Bulan fork**
+>
+> This repository also carries Bulan, a private Steam Deck-focused interface
+> fork. Its project authorities are the
+> [creative brief](bulan-creative-brief.md), [roadmap](ROADMAP.md), and
+> [current handoff](HANDOFF.md).
+>
+> The upstream Moonlight README continues unchanged below.
+
 [Moonlight PC](https://moonlight-stream.org) is an open source PC client for NVIDIA GameStream and [Sunshine](https://github.com/LizardByte/Sunshine).
 
 Moonlight also has mobile versions for [Android](https://github.com/moonlight-stream/moonlight-android) and [iOS](https://github.com/moonlight-stream/moonlight-ios).

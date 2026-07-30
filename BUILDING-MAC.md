@@ -144,7 +144,8 @@ like this one — which is why it is deliberately absent from the everyday comma
 
 **"1 file changed" in `app/Info.plist`, and a stray `app/Info.plist-e` file.**
 The build stamps the version number directly into this file as it runs, and leaves a
-backup copy behind ([app/app.pro:562](app/app.pro:562)). Both are normal side effects of building.
+backup copy behind ([`app/app.pro`](app/app.pro), near the macOS bundle
+generation block). Both are normal side effects of building.
 Don't try to undo them.
 
 **Warnings about `Info.plist` during the build.** Lines reading
