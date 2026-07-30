@@ -1,14 +1,27 @@
 # Host carousel — as built
 
-The repo is the source of truth for this screen, not the Figma file. This records
-what exists, what was decided along the way, and what is deliberately unfinished.
+This is the durable authority for the accepted host-carousel surface: component
+inventory, navigation, state model, design decisions, compromises, known
+unfinished work, and validation evidence. Application source is the objective
+authority for what currently runs. Live branch, task, and build state belong in
+`HANDOFF.md` and `TASK-BRIEF.md`.
+
+Decision labels in this file have specific weight:
+
+- **Invariant** — a standing product or interaction rule.
+- **v1 decision** — accepted for private v1 and revisitable later.
+- **Accepted evolution** — an intentional change from the original brief after
+  client or hardware review.
+- **Accepted compromise** — knowingly imperfect, with its cost recorded.
+- **Provisional** — unfinished or awaiting a later client decision.
+- **Superseded** — retained as history but no longer authoritative.
 
 Screen targets **1280×800**, the Steam Deck panel.
 
-**Rebuilt 28 July 2026, merged into `bulan` and pushed.** `PathView` is gone; the
-tiles are positioned directly. The host's name, status and address now belong to
-its own tile and travel with it, rather than being drawn separately near the
-bottom of the screen. Four commits:
+**Completed 28 July 2026.** `PathView` is gone; the tiles are positioned
+directly. The host's name, status, and address belong to its tile and travel
+with it rather than being drawn separately near the bottom. Four commits provide
+the implementation record:
 
 | Commit | What |
 |---|---|
@@ -43,6 +56,10 @@ Supporting, not part of this screen but changed for it:
 ---
 
 ## Navigation, as implemented
+
+**Invariant — controller-first operation.** Every action needed on this screen
+is reachable without a mouse, focus remains visible, and B always has a
+recoverable route.
 
 | Input | Key delivered | Behaviour |
 |---|---|---|
@@ -99,7 +116,7 @@ carousel claims it.
 | **Focused, unpaired** | `"Not paired yet."` A starts pairing and opens the PIN panel. |
 | **Status unknown** | `"Looking for your PC…"` — brief §8 verbatim. |
 | **Connecting** | `"Connecting…"`. **Minimal, not yet designed.** |
-| **Exactly one host** | No flanking neighbours. Verified: the composition holds — the tile stays centred and the detail block keeps its position, because it is anchored up from the hint bar rather than down from the carousel. |
+| **Exactly one host** | No flanking neighbours. Verified: the composition holds — the tile remains centred and its own labels remain attached beneath it. |
 | **Zero hosts** | Two stacked elements: `"you have no pc's lol"` in the display face, and an amber X glyph with `"Press to pair a PC"`. The hint bar reduces to *Add a PC* (emphasised) and *Client Settings*. |
 
 The focus ring is amber in **every** focused state, online or not. Focus has to
@@ -112,13 +129,18 @@ carried by the halo, the monogram weight and the status line instead.
 
 All values from `Bulan.qml`, sourced from brief §6.
 
+**Accepted evolution — focus timing.** The brief's original `140 ms` read
+slightly too fast on the OLED Deck. The client accepted `180 ms` after hardware
+review; this is a deliberate change rather than accidental drift.
+
 | Interaction | Spec | As built |
 |---|---|---|
 | Focus change | 1.04, 140 ms, ease-out, barely-there overshoot | `Easing.OutBack`, `overshoot: 0.7`, `motionFocusMs: 180` |
 | Press | 0.97, 80 ms, immediate | `Easing.OutCubic`, 80 ms |
 | Carousel slide | — | Per-tile `Behavior` on position, scale, opacity and focus, all `motionFocusMs` on `Easing.InOutQuad` |
 
-**The travel easing is the one value that is neither transcribed nor measured.**
+**Accepted compromise — travel easing.** This is the one value that is neither
+transcribed nor measured.
 `PathView` used to ease its own travel and never exposed the curve, so replacing
 it meant choosing one. `Easing.InOutQuad` was picked as the closest reproduction
 of how the old one read, and **the client accepted it on screen on 28 July as
@@ -146,11 +168,12 @@ from `MouseArea.pressed`.
 
 ---
 
-## Decisions not specified in the brief
+## Durable decisions and accepted compromises
 
-**The tiles are positioned directly — no view component.** A `Repeater` builds one
-tile per host, and each tile's place is a pure function of how far its own index
-sits from the selection. That distance is clamped to two slots either side:
+**v1 decision — directly positioned tiles, with no view component.** A
+`Repeater` builds one tile per host, and each tile's place is a pure function of
+how far its own index sits from the selection. That distance is clamped to two
+slots either side:
 
 | Distance from selection | Where it is | How it looks |
 |---|---|---|
@@ -174,17 +197,16 @@ free and `StrictlyEnforceRange` centred the focused item with no arithmetic. Bot
 are now written by hand. More code in exchange for total control, and the trade
 was made deliberately after two sessions of workarounds were rejected.
 
-**`pathStretch` is gone and must not be reintroduced.** It existed only to
-compensate for `PathView` spacing items `1/count` apart below `pathItemCount` and
-`1/pathItemCount` above it, which put a neighbour in two different places
-depending on the host count. Owning the coordinates removed the thing it was
-compensating for.
+**Superseded — `pathStretch`.** It existed only to compensate for `PathView`
+spacing items `1/count` apart below `pathItemCount` and `1/pathItemCount` above
+it, which put a neighbour in two different places depending on host count.
+Owning the coordinates removed the thing it was compensating for.
 
-**The tile is a monogram, not artwork.** The mockup marks the circle "HOST
-ARTWORK"; the model has no concept of host artwork, so the tile shows the first
-letter of the host name in the display face. It fills the space meaningfully, needs
-no new asset, and is self-evidently a placeholder. **This is the slot for real host
-artwork.**
+**Accepted compromise — the tile is a monogram, not artwork.** The mockup marks
+the circle "HOST ARTWORK"; the model has no concept of host artwork, so the tile
+shows the first letter of the host name in the display face. It fills the space
+meaningfully and needs no new asset. This remains the slot for future host
+artwork.
 
 **Neighbours sit lower than the focused tile** (`hostTileNeighbourDrop: 75`),
 measured off the mockup. It is what makes the row read as a shallow arc rather than
@@ -202,13 +224,14 @@ Each label is instead anchored to **its own circle's drawn edge**, at
 scale and the press dip, so the gap under the artwork is constant through all
 three rather than being measured from anything that moves independently.
 
-**Opening focus lands on the first reachable host**, not index 0. Opening on an
-offline machine makes the screen look broken when a working one is one press away.
+**v1 decision — opening focus lands on the first reachable host**, not index 0.
+Opening on an offline machine makes the screen look broken when a working one is
+one press away.
 
-~~**Ready count excludes unpaired hosts from both figures.**~~ **Overturned by the
-client, 28 July 2026, and now implemented** in `58de72f1`. The old rule counted
-paired hosts only, on the reasoning that a machine is not yours to count until
-you have paired it.
+**Superseded — ready count excludes unpaired hosts from both figures.** The
+client overturned this on 28 July 2026, and `58de72f1` implements the replacement.
+The old rule counted paired hosts only, on the reasoning that a machine is not
+yours to count until you have paired it.
 
 Seen in use it read as a fault rather than a principle: with Steambox unpaired
 and Shoebox online the line said **"1 of 1 ready"** while two machines were
@@ -228,10 +251,10 @@ discovered but not paired, which is the state the client was looking at when the
 reported this. No preset had one before, so the rule could not be reviewed on
 screen at all. That is how it survived being wrong.
 
-**`AddressRole` was added to `ComputerModel`.** The mockup shows the address and the
-only existing route to it was `DetailsRole` — a *translated* human-readable blob a
-view would have to parse back out. The new role is presentational and additive; it
-touches no discovery or pairing logic.
+**v1 decision — `AddressRole` is presentational and additive.** The mockup shows
+the address and the only existing route to it was `DetailsRole` — a translated
+human-readable blob a view would have to parse back out. The new role touches no
+discovery or pairing logic.
 
 **Only a hairline separates the hint bar.** No filled band: the atmosphere gradient
 is already at its darkest by the bottom of the screen.
@@ -240,18 +263,17 @@ is already at its darkest by the bottom of the screen.
 screen's decision — a settings screen's primary action is not confirm. On this
 screen Connect is emphasised: **amber glyph, unfocused label.**
 
-**`import QtQuick.Controls` appears in `HostCarousel.qml`** solely for the
-`StackView` attached properties (`StackView.onActivated`), since this screen pushes
-and pops through the app's existing StackView. No stock control from that module is
-instantiated in any Bulan screen.
+**Invariant boundary — no stock visual control is instantiated.**
+`import QtQuick.Controls` appears in `HostCarousel.qml` solely for the
+`StackView` attached properties (`StackView.onActivated`), since this screen
+pushes and pops through the app's existing StackView.
 
 ---
 
 ## Client review, 28 July 2026 — six changes wanted
 
-Given on the Mac after the wrap fix, watching the real build. **None of these are
-started.** They are recorded here because this is the screen they belong to; the
-sequencing question is `ROADMAP.md`'s.
+Given on the Mac after the wrap fix, watching the real build. The table records
+their durable disposition; `ROADMAP.md` owns sequencing for unfinished work.
 
 | # | What the client said | Status |
 |---|---|---|
@@ -283,45 +305,27 @@ the composition sits high and the space is deliberate.
 
 ---
 
-## The component underneath was the wrong shape — DONE, 28 July 2026
+## Validation and retrospective
 
-Kept because the argument is what justified the rebuild, and because the same
-reasoning will be needed the next time a stock view is reached for.
-
-`PathView` exists to move items endlessly around a **closed path**. This carousel
-**clamps** at both ends and never wraps. Everything in defects 2, 4 and 7, and
-client review items 1 and 6, was that single mismatch:
-
-- items fill the loop exactly at low host counts, so one must always be crossing
-  the join;
-- the join is at a visible screen position, so the crossing is visible;
-- the component picks its own direction round the loop, and picked wrong;
-- at two hosts the join *is* a resting position, so a tile is drawn on the wrong
-  side at rest.
-
-Two sessions worked around this rather than removing it, and both workarounds
-were what the client ended up objecting to. **The estimate — about a session, two
-files — held.** It came to four commits and cost no regressions in any host
-count.
-
-**The transferable lesson is about the second workaround, not the first.** The
-first fix was wrong and was replaced. The second was *correct* — it did stop the
-tile crossing the screen — and the client rejected it anyway, because trading a
-visible wrap for a visible disappearance is not progress. When a fix has to trade
-one artefact for another, that is the signal that the component is the problem,
-and it arrives one session before anyone wants to hear it.
+The rebuild was verified frame by frame at low host counts and accepted by the
+client. The detailed defect evidence and failed workarounds are preserved in
+`docs/retrospectives/DEFECTS-carousel.md`; the transferable component-selection
+lesson is in `docs/retrospectives/DEBUGGING-LESSONS.md`.
 
 ---
 
-## Deliberately unfinished
+## Known unfinished work and v1 compromises
 
-| Thing | State | Why |
+This table records durable surface gaps, not the current task or branch.
+`TASK-BRIEF.md` owns active implementation scope.
+
+| Thing | Label | Durable state |
 |---|---|---|
-| **Connecting** | Status line reads `"Connecting…"` and nothing else changes. | No design exists. Needs specifying. |
-| **Host settings (SELECT)** | Opens a panel showing what the old grid's "View Details" showed. | The nav table routes SELECT here but no host-settings screen has been designed. |
-| **Rename / Delete / Test Network** | **Not reachable from this screen.** | They live in `PcView.qml`, which is still in the tree but no longer the initial view. They need a designed home — most likely the host-settings screen above. |
-| **Host artwork** | Monogram placeholder. | Model has no artwork concept; needs a design and a source. |
-| **Deck glyphs** | `deck_*` resolves to the Xbox set. | Art not yet delivered. One line in `resolveGlyphFamily()` when it is. |
+| **Connecting** | **Provisional** | Status line reads `"Connecting…"` and nothing else changes. No design exists yet. |
+| **Host settings (SELECT)** | **Provisional** | Opens the old read-only details panel. The active task brief owns the replacement menu. |
+| **Rename / Forget / Test Network** | **Provisional** | Not reachable from this screen. The upstream actions remain in `PcView.qml`; the task brief owns which ones enter the v1 menu. |
+| **Host artwork** | **Accepted compromise** | The monogram is the current placeholder because the model has no artwork concept. |
+| **Deck glyphs** | **v1 decision** | Deck hardware is detected and intentionally resolves to the practically identical XInput art. Custom Deck vectors are not required for private v1. |
 
 ---
 
@@ -342,7 +346,7 @@ unless set.
 |---|---|---|
 | `none` | 0 | The zero-host screen |
 | `one` | 1 | No flanking neighbours; checks the composition holds |
-| `two` | 2 | **The client's real host count**, and Steambox is discovered but **unpaired** — the state the ready count was wrong about |
+| `two` | 2 | Low-count regression case; Steambox is discovered but **unpaired**, the state the ready count was wrong about |
 | `offline` | 3 | Leads with a host that is unreachable *and* cannot be woken |
 | `mixed` | 3 | The mockup's arrangement, one reachable and two not |
 | `many` | 5 | More hosts than the carousel draws at once |

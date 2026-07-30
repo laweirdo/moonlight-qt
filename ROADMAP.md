@@ -118,9 +118,10 @@ the user journey that still reads as upstream Moonlight.
 - Manual IP entry, including deliberate Steam on-screen-keyboard handling
 - First-run routing and the post-pairing destination
 
-The reflected-moon mark is superseded. Existing onboarding boards remain useful
-for content and copy, but their composition must be revisited around the current
-horizontal wordmark.
+The reflected-moon mark is superseded. The horizontal corner wordmark is final
+for that role, but it must not be enlarged or recomposed for centred-logo
+screens. Existing onboarding boards remain useful for content and copy; their
+centred treatment depends on vector assets designed and supplied by the client.
 
 **Exit:** a first-time user can discover or enter a host, pair, and arrive in
 the normal loop without encountering an upstream screen.

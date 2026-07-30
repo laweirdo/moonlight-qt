@@ -12,10 +12,10 @@ sequencing is in the roadmap; the implementation work order is in
 | Item | State |
 |---|---|
 | Current branch | `codex/docs-architecture` |
-| Current HEAD before the Stage 4 review diff | `87d305f9` — `docs: separate roadmap from project history` |
+| Current HEAD before the Stage 5 review diff | `2fbdfc9f` — `docs: split open defects from retrospectives` |
 | Documentation branch baseline | `bulan` at `30aaa57d` |
 | Integration branch | `bulan`, matching `origin/bulan` at `30aaa57d` when this branch was created |
-| Working tree | **Dirty by design:** Stage 4 separates the open startup-toolbar defect from closed carousel investigations; awaiting client review |
+| Working tree | **Dirty by design:** Stage 5 reconciles the creative brief, roadmap logo dependency, and host-carousel specification; awaiting client review |
 | Configured remotes | `origin` only in this checkout |
 | Application source changes on this branch | None |
 
@@ -26,7 +26,7 @@ permanent rules or specifications.
 
 ### Documentation
 
-Stages 1 through 3 of the documentation reorganization are complete:
+Stages 1 through 4 of the documentation reorganization are complete:
 
 - `d49d3a90` created `AGENTS.md` as the permanent operating authority and moved
   stable rules out of mutable session documents.
@@ -34,6 +34,8 @@ Stages 1 through 3 of the documentation reorganization are complete:
   `PROMPT-next-session.md` with the single active `TASK-BRIEF.md`.
 - `87d305f9` separated roadmap sequencing from project history, reconciled the
   flow questions, and created the cross-cutting debugging retrospective.
+- `2fbdfc9f` separated the open startup-toolbar defect from the closed carousel
+  investigations and preserved the ledger as a detected Git rename.
 
 No application file changed and no application build was needed for these
 stages.
@@ -55,21 +57,22 @@ The rebuilt carousel:
 
 ## Work currently in progress
 
-The documentation-architecture task is in **Stage 4 — defects and
-retrospectives**. The review diff:
+The documentation-architecture task is in **Stage 5 — brief and
+specifications**. The review diff:
 
-- creates `BUGS.md` with the startup toolbar as the sole open unintended
-  behavior;
-- moves the former `BUGS-open.md` history to
-  `docs/retrospectives/DEFECTS-carousel.md`;
-- keeps only resolved carousel investigations in that retrospective;
-- links the detailed investigations to
-  `docs/retrospectives/DEBUGGING-LESSONS.md`; and
-- updates affected references and the stale carousel-hover validation status.
+- adds a current-interpretation section without rewriting the original creative
+  exploration;
+- records deliberate OLED-validated evolution and deferred LCD validation;
+- distinguishes the final horizontal corner wordmark from client-supplied
+  centred-logo assets;
+- clarifies the long-term deliverables and custom Deck glyph decisions;
+- labels carousel decisions as invariants, v1 decisions, accepted compromises,
+  provisional work, or superseded history; and
+- removes duplicated debugging narrative and mutable merge/push status from the
+  carousel specification.
 
-Stages 5 and 6 have not started. The documentation is therefore **not yet fully
-reconciled**, and the creative brief, specifications, README, and final
-cross-file consistency still await their scheduled stages.
+Stage 6 has not started. The documentation is therefore **not yet fully
+reconciled**; the README notice and final cross-file consistency pass remain.
 
 ## Active implementation task
 
@@ -104,12 +107,13 @@ reconcile the documents rather than expanding this summary.
 | Deck glyph drawing | Deck is detected, but v1 intentionally uses the practically identical XInput glyph set |
 | App grid, settings, and segue screens | Still inherited upstream screens, restyled but not rebuilt |
 | Onboarding | Designed in reference frames but not implemented |
+| Centred-logo assets | Client must design and provide vectors; the final horizontal corner wordmark is not a substitute |
 | Moonlight credit | Required and not yet added |
 
 ## Last known build and validation status
 
 No application build or runtime test was performed for documentation Stages 1
-or 2 because they do not change application files.
+through 5 because they do not change application files.
 
 | Validation | Last known result |
 |---|---|
@@ -122,6 +126,8 @@ or 2 because they do not change application files.
 | Stage 1 documentation | UTF-8, whitespace, staged-diff, and documentation-only scope checks passed |
 | Stage 2 documentation | UTF-8, whitespace, staged-diff, and documentation-only scope checks passed |
 | Stage 3 documentation | UTF-8, whitespace, reference, Mermaid-fence, and documentation-only scope checks passed |
+| Stage 4 documentation | UTF-8, whitespace, reference, open/closed separation, rename-detection, and documentation-only scope checks passed |
+| Stage 5 review diff | UTF-8, whitespace, reference, source-value, logo-placement, and documentation-only scope checks passed |
 
 The relevant `BUILDING-*.md` file must be read before the next application
 build. Do not infer that an old validation covers new application changes.
@@ -159,6 +165,11 @@ recommendation and consequence for each rather than deciding silently.
 LCD banding and panel-specific visual validation remain deferred until LCD
 hardware is available. They do not block private v1.
 
+Centred-logo screens require vector assets designed and supplied by the client.
+Agents must not enlarge, recompose, or substitute the final horizontal corner
+wordmark. This does not block the active host-settings task, but it is a client
+dependency for the relevant onboarding and artwork work.
+
 ## Decisions made in the latest documentation session
 
 These decisions are settled and must be carried into the remaining
@@ -171,6 +182,8 @@ documentation stages:
 | Creative deliverables | Long-term list and creative guide, not the definition of v1 |
 | Steam Deck glyph art | Not required for v1; current XInput glyphs are practically identical |
 | Reflected-moon mark | Superseded |
+| Horizontal corner wordmark | `app/res/bulan_logo_horiz.svg` is final for that role |
+| Centred-logo assets | Client will design and supply separate vectors; agents must not infer them |
 | Hardware target | LCD and OLED remain targets; LCD visual validation is deferred, not blocking |
 | Host settings classification | Product task and functional regression, not a numbered defect |
 | Upstream UI audit findings | Historical redesign findings, not active defects |
@@ -178,8 +191,8 @@ documentation stages:
 | Historical organization | Use a small retrospective set and preserve Git-aware moves |
 | Root README | Keep upstream content and add a concise Bulan orientation notice without public-release marketing |
 
-These decisions have not all been applied yet. The roadmap, flow, defects,
-brief, specifications, historical files, and README are handled in later stages.
+The Stage 5 review diff applies the remaining brief and specification decisions.
+The root README notice and final consistency work remain for Stage 6.
 
 ## Required reading
 
@@ -202,9 +215,10 @@ authority.
 
 For the current documentation task:
 
-1. Review this Stage 4 diff.
+1. Review this Stage 5 diff.
 2. If approved, commit it as a separate documentation-only change.
-3. Begin Stage 5 by reconciling the creative brief and specifications.
+3. Begin Stage 6 by adding the concise README notice and performing the full
+   Markdown consistency pass.
 
 For the later host-settings implementation:
 
@@ -224,5 +238,5 @@ For the later host-settings implementation:
 - Build procedures, except where a later documentation stage explicitly moves
   duplicated historical material without changing commands
 
-Stage 4 is documentation architecture only: open defects, closed
-investigations, and their references.
+Stage 5 is documentation architecture only: creative interpretation, durable
+surface decisions, and known unfinished work.

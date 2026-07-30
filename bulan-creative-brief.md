@@ -9,6 +9,28 @@
 
 ---
 
+## Current interpretation — 30 July 2026
+
+This brief preserves the original creative direction. The labels below record
+later client decisions and hardware validation without rewriting that history.
+`ROADMAP.md` owns release scope; `HANDOFF.md` owns current implementation state.
+
+| Label | Topic | Current interpretation |
+| --- | --- | --- |
+| **Invariant** | Reflection | The reflection metaphor, warm-light/cool-ground system, voice, and atmosphere remain the creative foundation. Superseding one logo direction does not supersede the concept. |
+| **Superseded** | Reflected-moon mark | Direction A is no longer the lead mark and must not be used as the assumed solution for new screens or artwork. Its original exploration remains below as history. |
+| **Final for its role** | Horizontal corner wordmark | `app/res/bulan_logo_horiz.svg` is the final horizontal wordmark on screens where it appears in a corner. Do not redesign or substitute it. |
+| **Client asset required** | Centred-logo screens | A corner wordmark must not be enlarged or recomposed into a centred mark. The client will design and provide the required vector files for screens with a centred logo treatment. |
+| **v1 decision** | Hardware target | Both Steam Deck LCD and OLED remain product targets. OLED visual validation has been performed; LCD-specific visual validation is deferred until hardware is available and does not block private v1. |
+| **Accepted evolution** | Focus motion | Hardware review changed focus duration from the original `140 ms` to `180 ms`. The original value remains below as creative history; `180 ms` is the accepted live value. |
+| **Validated on OLED** | Grain and type | Grain at `0.03`, caption text at `16 px`, and motion overshoot at `0.7` were accepted on the OLED Deck. This is not evidence for LCD-specific banding or appearance. |
+| **v1 decision** | Controller glyph art | Custom Steam Deck glyph vectors are not required for private v1 because their practical shapes are identical to the accepted XInput set. Deck detection remains meaningful even when it resolves to that art. |
+| **Long-term** | Deliverables | Section 10 is the long-term creative list and a guide when a visual decision is stuck. It is not the private-v1 acceptance checklist. |
+| **v1 engineering boundary** | Upstream foundation | Retain upstream discovery, pairing, streaming, and platform infrastructure. New or rebuilt Bulan visual controls remain custom; this does not require wholesale replacement of inherited infrastructure or every upstream screen at once. |
+| **Conceptual** | Panel handling and effect controls | Automatic LCD/OLED visual selection and user-facing toggles for every atmosphere effect remain product intent rather than completed features. |
+
+---
+
 ## 1. Positioning
 
 **Moonlight is a tool. Bulan is a place you arrive.**
@@ -39,9 +61,11 @@ Use this metaphor to resolve ambiguity. When unsure how something should look, a
 
 ## 3. Logo Directions
 
-Explore all three. Expect the final mark to combine A with elements of B or C.
+The three original explorations are preserved below. The instruction to lead
+with Direction A or combine it into the final mark is superseded; no agent should
+infer a replacement mark from these sketches.
 
-### Direction A — The Reflected Moon *(lead direction)*
+### Direction A — The Reflected Moon *(superseded; original lead direction)*
 - A crescent above, its mirrored reflection below, separated by a thin horizon line
 - The lower reflection is softer, blurred, or broken into horizontal bands — this *is* the stream
 - Reads at 24px as a simple stacked lens shape
@@ -59,6 +83,10 @@ Explore all three. Expect the final mark to combine A with elements of B or C.
 - **Use as a mascot alongside the mark from A, not as the primary mark itself**
 
 > **Not in scope for v1.** A mascot needs a full expression set (idle, searching, connected, error, sleeping) and that illustration load should come after the app ships. Design the primary mark so a companion character *could* be added later without rework — leave conceptual room, don't build the room yet.
+
+The original pairing with Direction A is no longer binding because Direction A
+is superseded. Any future mascot-to-mark relationship requires a new client
+decision.
 
 ### Surface treatment *(applies to all directions)*
 Keep the mark's interior nearly empty. If texture is needed, use the most reductive option available:
@@ -106,6 +134,10 @@ Grain has a practical bonus: it breaks up **colour banding**, which gradients on
 ### OLED handling
 Detect panel type and deepen the gradient's lower end slightly on OLED — but keep it above true black. The battery saving from pure black is small at these luminance levels and not worth the eye strain.
 
+This remains conceptual. Both panels remain targets, but automatic panel
+selection has not been implemented and LCD-specific appearance is not yet
+validated.
+
 ### Non-negotiables
 - The palette must survive a dark room at 1am
 - **No pure black, no pure white** — cap contrast at both ends
@@ -143,6 +175,10 @@ Nintendo Switch 2's UI feels good because it is **fast and confident**, not beca
 | Screen transition | Vertical reveal with slight motion blur, **220ms** — content ascends like something surfacing |
 | Press | Scale to 0.97, 80ms, immediate |
 | Ambient background | Slow parallax starfield or water-shimmer, extremely low contrast, pausable for battery |
+
+The live focus duration is `180 ms`, accepted after the original `140 ms` read
+slightly too fast on the OLED Deck. This is deliberate evolution, not an
+accidental implementation deviation.
 
 ### Motion rules
 1. **Never bounce twice.** One settle, done.
@@ -195,7 +231,10 @@ Search themes for gathering reference. These describe **atmosphere**, not instru
 
 The founding image: a light source above, a softer double below, a horizon between them.
 
-**What to take:** the reflection is always *broken* — banded, rippled, imperfect. Carry that into the mark's lower crescent. And note that the horizon line is always the calmest part of the frame; the logo's divider should be equally quiet.
+**Historical Direction A reference:** the original mark lesson was that a
+reflection is *broken* — banded, rippled, imperfect — while the horizon remains
+quiet. This still informs the atmosphere, but it is not an instruction to
+restore a lower reflected crescent to a new mark.
 
 ### B. The Mark — Reductive
 > `minimal geometric moon phases design` · `pure circle geometry logo`
@@ -239,13 +278,16 @@ The personality is carried by behaviour, not decoration. Practical consequence: 
 
 ## 10. Deliverables
 
+This is the long-term creative production list and a reference when visual work
+is blocked. `ROADMAP.md`, not this list, decides what private v1 requires.
+
 1. **Primary mark** — full-color, mono, inverse + safe-area and minimum-size specs
 2. **App icon** — 512, 256, 128, 64, 32 px
 3. **Steam Deck artwork set** — 460×215 capsule, 920×430 wide capsule, 1920×620 hero, transparent logo PNG
 4. **Wordmark lockups** — horizontal, stacked, icon-only
 5. **Boot / splash animation** — ≤1.2s, skippable
 6. **Color tokens** — as a QML singleton *and* design-token JSON
-7. **Icon set** — navigation, status, and Steam Deck controller glyphs (A/B/X/Y, L/R bumpers, Steam, QAM)
+7. **Icon set** — navigation, status, and Steam Deck controller glyphs (A/B/X/Y, L/R bumpers, Steam, QAM); custom Deck glyph vectors are not required for private v1
 8. **Sound pack** — 8–12 cues, normalized, OGG format
 9. **One-page brand rules sheet**
 
@@ -266,7 +308,10 @@ The personality is carried by behaviour, not decoration. Practical consequence: 
 
 ---
 
-## Decisions Made
+## Original decisions made
+
+Later decisions and validated evolution are recorded in *Current
+interpretation* near the top.
 
 | Question | Decision |
 | --- | --- |
@@ -276,6 +321,9 @@ The personality is carried by behaviour, not decoration. Practical consequence: 
 
 ## Still Open
 
-- Wordmark typeface — pick one candidate and produce the lockups
+- Centred-logo vector assets — the client must design and provide these; the
+  final horizontal corner wordmark is not a substitute
 - Whether ambient background motion ships enabled or disabled by default
-- Grain intensity — needs testing on an actual Deck panel, not a desktop monitor
+
+Grain intensity is no longer generally open: `0.03` passed on OLED. LCD-specific
+visual validation remains deferred until LCD hardware is available.
