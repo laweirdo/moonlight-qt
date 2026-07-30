@@ -1,1036 +1,217 @@
-# Bulan — handoff
+# Bulan — current handoff
 
-Context for whoever picks this up next, human or otherwise. Current as of
-**28 July 2026**, branch `bulan`.
+Current as of **30 July 2026**.
 
-**Two Steam Deck sessions, one Mac session and one Windows session have happened.
-Phase A is closed and now owes nothing.** See "Deck verification — what has
-actually been checked" near the end for the results, and `REVIEW-CHECKLIST.md`
-for the full answers.
+This file is the authority for current repository and validation state. Permanent
+operating rules are in `AGENTS.md`; product intent is in the creative brief;
+sequencing is in the roadmap; the implementation work order is in
+`TASK-BRIEF.md`.
 
-**The host carousel has been rebuilt and the client has accepted it.** This was
-the 28 July Windows session and it is the first time this screen has passed
-review. `PathView` is gone — the tiles are positioned directly, so there is no
-loop, no join and no direction to guess. **Merged into `bulan` and pushed on 28
-July**; the task branch is deleted. Details in `SPEC-host-carousel.md`; the
-verification is in `BUGS-open.md`.
+## Repository state when written
 
-**There is now a third machine: the client's Windows PC, which is `Shoebox`.**
-It builds and runs the app, and it is a **review station, not a platform** —
-Windows is explicitly not a target and nothing about that has changed. It is good
-for "does the screen load and do the tiles move correctly" and useless for grain,
-type size or motion in the hand. `BUILDING-WINDOWS.md` has the recipe and six
-traps that each cost time.
-
-**One new defect, found by the client watching the app launch:** upstream's top
-bar is on screen for the first **567 milliseconds** of every run. Measured, not
-inferred. `BUGS-open.md` defect 8.
-
-**The three global tokens are settled**, from observation on the real panel
-rather than arithmetic: `atmosphereGrainOpacity` stays **0.03**, `sizeCaption`
-stays **16**, `motionOvershoot` stays **0.7**. `motionFocusMs` moved **140 → 180**
-on the client's call. **Construction is no longer gated** — `ROADMAP.md` Phase B
-can start.
-
-**Game Mode is verified** and it passed, which closes the project's largest
-untested assumption: Steam Input interposes a virtual controller but carries
-Valve's vendor ID through, so glyph detection and all five bindings survive.
-
-**Wake works.** The last Phase A question was answered on the Mac on 28 July: a
-paired host put genuinely to sleep was woken from the carousel with Y and was
-back a minute later. *"Asleep"* is a promise the app can keep, and the copy
-stands as written.
-
-**Eight defects have been found over the project's life and seven are closed.**
-The only open one is the top-bar flash above. The two carousel defects were closed
-by removing the component underneath rather than working around it a third time,
-and the hover fix was confirmed by the client with a mouse.
-
-**Two of the original bug entries had a wrong diagnosis on record**, and both cost
-a session time before they were caught. Read `BUGS-open.md` before trusting the
-phrase "ruled out" in any write-up on this project — both went wrong the same
-way, and it is the same way twice: **a conclusion drawn from a measurement that
-could not see the thing it was being used to rule out.**
-
-That pattern struck again in the Windows session and was caught this time. A
-frame-by-frame trace came back completely empty and read as proof the tiles never
-moved; they had, and the log was going to a stream that was not being captured.
-The rule that keeps paying for itself: **prove your logging appears before drawing
-any inference from its absence.**
-
-Bulan is a UI/UX-focused fork of moonlight-qt targeting the Steam Deck.
-`AGENTS.md` defines the permanent client-decision and communication rules.
-
----
-
-## Read these first, in this order
-
-| Document | What it is |
+| Item | State |
 |---|---|
-| `AGENTS.md` | **The permanent operating rules** for coding and reviewing agents: authority order, branch policy, client decision boundaries, interface invariants, validation honesty, and contradiction handling. |
-| `bulan-creative-brief.md` | **The authority on design.** §4 depth/atmosphere, §6 motion, §8 voice, §11 guardrails are the sections that get cited constantly. |
-| `FLOW.md` | Where every screen sits and how you get between them, as Mermaid. Two diagrams: Bulan as designed, and upstream as it is today. Carries the board's open questions as prose. |
-| `ROADMAP.md` | **The authority on sequencing.** What v1 is, the scope decisions that stopped being re-derived, and the phase order. |
-| `REVIEW-CHECKLIST.md` | The next Deck session, as a list. Regression on the four fixes, then the judgement calls that settle the three frozen tokens. |
-| `SPEC-host-carousel.md` | The host screen as built: navigation table, components, decisions, and what is knowingly unfinished. |
-| `BUILDING-MAC.md` | How the design machine builds and launches the project. |
-| `BUILDING-DECK.md` | How the Steam Deck builds, installs and runs it. Read before any Deck session — the recipe hardcodes a source path and will silently build the wrong branch. |
-| `BUILDING-WINDOWS.md` | How the client's PC builds and runs it as a **review station**. Windows is not a target; this is somewhere to look at a screen without the Mac or the Deck. Carries six traps, including one that silently corrupts source files. |
-| `UI-AUDIT.md` | Upstream's interface as it was *before* this work. Historical baseline, not a current description — it says so at the top. |
+| Current branch | `codex/docs-architecture` |
+| Current HEAD | `d49d3a90` — `docs: add permanent agent instructions` |
+| Documentation branch baseline | `bulan` at `30aaa57d` |
+| Integration branch | `bulan`, matching `origin/bulan` at `30aaa57d` when this branch was created |
+| Working tree | **Dirty by design:** Stage 2 replaces this handoff and renames/simplifies the active task brief; awaiting client review |
+| Configured remotes | `origin` only in this checkout |
+| Application source changes on this branch | None |
 
-Design source material lives in `design/`:
+Always inspect Git before relying on this snapshot. Do not copy these values into
+permanent rules or specifications.
 
-| File | What it is |
+## Last completed work
+
+### Documentation
+
+Stage 1 of the documentation reorganization is complete in `d49d3a90`:
+
+- created `AGENTS.md` as the permanent operating authority;
+- moved branch, commit, client-boundary, interface, validation, and
+  contradiction rules out of mutable session documents; and
+- retained the first upstream-sync account as explicitly historical.
+
+No application file changed and no application build was needed for Stage 1.
+
+### Application
+
+The last completed product task was the host-carousel rebuild, merged into
+`bulan` in `942e3d02` and accepted by the client.
+
+The rebuilt carousel:
+
+- positions tiles directly rather than using `PathView`;
+- keeps host text attached to its tile;
+- counts every visible machine in the ready-count denominator;
+- clamps at both ends without wrapping; and
+- no longer lets mouse hover steer selection.
+
+`SPEC-host-carousel.md` is the durable authority for that surface.
+
+## Work currently in progress
+
+The documentation-architecture task is in **Stage 2 — current state and active
+task**. This stage:
+
+- reduces this handoff to current operational state;
+- renames `PROMPT-next-session.md` to `TASK-BRIEF.md`;
+- records that host-settings implementation has not started; and
+- removes permanent-rule and full-project-state duplication from the task brief.
+
+Stages 3–6 have not started. The documentation is therefore **not yet fully
+reconciled**.
+
+## Active implementation task
+
+The host-settings task remains the single active product work order, but its
+implementation session has **not started**.
+
+`TASK-BRIEF.md` owns its objective, scope, non-goals, unresolved client
+questions, risks, acceptance criteria, and required tests. No implementation
+branch exists yet.
+
+The task contains three logical changes:
+
+1. Change `hostTileLabelGap` from 56 to 46.
+2. Replace SELECT's temporary details panel with the approved host menu.
+3. Fix the startup toolbar defect without removing inherited toolbars.
+
+These lines are only a pointer. If they disagree with `TASK-BRIEF.md`, stop and
+reconcile the documents rather than expanding this summary.
+
+## Current application state relevant to the next task
+
+| Area | Current state |
 |---|---|
-| `design/onboarding-01-splash.png` … `-04-pairing-pin.png` | The four onboarding frames, 1× at 1280×800. Named so a future `SPEC-onboarding.md` can cite a single frame. **Nothing in this sequence is built** — the app has no onboarding at all today, and these frames show the *superseded* composition built around the reflected mark. Content and copy still hold; the layout does not. See Phase C. |
-| `design/navigation-flow-board.png` | The flow board as exported, 9902×1828. Mermaid lays out its own graph, so `FLOW.md` cannot reproduce the spatial reading; this is the reference for that. |
+| Initial screen | Bulan host carousel |
+| Host settings on SELECT | Temporary read-only details panel |
+| Rename / Forget / Test Network | Still present in upstream `PcView.qml`, unreachable from the carousel |
+| Host label gap | 56; client-approved target is 46 |
+| Startup toolbar | Visible for about 567 ms; open defect |
+| Wake | Works on a host that provides a hardware address |
+| Wake hint | Shown only when the focused host is offline and wakeable |
+| Game Mode | Verified; Steam Input preserves Valve's vendor ID and all five bindings work |
+| Deck glyph drawing | Deck is detected, but v1 intentionally uses the practically identical XInput glyph set |
+| App grid, settings, and segue screens | Still inherited upstream screens, restyled but not rebuilt |
+| Onboarding | Designed in reference frames but not implemented |
+| Moonlight credit | Required and not yet added |
 
-**These were all outside the repo until 27 July 2026.** Every session cited the
-brief as authority while it sat in the client's Downloads folder, which meant no
-session could be reproduced from a checkout alone. If a new authority document
-appears, move it in rather than citing a path on someone's machine.
+## Last known build and validation status
 
----
+No application build or runtime test was performed for documentation Stages 1
+or 2 because they do not change application files.
 
-## Branching
-
-`AGENTS.md` is the authority for branch, commit, remote, ownership, and
-working-tree rules.
-
-### Historical note — first upstream sync
-
-**Done once, 27 July 2026, and it worked as designed.** Twelve upstream commits
-fast-forwarded onto `master`, then merged into `bulan` with **no conflicts**.
-Only two files are touched by both sides — `app/main.cpp` and `app/app.pro` —
-and both merged cleanly because the edits sit in different regions. Upstream
-also replaced the `h264bitstream` submodule with vendored sources; that lands
-cleanly but leaves an untracked `h264bitstream/h264bitstream/` directory behind
-from the old submodule checkout. It is safe to delete and was.
-
-At the time of that sync, `origin` was the client's fork and `upstream` was the
-official Moonlight repository. Remote configuration is machine-specific and
-must be inspected rather than assumed.
-
----
-
-## Permanent operating rules
-
-See `AGENTS.md`. It owns the permanent interface, token, focus, branch, commit,
-client-decision, build-honesty, and contradiction rules. This handoff records
-mutable repository state and must not restate them.
-
----
-
-## Where things stand
-
-### Done and pushed
-
-| Commit | What |
+| Validation | Last known result |
 |---|---|
-| `16315ad3` | Atmosphere layer extracted into a component; film grain added |
-| `3dbcb6a9` | Controller glyph system |
-| `7ed90b16` | Fixed black boxes behind glyphs |
-| `7ab5ff1c` | Recoloured rect artwork; dropped the R-trigger workaround |
-| `7cb235ed` | Hint bar |
-| `c39437dc` | Host carousel replacing the host grid |
-| `9bf731f1` | `SPEC-host-carousel.md` |
-| `f40a7deb` | `BUILDING-MAC.md`, `UI-AUDIT.md`, gitignore fix |
-| `4d967758` | This handoff document |
-| `79f2baea` | `BUILDING-DECK.md` |
-| `76e1fcb3` | The first Steam Deck verification session, and the defects it found |
-| `460e7436` | Merged the macOS Info.plist build fix — builds no longer dirty the tree |
-| `b4110453` | Defects 1 and 3: the dead A button, and the silent game-grid failure |
-| `95efe680` | Defect 4: glyphs follow the pad in use; unconditional detection log |
-| `93394eaf` | Defect 2: hints appear only in states where their button does something |
-| `cfb9d25b` | Brief, `FLOW.md`, onboarding frames and the flow board moved into the repo |
-| `d52c1435` | `ROADMAP.md` |
-| `40b9d938` | Merged upstream moonlight-qt — 12 commits, no conflicts |
-| `7e8506c1` | The build stamp — the log now names the commit and build time it is running |
-| `d3c57f95` | The fake-host crash, and `MOONLIGHT_FAKE_HOSTS=many` |
-| `9c721e13` | The carousel's visible wrap at three hosts |
-| `1ba04c01` | The Mac session write-up, and two corrected diagnoses |
-| `402b37d4` | Wake no longer offered on hosts that cannot be woken |
+| Windows review build | Carousel rebuild loaded and was checked frame by frame on 28 July 2026 |
+| Steam Deck Desktop Mode | Controller regressions, token values, and host navigation passed on 28 July 2026 |
+| Steam Deck Game Mode | Passed on 28 July 2026 with `gamescope` confirmed; all five bindings arrived |
+| Wake-on-LAN | Passed on 28 July 2026 using a genuinely sleeping wakeable host |
+| Carousel hover | Client-confirmed with a mouse; closed |
+| LCD visual validation | Deferred until LCD hardware is available; not a private-v1 blocker |
+| Stage 1 documentation | UTF-8, whitespace, staged-diff, and documentation-only scope checks passed |
 
-### The carousel rebuild — merged into `bulan` on 28 July 2026
+The relevant `BUILDING-*.md` file must be read before the next application
+build. Do not infer that an old validation covers new application changes.
 
-| Commit | What |
+## Open defects relevant to the next session
+
+One acknowledged open defect exists:
+
+### Upstream toolbar appears during launch
+
+The inherited toolbar starts visible and remains on screen for approximately
+567 ms before the carousel hides it. The diagnosis and evidence are currently
+in `BUGS-open.md`; Stage 4 will move the active entry to `BUGS.md`.
+
+The host-settings menu is not a numbered defect. It is an active product task
+and a functional regression from upstream.
+
+The upstream observations in `UI-AUDIT.md` remain historical redesign findings,
+not accepted Bulan defects.
+
+## Unresolved decisions and blockers
+
+There is no known technical blocker to beginning the host-settings task.
+
+Four client design decisions are required before implementation:
+
+1. Overlay or pushed screen?
+2. What should the menu show for an offline host?
+3. Does Forget PC require confirmation?
+4. Do Rename PC and Test Network belong in the v1 menu?
+
+They are recorded in `TASK-BRIEF.md`. The implementing agent must bring a
+recommendation and consequence for each rather than deciding silently.
+
+LCD banding and panel-specific visual validation remain deferred until LCD
+hardware is available. They do not block private v1.
+
+## Decisions made in the latest documentation session
+
+These decisions are settled and must be carried into the remaining
+documentation stages:
+
+| Topic | Decision |
 |---|---|
-| `1d813d2e` | The carousel's engine: `PathView` dropped, tiles positioned directly |
-| `f0635789` | The host's name, status and address belong to its tile and travel with it |
-| `ee801af1` | `hostTileLabelGap` — the clear space between a circle and its name |
-| `58de72f1` | The ready count counts machines you have, not machines you have paired |
-| `f32ec616` | The documents brought up to date; `BUILDING-WINDOWS.md` added |
-| `201e1f3a` | Defect 6 closed — the hover check had been done and never written down |
-| `942e3d02` | The merge |
-
-`feat/carousel-engine` is deleted, locally and on the fork. `bulan` is pushed and
-matches `origin/bulan`.
-
-### The component inventory
-
-```
-app/gui/
-  Bulan.qml            design tokens — the single source of truth
-  Atmosphere.qml       gradient + vignette + grain, each individually switchable
-  ControllerGlyph.qml  one button glyph, by semantic action and live controller
-  HintBar.qml          persistent bottom bar, declarative contents, display-only
-  HostCarousel.qml     the host screen
-  HostTile.qml         one host in the carousel
-  HostPanel.qml        modal overlay: scrim, surface, title, body, optional field
-  GlyphProof.qml       offline review sheet for glyphs; also previews the hint bar
-  TokenProof.qml       offline review sheet for the tokens
-```
-
-Still upstream's, restyled but not rebuilt: `AppView.qml` (the game grid),
-`SettingsView.qml`, `StreamSegue.qml`, `QuitSegue.qml`, the `Cli*` screens,
-`PcView.qml`.
-
----
-
-## Defects from the Deck sessions
-
-Defects 1–4 were fixed on `fix/input-defects` (merged 27 July 2026) and **all
-four were then confirmed by hand on real hardware** on 28 July. Defect 5 is a
-design task, not a bug, and is scheduled as Phase B work.
-
-| # | What it was | Status |
-|---|---|---|
-| 1 | A was a dead button after a Client Settings round trip | Fixed. Hardware-confirmed — but see below, hardware found a *third* cause |
-| 2 | The hint bar offered Wake on hosts that were already awake | Fixed. Hardware-confirmed; reflow accepted as built |
-| 3 | `actConfirm()` pushed the game grid without checking it loaded | Fixed — both failure paths now report |
-| 4 | Glyphs followed the most recently *attached* pad, not the most recently *used* | Fixed. Hardware-confirmed |
-
-**Defect 1 had a third mechanism the original diagnosis missed**, found on
-hardware and fixed in `be874bf8`: a popup elsewhere in the window restores focus
-to a control that no longer exists on the way back, landing *after* the carousel
-has claimed it. The carousel now reclaims focus whenever it loses it rather than
-claiming it once, which cannot be raced.
-
-That symptom — **exactly one button dead, everything else fine** — has now come
-from three different causes. It happens because A is the only button with no
-window-level shortcut behind it, so anything that stops the screen listening
-takes out A alone and leaves everything looking healthy. Do not read it as a
-pairing or binding problem. See `BUGS-open.md`.
-
-**Three defects are currently open**, all in `BUGS-open.md`, none of which needs
-a Deck to reproduce.
-
-### 5. Host Settings (SELECT) shows details, but should be a menu — STILL OPEN
-
-The client has scoped it: SELECT should open the right-click context menu
-equivalent — **host details, wake PC, and forget PC** — not the bare details
-panel it currently shows.
-
-This also absorbs the "rename / delete / test-network are unreachable"
-regression: those still live in `PcView.qml`, which is no longer the initial
-view, and that menu is where they belong. `ROADMAP.md` puts this first in
-Phase B, and calls it a functional loss against upstream.
-
----
-
-## What to do next
-
-**`ROADMAP.md` is now the authority on sequencing.** It supersedes the informal
-candidate list that used to live here. The short version:
-
-Phase A is closed and owes nothing. The three global tokens are settled from
-observation on the real panel, Game Mode is verified, and wake works.
-
-**Phase B is under way and the carousel rebuild that preceded it is done.** What
-remains, in order:
-
-1. **`hostTileLabelGap` 56 → 46.** Thirty seconds, and the only outstanding
-   change to a screen the client has otherwise accepted.
-2. **Host settings menu (SELECT).** The next real task, and the client has
-   confirmed that order. It absorbs the rename / delete / test-network
-   regression, which is a functional loss against upstream today.
-3. **The top-bar flash** (`BUGS-open.md` defect 8). Worth doing before the game
-   grid is rebuilt, because the game grid is one of the screens that would have
-   to claim its own toolbar.
-4. The Connecting state, the game grid, game detail, and the 220ms screen
-   transition that `Bulan.motionTransitionMs` defines and nothing uses.
-
-The next session is scoped in `PROMPT-next-session.md`.
-
-**Phase C is no longer blocked.** The client decided the onboarding frames do not
-use the reflected mark — they use `app/res/bulan_logo_horiz.svg`, the wordmark
-the carousel already draws. The consequence is that all four frames need
-recomposing rather than resizing: they were built around a tall centred element,
-and the wordmark is small and horizontal, so the vertical space it vacates has to
-be deliberately reallocated. **The PNGs in `design/` are the old composition** —
-reference for content and copy, not for layout.
-
----
-
-## Waiting on the client
-
-| Thing | Detail |
-|---|---|
-| **`deck_*` glyphs** | 10 files. Until they land, `deck` resolves to the Xbox set via `resolveGlyphFamily()` in `sdlgamepadkeynavigation.cpp` — deleting one line is the whole change. **Detection is confirmed working on real hardware in both Desktop Mode and Game Mode**, so those 10 files are the only thing between here and Deck glyphs. |
-| **Vignette / hint-bar band** | The client confirmed hairline-only for the hint bar. No filled surface token exists; if one is ever wanted, it is theirs to specify. |
-| **Status colour on in-between states** | Red and green now carry reachability on the host status line. *Looking for your PC…*, *Connecting…* and *Not paired yet* were left on the neutral text colour, on the reasoning that red and green are verdicts and those states have not reached one. Assistant's call, flagged to the client, not yet overturned. |
-| ~~**Replacing the carousel's engine**~~ | **Done 28 July.** Retired `BUGS-open.md` defects 2, 4 and 7 and closed four of the six review items. |
-| **`hostTileLabelGap` should drop 56 → 46** | **Client's call, 28 July, and NOT yet applied.** The gap between a host's circle and its name was opened up by 40px this session and the client then judged it 10px too much. One number in `app/gui/Bulan.qml`. Do this first next session — it is thirty seconds and it is the only outstanding change to a screen the client has otherwise accepted. |
-| **The six carousel review items** | Listed in full in `SPEC-host-carousel.md`. **Items 1, 2, 3, 5 and 6 are done. Item 4 — the wake overlay — is untouched** and deserves its own session, because it has to resolve on the host coming back *or failing to*. |
-| **Three calls made while building the tile text** | All reversible, all the client's to overturn: the display face is used for every host name rather than only the focused one; the status line is two texts cross-faded rather than one that swaps; the address is the focused host's alone. Reasoning in `SPEC-host-carousel.md`. |
-| **"Forget PC" wording** | **Settled 28 July, client's call: it stays.** Removing a machine does not unpair it, and the client's reading is that the words already say so — Bulan forgets the host, the host does not forget Bulan. The asymmetry is intended. Do not reopen it as a bug. |
-| **Rebuilding on upstream vs. replacing it** | The client asked whether the whole thing should be rebuilt rather than skinned. Advice given: **against** — see the note below. Not re-opened since, but not formally closed either. |
-| **Review-mode copy** | Pressing A on a review-mode host now raises a *"Review mode"* panel. Placeholder wording, never seen by a real user, changeable on request. |
-
-**Settled 28 July, no longer waiting:** grain intensity (`atmosphereGrainOpacity`
-stays 0.03), caption size (`sizeCaption` stays 16), overshoot
-(`motionOvershoot` stays 0.7), the hint-bar reflow (accepted as built),
-**the wake question — wake works, so the "Asleep" copy stands**, and Wake being
-withheld on hosts that cannot be woken.
-
-**Also settled in the Windows session:** the carousel's new travel easing is
-**good enough for v1** — the client watched it and said so, and it is a faithful
-copy of what `PathView` used to do rather than a considered motion design. And
-**the empty band at the bottom of the screen is accepted**: moving the text onto
-the tiles vacated the lower third, the composition sits high, and the space is
-deliberate.
-
----
-
-## Should this fork rebuild upstream rather than skin it?
-
-**Asked by the client on 28 July 2026, after reviewing the carousel. Advice given
-was: against a full rebuild, for replacing one component.** Recorded here because
-it will be asked again, and the reasoning is the useful part.
-
-The question came from six complaints about the host screen. **None of the six is
-upstream's code.** Four are the carousel component this project chose, one is this
-project's counting rule, one is this project's mouse-hover handler. A rebuild of
-upstream's shell would have fixed none of them.
-
-What upstream still provides is discovery, pairing, the streaming protocol and
-video decode — essentially all of it, and years of work. What it provides that
-Bulan actually touches is thin: a window, a screen stack, and a toolbar this fork
-already hides.
-
-**The cost of diverging is concrete and permanent.** The upstream sync currently
-fast-forwards `master` and merges into `bulan` with no conflicts — twelve commits,
-zero conflicts, 27 July. That is the channel protocol and security fixes arrive
-through. Structural divergence turns every future sync into a merge that has to be
-reasoned about, in exchange for fixing nothing that was complained about.
-
-**What is worth replacing is one component**, and that argument is in
-`SPEC-host-carousel.md`.
-
-One genuine structural weakness in the inherited input layer is worth naming, so
-the "against" is not mistaken for "there is nothing wrong": **navigation mode is
-global mutable state**, set by one screen and read by another. That is what caused
-defect 1 and it is the shape of fault most likely to recur. It has been de-fanged
-rather than removed. If the input layer is ever revisited, that is the thing to
-revisit — not the SDL-to-Qt key translation, which is thin and works.
-
----
-
-## Hard-won knowledge — do not rediscover these
-
-These each cost real time. They are the reason several files look the way they do.
-
-### A rebuild can install perfectly and still not be what you are looking at
-
-**This cost most of the 28 July session and produced three wrong conclusions in a
-row.** Three separate things can put an old interface in front of you, and they
-stack:
-
-1. **An old instance is still running.** `flatpak run` on a running app raises
-   the existing window instead of starting the new build. Exactly the trap `-n`
-   solves on macOS. Check `flatpak ps | grep -c MoonlightFork` is 0 before
-   launching and 1 after.
-2. **The interface is served from a stale on-disk cache** that survives
-   rebuilds. Files days older than the build is the tell. Path and removal
-   command are in `BUILDING-DECK.md`.
-3. **A broken screen falls back to upstream's interface.** If a Bulan screen
-   fails to load, the app quietly shows upstream's grid instead. That reads as
-   "my build didn't take" and is actually "my build took and my screen is
-   broken".
-
-**The recovery is always the same: read the log.** It states load failures in
-plain language, with file and line. Two sessions have now been lost to inferring
-build state from the outside when the app was saying it outright.
-
-**As of `7e8506c1` the log answers the first two outright**, so stop inferring
-them. Second line of every run:
-
-```
-Build: fix/carousel-defects @ deck-test-1-56-g9c721e13 | binary built "2026-07-28T16:43:59"
-```
-
-The commit answers *is this the code I think it is*, which catches building a
-different source tree — the Deck recipe's hardcoded source path makes that a live
-risk there. The timestamp answers *is this the build I just made*, which catches
-an old instance in front of you. They fail independently, which is why both are
-printed. `-dirty` on the commit means uncommitted changes, which mid-session is
-normal and itself worth seeing.
-
-It is regenerated by `scripts/gen-buildstamp.sh` on **every** build, not at
-`qmake` time. A stamp generated once at configure time would go on describing
-whichever commit happened to be checked out then, which would not merely fail to
-help — it would lie, which is the exact failure it exists to prevent. The script
-only rewrites its header when the value changes, so ordinary rebuilds do not
-recompile `main.cpp`.
-
-### Do not grep the binary to check what is in a build
-
-Interface code is not stored as plain text in the executable. `grep` returns zero
-for identifiers that have been in a file for weeks, which looks exactly like
-proof of a stale build. It is not proof of anything. This directly caused a wrong
-diagnosis on 28 July.
-
-The log is the source of truth for what loaded.
-
-### QML `console.log` never reaches the log **on the Deck**; on the Mac both do
-
-Debug output from the interface layer is dropped **in the Flatpak build**.
-Warnings are not, and print as `Qt Warning:` lines. `qDebug()` from C++ also
-arrives.
-
-**Checked on the Mac on 28 July and it is different there**: `console.log`
-arrives as `Qt Debug:` and `console.warn` as `Qt Warning:`. Both work. So this is
-a property of how the Deck build is run, not of QML.
-
-The rule that survives is the second-order one, not the first: **prove your
-logging appears before drawing any inference from its absence**, because the
-answer differs between the two machines this project builds for. Using
-`console.warn` everywhere costs nothing and works on both.
-
-An empty log was read as "the handler never fired" when the handler had run
-perfectly and the logging was the thing that never arrived — the opposite
-conclusion, and it sent a diagnosis down the wrong path for hours. **Prove your
-logging appears before drawing any inference from its absence.**
-
-### A `Behavior` cannot animate a `readonly property`
-
-Marking one readonly and attaching a `Behavior` makes the whole component fail to
-load, which cascades: the component using it fails, its screen fails, and the app
-falls back to upstream's interface with no hosts. The visible symptom looks
-nothing like a motion bug.
-
-This is worth generalising: **in this codebase a single bad property assignment
-takes out an entire screen, silently, and lands you on upstream's UI.** Suspect
-it whenever a screen "reverts".
-
-### `pkill -f` with the app ID kills your own shell
-
-The pattern matches the command line of the shell running it. Use
-`flatpak kill io.github.laweirdo.MoonlightFork`, or kill by PID from
-`flatpak ps`. Cost two aborted commands in one session.
-
-### Battery readings are silently zero on mains power
-
-`current_now` reads 0 whenever the charger is connected, so the arithmetic
-produces a confident, entirely fictional **0.00 W**. Check
-`/sys/class/power_supply/ACAD/online` is `0` and `BAT1/status` is `Discharging`
-before trusting anything. Note also that **there is no `bc`** on this machine —
-use `awk`.
-
-Do not sample while a build is running; compiling swamps the reading.
-
-### `MOONLIGHT_FAKE_HOSTS` cannot be used past the carousel
-
-Fake hosts are for reviewing the carousel and nothing beyond it; anything that
-needs A pressed to completion needs a real host. Screens past the carousel are
-reachable with `MOONLIGHT_INITIAL_VIEW` instead, so this is not a blocker for
-Phase B review.
-
-**A now says so rather than crashing** (`d3c57f95`), and the reason it used to
-crash is worth carrying forward, because the same shape will recur anywhere a
-view is fed an injectable model:
-
-**Everything past the offline branch of `actConfirm()` addresses a machine by its
-POSITION in the real host list**, and a fake host's position means nothing there.
-With two real machines paired, pressing A on the second fake host quietly opened
-the *second real machine's* games and looked like it worked. Pressing A on the
-fifth read off the end of the list and segfaulted. Whether it died depended on how
-many real machines happened to be paired — which is why it reproduced on the Deck
-and not on the Mac until it was looked for deliberately.
-
-**The silent wrong action was worse than the crash**, and a crash is what got
-reported. Assume any injectable-model debug hook has this failure mode until the
-guard is shown to cover every branch, not just the one that was noticed.
-
-### Removing a PC in Moonlight does not unpair it
-
-Learned while trying to produce an online-but-unpaired host to confirm defect 1
-in Desktop Mode.
-
-"Delete PC" removes the machine from **this** client's list. It does not tell the
-host to forget this client. Add it back and the host recognises the client
-certificate, reports itself as already paired, and no PIN panel ever appears —
-so the pairing flow cannot be exercised this way.
-
-**The unpair has to happen on the host.** Both of the client's machines run
-Sunshine (`state` reports `SUNSHINE_SERVER_FREE`), so it is done in Sunshine's
-own web interface, under Troubleshooting. That needs the client's login and is
-therefore theirs to do.
-
-Re-pairing afterwards is one PIN typed on the host. A completed pairing runs five
-requests ending in an HTTPS `pairchallenge`; an abandoned one stops after the
-first and eventually logs `RemoteHostClosedError`. That difference is how to tell
-from the log whether a pairing actually completed rather than taking it on trust.
-
-### Wake needs a hardware address the host has to volunteer
-
-`wakeable` in `computermodel.cpp` is simply "we have a MAC stored", and the MAC
-comes from the host's own `serverinfo` reply. **Moonlight rejects
-`00:00:00:00:00:00`**, which is what Sunshine reports over plain HTTP and, on at
-least one of the client's machines, over HTTPS too.
-
-The practical consequence: **`Steambox` is wakeable and `Shoebox` is not**, and no
-amount of app-side work changes that. Any future wake testing has to use
-Steambox. The hint bar checks `wakeable` before offering Wake as of `402b37d4`; before
-that it offered Wake on `Shoebox` and could only ever refuse.
-
-Wake itself broadcasts on every network interface as well as to the addresses it
-knows, so a host known only by a VPN address is still wakeable provided it is
-physically on the same network. Confirmed working on 28 July.
-
-### Qt renders SVG Tiny, and it does not honour `<clipPath>`
-
-Instead of clipping, it **draws the `<rect>` inside the clip path**. Those rects
-declare no fill, so they default to black and land as a solid square behind the
-artwork. 17 of 30 glyphs had one.
-
-`scripts/import-controller-glyphs.py` strips `<clipPath>` and `<defs>` before
-recolouring. **That ordering is load-bearing** — recolouring first would fill the
-clip rect and paint a black square over every glyph.
-
-**Corollary that matters more than the bug:** the defect is invisible in macOS
-QuickLook, which honours `clipPath` correctly. Checking art in a previewer proves
-nothing. Check it in the app.
-
-### `QT_QPA_PLATFORM=offscreen` cannot render shader effects
-
-This is why glyph colour is **baked in at import** rather than tinted at runtime
-with `MultiEffect`. A colorization pass renders nothing offscreen — which is exactly
-how every screenshot in this project is taken — and it pulls in a Qt module that
-would then have to exist inside the Flatpak.
-
-The cost: each glyph tone is a separate generated set. There are currently two,
-`res/glyphs/unfocused/` and `res/glyphs/focus/`. A third is one line in `VARIANTS`
-plus a re-run. Both colours are read out of `Bulan.qml` by the script, so the design
-system still owns the values.
-
-### The art set draws inconsistently
-
-Most shapes are filled with **no fill declared at all** (so they default to
-invisible black); the PlayStation cross is `fill:none; stroke:#000`; the bumpers
-carry a black stroke over a fill; and the three `start` glyphs draw their inner bars
-with `<rect>`, not `<path>`. Both fill and stroke need recolouring, and a shape
-declaring `fill:none` must keep it — giving an outline-only shape a fill turns it
-into a solid blob.
-
-The element list in the importer is deliberately **wider than what the art currently
-uses** (circle, ellipse, polygon, polyline, line) so a future re-export reaching for
-a different primitive does not silently come out black. An earlier pass restricted
-it to `<path>` after checking four files; three of the thirty used rects.
-
-**After any art delivery, re-run the importer and verify by scanning the output, not
-by eye:** 30 files, 110 shape elements, every one carrying the token colour or
-declaring `fill:none`.
-
-### PathView spaces items `1/count` below `pathItemCount` — HISTORICAL
-
-**The carousel no longer uses `PathView`, so none of this applies to the code as
-it stands.** Kept because it is true of Qt, because it is why the rebuild
-happened, and because the next stock view this project reaches for will raise the
-same question. Skip it unless you are considering `PathView` for something.
-
-
-And `1/pathItemCount` above it. So a neighbour sits at path fraction 0.0 with two
-hosts but 1/6 with three — one fixed geometry puts it in two different places, and
-with three hosts the neighbours slide inward and collide with the focused tile.
-`pathView.pathStretch` (1.5 or 1.0) compensates.
-
-**PathView also instantiates a wrapped neighbour** regardless of how selection
-moves. Focused on the first host it draws the *last* one to the left, promising a
-host that pressing left can never reach. Delegates draw only when
-`|index − currentIndex| ≤ 1`.
-
-### A full PathView loop always has one item crossing the join
-
-This is the root of `BUGS-open.md` defects 2 and 4 and is worth understanding
-once rather than rediscovering per host count.
-
-`PathView` arranges items around a **closed loop**. While the host count is at or
-below `pathItemCount` the items fill that loop exactly, so every move forces one
-of them to travel from one end of the path to the other — it leaves one edge of
-the screen and reappears at the opposite one in a single frame. The join sits at a
-visible screen position, so that crossing is visible.
-
-Once the host count **exceeds** `pathItemCount` the surplus items are never built
-at all. Nothing crosses, and new neighbours slide in from beyond the edge exactly
-as they should. Verified by frame-by-frame trace at five hosts: completely clean.
-
-**Two consequences that are easy to get backwards:**
-
-- **Raising `pathItemCount` does not give the loop slack.** Spacing is
-  `1/count` in that regime, so the items still fill the loop however high you
-  push it. Slack only comes from having *more hosts than tiles drawn*, which is
-  the opposite adjustment. A previous write-up recommended raising it first; it
-  cannot work.
-- **`movementDirection` defaults to "shortest way round the loop"**, which is
-  right for something that wraps and wrong for this, which clamps. Left to itself
-  it sent every tile the long way round on one transition at three hosts.
-  `moveBy()` in `HostCarousel.qml` now states the direction instead.
-
-### A stock view that has to be argued with is the wrong view
-
-**The carousel's rebuild, in one sentence.** `PathView` moves items endlessly
-around a closed loop; the design clamps and never wraps; three defects and two
-review items were all that one mismatch.
-
-The lesson is not "avoid `PathView`". It is about **when to stop fixing**. Two
-workarounds were written. The first was wrong and was replaced. The second was
-*correct* — it genuinely stopped the tile crossing the screen — and the client
-rejected it on sight anyway, because it traded a visible wrap for a visible
-disappearance.
-
-**When a fix can only trade one artefact for another, the component is the
-problem.** That is the signal, and it arrives one session before anyone wants to
-act on it. Replacing the engine took one session and four commits, closed
-everything at once, and required no new tokens and no regressions at any host
-count.
-
-What replaced it is worth knowing in one line: **each tile's position, scale,
-opacity and text weight are a pure function of how far its index sits from the
-selection, clamped to two slots either side.** The clamp is what creates
-off-screen room, which is what lets a departing tile leave rather than be cut.
-
-### Hover-to-focus and a moving view are a feedback loop
-
-Any view that moves its items **and** moves the selection on hover contains this,
-and it is not specific to the carousel — it will survive replacing the carousel's
-component.
-
-A press moves the row, a different item slides under a cursor that has not moved,
-that item reports being entered, the selection follows it, the row moves again. It
-sustains itself. Which way it runs depends on which side of centre the cursor was
-left, so it presents as *one direction is broken and the other is fine* — which
-sends the search straight at the key handler, where the fault is not.
-
-**No hover signal on the moving item can distinguish the two cases.** `entered`
-fires whether the pointer arrived at the item or the item arrived at the pointer.
-So does `positionChanged`, because the position it reports is relative to the
-item. Separating them needs the pointer tracked in **screen** coordinates, above
-any individual item.
-
-On this project the answer was to drop hover-to-focus entirely, on a screen whose
-premise is a gamepad. `hoverEnabled` is off rather than filtered, so the
-misleading events are never generated.
-
-### A settled value cannot tell you how something got there
-
-**This is the single most expensive mistake on record for this project, and it
-has now happened twice under different disguises.**
-
-The carousel wrap was diagnosed by logging `PathView.offset` after each move,
-observing it changed by exactly one unit every time, and concluding the carousel
-could not be travelling the wrong way round its loop. The client, who had watched
-it, said it was. The client was right: the animation really did take the long way
-on one transition. **Where something ends up cannot say which way it travelled to
-get there**, and the measurement was of where it ended up.
-
-The fix for this class of error is cheap: log the value **every frame** rather
-than once it settles. In QML, `onXChanged` on a delegate is enough, and 250 lines
-of trace answered in one run what a settled-value measurement had got wrong for a
-week. See the same shape in defect 1's history, where an empty log was read as
-"the handler never fired".
-
-**If a write-up says something is ruled out, check what measurement ruled it
-out** before building on it.
-
-**Used successfully the same day.** The client reported the left arrow running the
-carousel away. Rather than reasoning about the key handler, `moveBy()` was called
-eight times in each direction from a probe with the index logged each time: it
-clamps at both ends. That took one build and converted a guess into a fact, and it
-redirected the search to the mouse-hover handler — `BUGS-open.md` defect 6. Do
-this before theorising, not after.
-
-### The gamepad layer could not express the specified bindings
-
-Y and START **both sent `Key_Hangup`** — indistinguishable to QML — and SELECT was
-not mapped at all. Y now sends `Key_Call`, SELECT sends `Key_Context1`, both
-reserved keys with no text meaning. `main.qml` still treats `Key_Call` as "show
-settings" at the StackView level, so Y keeps its old behaviour on every screen that
-does not claim it first.
-
-**`SDL_CONTROLLERDEVICEREMOVED` was never handled** before this work. It leaked the
-controller handle and would have left glyphs showing an unplugged pad.
-
-### Steam Deck is not distinguishable by SDL controller type
-
-The enum in the SDL2 headers this links against has no entry for it. Valve hardware
-is identified by **vendor ID `0x28DE`**. SDL3 underneath does carry a Steam Deck
-HIDAPI driver and reports the name "Steam Deck", but exposes no distinct type
-through the SDL2 API.
-
-**Verified on hardware: this works.** The built-in controls resolve to `deck`.
-The earlier worry that Steam Input would mask Valve's vendor ID appears
-unfounded — its virtual pad is `Vendor=28de Product=11ff` in
-`/proc/bus/input/devices`, i.e. it carries Valve's vendor ID too. Still unproven
-in **Game Mode**, which is where Steam Input actually sits in the path; the
-confirmed run was Desktop Mode.
-
-### An editor that guesses at encoding will quietly rewrite your copy
-
-**This happened on 28 July, reached a commit, and was caught by eye rather than
-by any tool.**
-
-PowerShell 5.1 reads a file without a byte-order mark as ANSI. A UTF-8 `§` or `…`
-comes back as two or three separate characters, and writing that out as UTF-8
-double-encodes it: `§` becomes `Â§` and `…` becomes `â€¦`. It also adds a BOM the
-repository does not use.
-
-The visible symptom is **garbage in on-screen copy** — *"Connectingâ€¦"* — and the
-reason it is dangerous is that the corrupted strings live in states that are hard
-to reach, so nobody sees them until a user does.
-
-Two rules. Edit source files with something that preserves encoding. And after
-any script has touched a file, check it:
-
-```
-([regex]::Matches($text, "Â|â€|Ã")).Count   # must be 0
-```
-
-Generalise it past PowerShell: **any tool that rewrites a whole file is a tool
-that can silently change every character in it.** The project's copy is
-brief §8 verbatim in places, and §8 is the part a user reads.
-
-### The build tells you what stream to read it on, and it is not always stdout
-
-The Windows binary is a GUI-subsystem executable and writes its log to **stderr**.
-Capture stdout alone and you get an empty file — which looks exactly like proof
-that nothing ran, and on 28 July was read that way for a moment.
-
-This is the same shape as the Deck's dropped `console.log` and the empty log that
-sent defect 1 down the wrong path for hours. Three platforms, three different
-mechanisms, one rule: **prove your logging appears before drawing any inference
-from its absence.** It is the single most reliably useful sentence in this file.
-
-### There are two token files, and only one of them changes the app
-
-`app/gui/Bulan.qml` is the live design system — the singleton every screen
-imports. Changing a value here changes the application.
-
-`app/gui/BulanTokens.qml` is a **separate copy**, and it feeds `TokenProof.qml`,
-the offline review sheet. Changing a value here changes nothing the user ever
-sees. It exists because the proof sheet documents provenance per token, which the
-runtime singleton has no reason to carry.
-
-**`sizeCaption` lives in both** — as `sizeCaption: 16` in `Bulan.qml`, and as
-`size: 16` on the `caption` entry of the type ramp in `BulanTokens.qml`. Change
-one and the review sheet shows the client a value the app is not using, which is
-the worst possible failure for a document whose entire job is to be reviewed.
-Grep both files for any token before changing it.
-
-`atmosphereGrainOpacity` and `motionOvershoot` are only in `Bulan.qml`. The
-palette and the type ramp are the parts that are duplicated.
-
-### Global state written by a component that is being destroyed
-
-**This was defect 1, and the shape of it will recur.** The settings page arms a
-tab-chain navigation mode in which A sends Space instead of Return. Its combo
-box turned that mode off while its dropdown was open and asserted it back *on*
-when the dropdown closed — including when the dropdown was being torn down along
-with the page, which happens *after* the page has already reset the mode. The
-carousel then ran its own reset and happened to land last, which is the only
-reason the bug was intermittent rather than constant.
-
-Two things worth carrying forward:
-
-- **A dying component cannot tell that it is dying.** At `aboutToHide` during
-  teardown, the combo box's `visible`, `enabled`, `parent` and `Window.window`
-  are all indistinguishable from a normal close. Checked directly; there is no
-  discriminator to branch on. Any fix that depends on detecting teardown is
-  built on sand.
-- **The fix was to remove the authority, not to order the writes.** The screen
-  owns the navigation style; a popup now only declares that it is open
-  (`setNavModeSuspended`). Clearing a suspension cannot resurrect a stale value,
-  so ordering stops mattering. If you find yourself reasoning about which
-  handler runs last, that is the signal to split the state instead.
-
-The symptom is worth recognising: **exactly one button dead, everything else
-fine.** Only two places in the app ever turn that mode on, so a stuck mode is
-always one of them — that argument narrows this class of bug faster than any
-experiment.
-
-### Glyph detection is logged unconditionally at startup
-
-It did not used to be. `resolveGlyphFamily()` maps both `deck` and `fallback` to
-`xinput`, and the old log fired only when the *drawn* family changed — so on a
-Deck the line was silent whether detection succeeded or failed, and the only way
-to force it was to connect a DualSense and unplug it. Every Deck session paid
-that tax.
-
-Three lines now print at startup regardless:
-
-```
-Controller glyphs: 1 controller(s) attached
-Controller glyphs:   "Steam Deck" vendor=28de product=1205 type=0 -> deck
-Controller glyphs: detected deck, drawing xinput
-```
-
-`detected deck` means Valve's vendor ID was seen. `detected fallback` with a
-controller attached means it was not. `drawing xinput` is expected either way
-until `deck_*` art exists. The change-triggered line now keys off what was
-**detected** rather than what is drawn, so hot-swaps are visible too.
-
-### The Deck in hand is a "Galileo" — the OLED, not the LCD
-
-`/sys/class/dmi/id/product_name` reports `Galileo`. 1280×800 at roughly
-**204 ppi**.
-
-This matters for the atmosphere checks. The brief's banding concern targets the
-**LCD**, and the two panels fail differently — LCD shows wide stepped bands,
-OLED tends toward near-black crush and tinting. **The LCD banding case cannot be
-checked on this hardware at all.**
-
-It also sharpens the grain question. At 2× DPR on the design machine each grain
-speck covered 2 device pixels; here it covers 1 physical pixel, about 0.12 mm,
-which at a 50 cm viewing distance is roughly 0.9 arcmin — at or below the limit
-of human acuity. **The likely failure mode for grain on the Deck is "invisible",
-not "too coarse."** And invisible grain cannot break banding, so grain density
-and banding have to be judged together rather than as separate checks.
-
-Same arithmetic flags `sizeCaption: 16` as the type size at risk: about
-13.7 arcmin at 50 cm, below the ~16 arcmin comfort threshold. `sizeBody: 22` and
-up are fine.
-
-### The atmosphere switches are compile-time, which makes A/B measurement slow
-
-`atmosphereGrainEnabled`, `atmosphereVignetteEnabled` and
-`atmosphereGradientEnabled` are `readonly property` in `Bulan.qml`. Toggling one
-needs a rebuild — about two minutes on the Deck. Any grain-on/grain-off power
-comparison therefore costs two builds. If that becomes routine, making them
-runtime-switchable is a small change.
-
-Idle draw with the app closed, on battery, measured at **3.92 W**
-(`current_now × voltage_now` from `/sys/class/power_supply/BAT1`; there is no
-`power_now` on this machine). The reading is noisy — sample repeatedly.
-
-### This links sdl2-compat, not SDL2
-
-`libSDL2.dylib` reports version 3201.70.0 while the runtime logs "SDL3 version:
-3.4.12". It is the SDL2 ABI shim running on real SDL3. All the controller
-identification functions exist in both the headers and the shim, so the SDL2 API is
-safe to build against — but do not assume SDL2 internals.
-
-### The macOS build used to rewrite `app/Info.plist` in place — fixed
-
-**Historical, kept because the symptom is memorable and the trap could be
-reintroduced.** Until `460e7436` the build stamped the literal `VERSION`
-placeholder to the real version number *in the tracked template*, so the file
-showed as modified after every build and had to be reverted by hand. Committing
-the stamped value would have destroyed the placeholder the build's `sed` looks
-for and silently broken every future version bump.
-
-Two causes, both now fixed in `app/app.pro`:
-
-- The old rule copied the template to `$$OUT_PWD/Info.plist`. In a **shadow**
-  build that is a different file; in an **in-source** build — which is what this
-  project does — `OUT_PWD == PWD`, so the copy was a no-op and the `sed` landed
-  on the tracked template.
-- It used `sed -i -e`, and BSD `sed` reads the argument after `-i` as a backup
-  suffix. So macOS consumed the `-e` and dropped a stray `Info.plist-e` beside
-  the template on every build.
-
-The build now writes `app/Info.generated.plist` — a different filename from the
-template, so in-source and shadow builds behave identically — with a plain
-redirect rather than in-place editing. **Building no longer dirties the working
-tree.** If `git status` is ever non-empty after a build again, this regressed.
-
-### Upstream quirks worth knowing
-
-- **`CenteredGridView` does not centre** when there are fewer items than fill one
-  row — the row hugs the left edge. Visible in `AppView` with exactly 5 games.
-- **Two empty-state messages have `wrapMode` but no width**, so they cannot wrap and
-  run off both edges below roughly 820px. Fine at 1280.
-- The custom-resolution label in `SettingsView.qml:360` builds a **hardcoded English
-  "Custom"** while the frame-rate label beside it uses `qsTr`.
-- **`GamepadMapper.qml` is an unreachable stub** with a permanently hidden toolbar
-  button.
-
----
-
-## Working on this project
-
-### Build and run
-
-```bash
-cd ~/Developer/moonlight-qt && make -j$(sysctl -n hw.ncpu) release && open -n app/Moonlight.app
-```
-
-`-n` matters. Without it macOS activates an already-running instance instead of
-launching the build you just made, and you review the wrong binary.
-
-After pulling: `git submodule update --init --recursive && python3 setup-deps.py`.
-
-On Windows — the client's PC, `Shoebox` — see `BUILDING-WINDOWS.md`. It is a
-**review station, not a platform**: good for proving a screen loads and behaves,
-useless for anything that depends on the Deck's panel. Note that it runs **Qt
-6.9.3** while the Mac and CI run 6.11.1, because the tool that installs Qt cannot
-reach 6.11 at all — that gap is the first thing to suspect if the two machines
-ever disagree about how something looks.
-
-On the Deck it is a Flatpak build instead — see `BUILDING-DECK.md`. Three traps
-worth knowing before you start, all of which cost time this session:
-
-- **The recipe hardcodes the source path** and will happily build a different
-  branch than the one you have open, with no warning.
-- **Submodules are per-worktree** and a fresh worktree has none.
-- **The offscreen hooks need `--filesystem=home`** or the screenshot silently
-  never appears.
-
-The generated glyph and atmosphere assets are **committed**, so the two asset
-scripts do not need re-running after a pull — only after new art is delivered.
-
-### Reviewing screens without a Deck
-
-There is no Screen Recording permission on this machine, so screens are captured
-offscreen:
-
-```bash
-MOONLIGHT_FAKE_HOSTS=mixed MOONLIGHT_SCREENSHOT=/tmp/shot.png \
-QT_QPA_PLATFORM=offscreen app/Moonlight.app/Contents/MacOS/Moonlight
-```
-
-| Hook | Effect |
-|---|---|
-| `MOONLIGHT_SCREENSHOT=<path>` | Pins the window to 1280×800, grabs it, exits. Also writes `<path>-toolbar.png`. |
-| `MOONLIGHT_INITIAL_VIEW=qrc:/gui/X.qml` | Boots straight to a screen. `GlyphProof.qml` and `TokenProof.qml` are the review sheets. |
-| `MOONLIGHT_FAKE_HOSTS=none\|one\|two\|offline\|mixed\|many` | Swaps a fixed host list into the carousel, so its states can be reviewed without pairing or unpairing real machines. `two` is the client's real host count **and the only preset with an unpaired host in it** — that state is why the ready count was wrong, and it could not be reviewed at all until the preset existed. `mixed` is three, `many` is five. |
-
-All three are inert unless set. Note the grab captures `stackView` only — 1280×712,
-without the toolbar — because the window root has no QML engine.
-
-Regenerating assets:
-
-```bash
-python3 scripts/gen-atmosphere-textures.py        # grain + vignette
-python3 scripts/import-controller-glyphs.py       # glyphs, from ~/Documents/Bulan/controller_glyphs
-```
-
-### The client's real hosts
-
-`Shoebox` and `Steambox`, both usually online and paired. Useful for real testing,
-and the reason `MOONLIGHT_FAKE_HOSTS` exists — the offline and zero-host states
-cannot be produced without either faking or damaging their config.
-
----
-
-## Deck verification — what has actually been checked
-
-Two sessions on a Steam Deck OLED ("Galileo"), with the client pressing the
-buttons. **26 July 2026** covered checks 1-3 in Desktop Mode. **28 July 2026**
-covered the regression pass, the judgement calls, and Game Mode.
-
-`REVIEW-CHECKLIST.md` is the working document for these and carries the full
-answers. Summary:
-
-### Regression — the fixes held
-
-| Check | Result |
-|---|---|
-| 1.1 A after a plain Client Settings round trip | **Passed** |
-| 1.2 A after opening the Resolution dropdown | **Failed, then fixed** in `be874bf8`, retested by hand, passes |
-| 1.3 Wake shown only where it does something | **Passed.** Reflow reads as responsive, not twitchy -- accepted as built |
-| 1.4 Glyphs follow the pad in use | **Passed** |
-| 1.5 Detection reported at startup | **Passed** -- `detected deck` |
-
-1.2 failing turned out to be a **third** mechanism behind the same one-dead-button
-symptom, not a regression of defect 1: a popup elsewhere in the window restores
-focus to a control that no longer exists on the way back, landing after the
-carousel has already claimed it. The screen now takes focus back whenever it
-loses it rather than claiming it once, which cannot be raced.
-
-### Judgement calls — the three global tokens are settled
-
-| Token | Outcome |
-|---|---|
-| `atmosphereGrainOpacity` | **Stays 0.03.** Judged fine on the panel |
-| `sizeCaption` | **Stays 16.** Legible at holding distance, no squinting |
-| `motionOvershoot` | **Stays 0.7** |
-
-**Both standing risks in `ROADMAP.md` were wrong, and in the reassuring
-direction.** `sizeCaption: 16` was predicted to fail at arm's length by
-calculation and does not. Grain at 0.03 was predicted to be invisible on this
-panel and is not. **The arithmetic was more pessimistic than the eye** -- worth
-remembering before the next value gets argued from a spreadsheet.
-
-Two changes did come out of it, both client calls from observation:
-
-- `motionFocusMs` **140 -> 180**. The brief's figure read a touch too fast.
-- The host status line: shorter copy, the status swatches carrying
-  reachability, and the redundant dot removed.
-
-Also fixed, and it was a real fault rather than a preference: the tile's scale-up
-lagged its travel because an animation was chasing a value that was itself still
-animating.
-
-### Game Mode — check 9, passed
-
-**The largest untested assumption in the project, and it held.** Verified 28 July
-2026 with `gamescope` confirmed running.
-
-Steam Input does interpose a virtual controller -- the app sees
-`Steam Virtual Gamepad` with product `11ff`, not `Steam Deck Controller` with
-`1205`. But **the Valve vendor ID `28de` is carried through**, and that is what
-detection keys on, so it reports `detected deck` exactly as in Desktop Mode. All
-five bindings arrive and fire the right handler.
-
-`BUILDING-DECK.md` records how to capture the log from Game Mode. The short
-version: Steam does not run Launch Options through a shell, so use the launcher
-script at `/home/deck/Documents/bulan-gamemode.sh`.
-
-### Colour banding — cannot be completed on this hardware
-
-The brief's concern targets the **LCD** Deck and this is an **OLED**; the two
-fail differently. Stays open unless an LCD Deck comes into scope. Nothing was
-observed on the OLED that needed action.
-
-### Menu battery cost — provisional
-
-**4.31 W** on the carousel against a **3.92 W** baseline with the app closed, so
-roughly **0.4 W**, about a tenth. Treat as indicative, not settled: the app
-crashed part-way through the sampling window, so some readings are of an idle
-machine and the true figure is likely a little higher.
-
-Sampling must be done with the Deck **actually unplugged** -- `current_now` reads
-0 whenever mains is connected, which produces a confident-looking 0.00 W. Check
-`/sys/class/power_supply/ACAD/online` is 0 first. There is no `bc` on this
-machine; use `awk`.
-
-### Can Bulan actually wake a sleeping PC? — yes, answered 28 July 2026
-
-**The last Phase A item, and it passed.** Answered on the Mac, not the Deck, with
-the client pressing the button.
-
-`Steambox` was unpaired in Sunshine, re-paired from the carousel, then put
-genuinely to sleep. The app logged it going offline, the status line read
-*Couldn't reach Steambox*, and the hint bar offered **Y Wake**. One press and it
-was back online 64 seconds later.
-
-**Why this counts as a real answer rather than a hopeful one.** `NvComputer::wake()`
-has exactly two ways to decline quietly — the host is already online, or no MAC
-is stored — and warns for both. Neither warning appears in the log, so it sent the
-packet rather than declining. The host was verifiably asleep beforehand: not
-responding to the app, and not responding to a direct `serverinfo` query either.
-
-**Consequence:** the *"Asleep"* state is a promise the app can keep and the copy
-stands as written. No copy decision is owed.
-
-Two things learned in the process, both recorded under hard-won knowledge: only
-`Steambox` is wakeable at all, because `Shoebox` never supplies a hardware
-address; and the hint bar offers Wake without checking, which is
-`BUGS-open.md` defect 5.
-
-## Things to be careful about
-
-- **The fork is GPLv3.** Brief §11 requires a *"Built on Moonlight"* credit in
-  About. **This has not been done yet** and is a licence obligation, not a nicety.
-
-Permanent remote, scope, and client-decision rules are in `AGENTS.md`.
+| Active product task | Host settings remains active; implementation has not started |
+| Commit policy | One logical, independently reviewable change per commit; stop for approval between stages |
+| Creative deliverables | Long-term list and creative guide, not the definition of v1 |
+| Steam Deck glyph art | Not required for v1; current XInput glyphs are practically identical |
+| Reflected-moon mark | Superseded |
+| Hardware target | LCD and OLED remain targets; LCD visual validation is deferred, not blocking |
+| Host settings classification | Product task and functional regression, not a numbered defect |
+| Upstream UI audit findings | Historical redesign findings, not active defects |
+| v1 technical foundation | Retain upstream discovery, pairing, streaming, and platform infrastructure; replace individual UI components only when justified |
+| Historical organization | Use a small retrospective set and preserve Git-aware moves |
+| Root README | Keep upstream content and add a concise Bulan orientation notice without public-release marketing |
+
+These decisions have not all been applied yet. The roadmap, flow, defects,
+brief, specifications, historical files, and README are handled in later stages.
+
+## Required reading
+
+Read in this order before the next documentation stage:
+
+1. `AGENTS.md`
+2. This file
+3. `TASK-BRIEF.md` when discussing the next application task
+4. `bulan-creative-brief.md`
+5. `FLOW.md`
+6. `ROADMAP.md`
+7. `BUGS-open.md` until Stage 4 creates `BUGS.md`
+8. `SPEC-host-carousel.md`
+9. The relevant `BUILDING-*.md` before any build
+
+`UI-AUDIT.md` is an upstream historical baseline, not a current implementation
+authority.
+
+## Next recommended action
+
+For the current documentation task:
+
+1. Review this Stage 2 diff.
+2. If approved, commit it as a separate documentation-only change.
+3. Begin Stage 3 by simplifying `ROADMAP.md` and reconciling `FLOW.md`.
+
+For the later host-settings implementation:
+
+1. Finish and merge the documentation reorganization first.
+2. Ask the four client questions in `TASK-BRIEF.md`.
+3. Inspect the latest approved `bulan` and create the implementation branch.
+4. Record that exact branch and baseline here.
+5. Implement and validate one approved logical change at a time.
+
+## Do not touch during the next documentation stage
+
+- Application source, QML, C++, build logic, assets, or design files
+- Host discovery, pairing, streaming, or platform infrastructure
+- The accepted carousel implementation
+- The host-settings implementation
+- The active startup-toolbar defect
+- Build procedures, except where a later documentation stage explicitly moves
+  duplicated historical material without changing commands
+
+Stage 3 is documentation architecture only: roadmap and flow.
