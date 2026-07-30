@@ -11,13 +11,13 @@ sequencing is in the roadmap; the implementation work order is in
 
 | Item | State |
 |---|---|
-| Current branch | `codex/docs-architecture` |
-| Documentation state | Stages 1 through 6 are committed on this branch; inspect Git for the exact HEAD |
+| Integration branch | `bulan`; this snapshot is prepared on a short state-only branch |
+| Published documentation baseline | `73be60bc` on `origin/bulan` |
 | Documentation branch baseline | `bulan` at `30aaa57d` |
-| Integration branch | `bulan`, matching `origin/bulan` at `30aaa57d` when this branch was created |
-| Working tree after the approved Stage 6 commit | Clean |
+| Documentation state | Stages 1 through 6 are merged and pushed; the completed task branch was deleted |
+| Working tree before this state-only snapshot | Clean |
 | Configured remotes | `origin` only in this checkout |
-| Application source changes on this branch | None |
+| Application source changes in the documentation work | None |
 
 Always inspect Git before relying on this snapshot. Do not copy these values into
 permanent rules or specifications.
@@ -38,13 +38,12 @@ Stages 1 through 6 of the documentation reorganization are complete:
   investigations and preserved the ledger as a detected Git rename.
 - `141462d2` reconciled deliberate creative evolution, logo roles, hardware
   validation, and the durable carousel specification.
-- The final consistency commit added the Bulan README notice, reconciled stale
-  review and build references, and completed the repository-wide Markdown
-  validation. Inspect Git for its exact hash because this handoff is part of
-  that commit.
+- `73be60bc` added the Bulan README notice, reconciled stale review and build
+  references, and completed the repository-wide Markdown validation.
 
 No application file changed and no application build was needed for these
-stages.
+stages. The six commits were fast-forwarded into `bulan`, pushed to `origin`,
+and the completed documentation task branch was deleted.
 
 ### Application
 
@@ -218,10 +217,7 @@ authority.
 
 ## Next recommended action
 
-The documentation branch is ready for the client to merge into `bulan`. Do not
-merge or push it without explicit approval.
-
-For the host-settings implementation after that merge:
+For the host-settings implementation:
 
 1. Ask the four client questions in `TASK-BRIEF.md`.
 2. Inspect the latest approved `bulan` and create the implementation branch.
