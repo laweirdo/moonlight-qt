@@ -60,10 +60,10 @@ that is theirs.
   not unpair it: the host goes on recognising this client, so it reappears as
   already paired if it is added back. **Bulan forgets the host; the host does not
   forget Bulan.** The asymmetry is intended. Do not raise it as a bug.
-- **Custom components only.** There is no menu component in `app/gui/` yet, so
-  this session builds one. `HostPanel.qml` is the closest existing thing — a
-  modal overlay with scrim, surface and title — and is the right thing to model
-  it on or extend. No Qt Quick Controls.
+- Follow the custom-component rule in `AGENTS.md`. There is no menu component in
+  `app/gui/` yet, so this session builds one. `HostPanel.qml` is the closest
+  existing thing — a modal overlay with scrim, surface and title — and is the
+  right thing to model it on or extend.
 
 ### What you have to decide with the client, not for them
 
@@ -174,21 +174,9 @@ noticed.
 
 ---
 
-## Rules that have not changed
+## Permanent rules
 
-- Branch from `bulan`, named once the task is known. Merge back on the client's
-  sign-off, then delete it locally and on the fork.
-- **Never commit to `master`.** It is a clean mirror of upstream and its only job
-  is to fast-forward. `origin` is the client's fork; `upstream` is never pushed to.
-- One commit per task, so each stays independently revertible. **Stop and show the
-  client before moving on.**
-- Custom components only. No Qt Quick Controls.
-- Controller-first. If something only works with a mouse it is wrong.
-- Minimum focus target 64×64 at 1280×800.
-- Every value comes from the `Bulan` singleton. If a token is missing, **say so
-  and let the client add it** — propose it with a value sourced from the brief and
-  say plainly that you have done so.
-- The client is a creative director who does not read code. Explain what the app
-  does, not what the code does, and name what things cost.
+Read and follow `AGENTS.md`. This temporary work order narrows the active task;
+it does not restate or override permanent project rules.
 
 **Delete this file when the session it describes is done.**

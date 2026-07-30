@@ -58,9 +58,8 @@ moved; they had, and the log was going to a stream that was not being captured.
 The rule that keeps paying for itself: **prove your logging appears before drawing
 any inference from its absence.**
 
-Bulan is a UI/UX-focused fork of moonlight-qt targeting the Steam Deck. The client
-is a creative director who does not read code; explanations belong in plain English,
-and design decisions are theirs to make, not yours to assume.
+Bulan is a UI/UX-focused fork of moonlight-qt targeting the Steam Deck.
+`AGENTS.md` defines the permanent client-decision and communication rules.
 
 ---
 
@@ -68,6 +67,7 @@ and design decisions are theirs to make, not yours to assume.
 
 | Document | What it is |
 |---|---|
+| `AGENTS.md` | **The permanent operating rules** for coding and reviewing agents: authority order, branch policy, client decision boundaries, interface invariants, validation honesty, and contradiction handling. |
 | `bulan-creative-brief.md` | **The authority on design.** §4 depth/atmosphere, §6 motion, §8 voice, §11 guardrails are the sections that get cited constantly. |
 | `FLOW.md` | Where every screen sits and how you get between them, as Mermaid. Two diagrams: Bulan as designed, and upstream as it is today. Carries the board's open questions as prose. |
 | `ROADMAP.md` | **The authority on sequencing.** What v1 is, the scope decisions that stopped being re-derived, and the phase order. |
@@ -92,24 +92,12 @@ appears, move it in rather than citing a path on someone's machine.
 
 ---
 
-## How this repository is branched
+## Branching
 
-Settled 27 July 2026. `dev/token-proof` is gone; everything it carried is on
-`bulan`. Follow this — the shape exists to keep upstream syncs cheap.
+`AGENTS.md` is the authority for branch, commit, remote, ownership, and
+working-tree rules.
 
-| Branch | Role |
-|---|---|
-| `master` | **The fork's default branch, and a clean mirror of upstream.** Never commit Bulan work here. Its only job is to fast-forward from `upstream/master`. The moment it carries a fork-only commit, every future sync becomes a conflicted merge instead of a fast-forward. |
-| `bulan` | **The integration branch and the baseline.** All Bulan work lands here. This is what you build, what you flash to the Deck, and what "known-good" means. |
-| short task branches | One per task, cut from `bulan`, merged back when the client signs off, then deleted — local and remote. |
-
-Task branches are **named at creation, once the task is actually known.** The old
-`dev/token-proof` stopped describing its contents about eight commits in, which
-is the failure this rule prevents. Prefixes in use: `fix/`, `docs/`, `feat/`.
-
-Syncing with upstream is therefore: fast-forward `master` from
-`upstream/master`, then merge `master` into `bulan`. Conflicts, if any, are
-confined to that second step — the mirror itself never conflicts.
+### Historical note — first upstream sync
 
 **Done once, 27 July 2026, and it worked as designed.** Twelve upstream commits
 fast-forwarded onto `master`, then merged into `bulan` with **no conflicts**.
@@ -119,29 +107,17 @@ also replaced the `h264bitstream` submodule with vendored sources; that lands
 cleanly but leaves an untracked `h264bitstream/h264bitstream/` directory behind
 from the old submodule checkout. It is safe to delete and was.
 
-`origin` is the client's fork (`laweirdo`). `upstream` is moonlight-stream.
-**Never push to `upstream`.**
+At the time of that sync, `origin` was the client's fork and `upstream` was the
+official Moonlight repository. Remote configuration is machine-specific and
+must be inspected rather than assumed.
 
 ---
 
-## Standing rules the client has set
+## Permanent operating rules
 
-These are not suggestions. They have been restated across several sessions.
-
-1. **Custom components only.** No Qt Quick Controls. Stock components are precisely
-   what makes upstream read as a utility. `QtQuick.Controls` is imported in exactly
-   one Bulan file, `HostCarousel.qml`, solely for the `StackView` attached
-   properties — no stock control is instantiated anywhere.
-2. **Every value comes from the `Bulan` singleton.** No hardcoded colours, sizes,
-   spacings or durations. **If a token is missing, tell the client and let them add
-   it** rather than inlining a value. In practice: propose the token with a value
-   sourced from the brief, and say plainly that you have done so.
-3. **Minimum focus target 64×64px** at native 1280×800. Display-only elements are
-   exempt (the hint bar is not focusable).
-4. **Controller-first, always.** If something only works with a mouse, it is wrong.
-5. **Commit per task, so each stays independently revertible.** Stop and show the
-   result before moving on.
-6. **Where the mockup and the brief disagree, ask.** Do not pick one silently.
+See `AGENTS.md`. It owns the permanent interface, token, focus, branch, commit,
+client-decision, build-honesty, and contradiction rules. This handoff records
+mutable repository state and must not restate them.
 
 ---
 
@@ -1054,13 +1030,7 @@ address; and the hint bar offers Wake without checking, which is
 
 ## Things to be careful about
 
-- **`git push` goes to `origin`, which is the client's fork** (`laweirdo`).
-  `upstream` is moonlight-stream. Never push there.
 - **The fork is GPLv3.** Brief §11 requires a *"Built on Moonlight"* credit in
   About. **This has not been done yet** and is a licence obligation, not a nicety.
-- Do not modify host discovery or pairing logic when changing views. The one
-  model change made so far was `AddressRole`, which is presentational and additive.
-- The client corrects design work directly and expects it acted on without
-  re-litigation. They have also caught two real defects by looking at screenshots
-  more carefully than the tooling did — take their visual observations seriously
-  even when a check has just passed.
+
+Permanent remote, scope, and client-decision rules are in `AGENTS.md`.
