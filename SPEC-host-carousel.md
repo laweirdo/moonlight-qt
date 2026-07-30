@@ -65,8 +65,8 @@ still carousel. These tiles move, and a moving view cannot tell the pointer
 arriving at a tile apart from a tile arriving at the pointer — both raise the same
 hover events at the same item, and there is no local signal that separates them.
 Acting on them turned one keypress into a selection that walked away on its own.
-`BUGS-open.md` defect 6 carries the full account, including a filtering attempt
-that was committed as a fix and was not one.
+`docs/retrospectives/DEFECTS-carousel.md` carries the full account, including a
+filtering attempt that was committed as a fix and was not one.
 
 Up and Down are *accepted* rather than merely ignored. Left unaccepted they bubble
 to the StackView and drag focus into toolbar chrome that this screen hides, at
@@ -259,7 +259,7 @@ sequencing question is `ROADMAP.md`'s.
 | 2 | *"Text stays static at the bottom of the screen. The text should be part of the carousel."* | **Done** in `f0635789`. Every host carries its own name, status and address, which travel with its tile and grow and brighten into focus. |
 | 3 | *"It read '1 of 1 ready' instead of '1 of 2' when Steambox was unpaired."* | **Done** in `58de72f1`. |
 | 4 | *"Waking should not create a popup. It should create a 'loading' overlay, perhaps with 3 animated bouncing dots, until the host is awake or fails to wake."* | **Not started.** `actWake()` still raises `HostPanel` with *"Give it a moment to come back."* and never revisits it. It should hold a waiting state and resolve on the host coming back **or failing to**, which means the screen has to notice both — so this is more than a visual change. Phase D's *Waking PC* arriving early. |
-| 5 | *"Left arrow key turns the carousel into an infinite scroll until right arrow key is pressed."* plus *"mouse hover still focuses the hovered host"* | **Fixed** in `8c40e196`, **not yet watched by a human.** See `BUGS-open.md` defect 6. |
+| 5 | *"Left arrow key turns the carousel into an infinite scroll until right arrow key is pressed."* plus *"mouse hover still focuses the hovered host"* | **Closed.** Fixed in `8c40e196` and confirmed by the client with a mouse. See `docs/retrospectives/DEFECTS-carousel.md`, investigation 6. |
 | 6 | *"On 2 hosts, even on the leftmost host selected, I see the host that would've been on the right appear faded on the left."* | **Done** in `1d813d2e`. Verified frame by frame: across 338 frames at two hosts, the second tile was drawn left of centre zero times. |
 
 **Five of the six are done, and one — the wake

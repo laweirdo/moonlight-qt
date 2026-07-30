@@ -12,10 +12,10 @@ sequencing is in the roadmap; the implementation work order is in
 | Item | State |
 |---|---|
 | Current branch | `codex/docs-architecture` |
-| Current HEAD before the Stage 3 review diff | `b7eeb09f` — `docs: simplify current handoff and task brief` |
+| Current HEAD before the Stage 4 review diff | `87d305f9` — `docs: separate roadmap from project history` |
 | Documentation branch baseline | `bulan` at `30aaa57d` |
 | Integration branch | `bulan`, matching `origin/bulan` at `30aaa57d` when this branch was created |
-| Working tree | **Dirty by design:** Stage 3 simplifies the roadmap, reconciles the flow, and moves general lessons into one retrospective; awaiting client review |
+| Working tree | **Dirty by design:** Stage 4 separates the open startup-toolbar defect from closed carousel investigations; awaiting client review |
 | Configured remotes | `origin` only in this checkout |
 | Application source changes on this branch | None |
 
@@ -26,15 +26,17 @@ permanent rules or specifications.
 
 ### Documentation
 
-Stages 1 and 2 of the documentation reorganization are complete:
+Stages 1 through 3 of the documentation reorganization are complete:
 
 - `d49d3a90` created `AGENTS.md` as the permanent operating authority and moved
   stable rules out of mutable session documents.
 - `b7eeb09f` reduced this handoff and replaced
   `PROMPT-next-session.md` with the single active `TASK-BRIEF.md`.
+- `87d305f9` separated roadmap sequencing from project history, reconciled the
+  flow questions, and created the cross-cutting debugging retrospective.
 
-No application file changed and no application build was needed for either
-stage.
+No application file changed and no application build was needed for these
+stages.
 
 ### Application
 
@@ -53,20 +55,21 @@ The rebuilt carousel:
 
 ## Work currently in progress
 
-The documentation-architecture task is in **Stage 3 — roadmap and flow**. The
-review diff:
+The documentation-architecture task is in **Stage 4 — defects and
+retrospectives**. The review diff:
 
-- narrows `ROADMAP.md` to scope, sequencing, milestones, exits, and genuine
-  standing risks;
-- gives `FLOW.md` an explicit authority header;
-- resolves or defers the old flow questions using the client's settled
-  decisions; and
-- moves reusable historical lessons to
-  `docs/retrospectives/DEBUGGING-LESSONS.md`.
+- creates `BUGS.md` with the startup toolbar as the sole open unintended
+  behavior;
+- moves the former `BUGS-open.md` history to
+  `docs/retrospectives/DEFECTS-carousel.md`;
+- keeps only resolved carousel investigations in that retrospective;
+- links the detailed investigations to
+  `docs/retrospectives/DEBUGGING-LESSONS.md`; and
+- updates affected references and the stale carousel-hover validation status.
 
-Stages 4–6 have not started. The documentation is therefore **not yet fully
-reconciled**, and `BUGS-open.md`, the creative brief, specifications, and README
-still await their scheduled stages.
+Stages 5 and 6 have not started. The documentation is therefore **not yet fully
+reconciled**, and the creative brief, specifications, README, and final
+cross-file consistency still await their scheduled stages.
 
 ## Active implementation task
 
@@ -118,6 +121,7 @@ or 2 because they do not change application files.
 | LCD visual validation | Deferred until LCD hardware is available; not a private-v1 blocker |
 | Stage 1 documentation | UTF-8, whitespace, staged-diff, and documentation-only scope checks passed |
 | Stage 2 documentation | UTF-8, whitespace, staged-diff, and documentation-only scope checks passed |
+| Stage 3 documentation | UTF-8, whitespace, reference, Mermaid-fence, and documentation-only scope checks passed |
 
 The relevant `BUILDING-*.md` file must be read before the next application
 build. Do not infer that an old validation covers new application changes.
@@ -129,8 +133,8 @@ One acknowledged open defect exists:
 ### Upstream toolbar appears during launch
 
 The inherited toolbar starts visible and remains on screen for approximately
-567 ms before the carousel hides it. The diagnosis and evidence are currently
-in `BUGS-open.md`; Stage 4 will move the active entry to `BUGS.md`.
+567 ms before the carousel hides it. `BUGS.md` owns its reproduction, evidence,
+diagnosis, uncertainty, next action, priority, and relevant files.
 
 The host-settings menu is not a numbered defect. It is an active product task
 and a functional regression from upstream.
@@ -187,7 +191,7 @@ Read in this order before the next documentation stage:
 4. `bulan-creative-brief.md`
 5. `FLOW.md`
 6. `ROADMAP.md`
-7. `BUGS-open.md` until Stage 4 creates `BUGS.md`
+7. `BUGS.md`
 8. `SPEC-host-carousel.md`
 9. The relevant `BUILDING-*.md` before any build
 
@@ -198,10 +202,9 @@ authority.
 
 For the current documentation task:
 
-1. Review this Stage 3 diff.
+1. Review this Stage 4 diff.
 2. If approved, commit it as a separate documentation-only change.
-3. Begin Stage 4 by separating the open startup-toolbar defect from the closed
-   carousel investigations.
+3. Begin Stage 5 by reconciling the creative brief and specifications.
 
 For the later host-settings implementation:
 
@@ -221,5 +224,5 @@ For the later host-settings implementation:
 - Build procedures, except where a later documentation stage explicitly moves
   duplicated historical material without changing commands
 
-Stage 3 is documentation architecture only: roadmap, flow, and relocation of
-their durable historical lessons.
+Stage 4 is documentation architecture only: open defects, closed
+investigations, and their references.

@@ -104,8 +104,7 @@ Remaining work, in order:
    completed core route.
 
 The host-settings work order also includes the startup-toolbar defect because
-the fix must preserve inherited toolbars. That defect is tracked in
-`BUGS-open.md`.
+the fix must preserve inherited toolbars. That defect is tracked in `BUGS.md`.
 
 **Exit:** launch → pick host → pick game → stream → return, with no screen in
 the user journey that still reads as upstream Moonlight.

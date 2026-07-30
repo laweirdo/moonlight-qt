@@ -5,7 +5,7 @@ not belong in the active roadmap, handoff, or defect list. It is not an
 authority for current repository state or open defects.
 
 Compiled on 30 July 2026 from the Phase A and carousel investigations. Detailed
-closed defect accounts are kept separately; this file is the small
+closed defect accounts are in `DEFECTS-carousel.md`; this file is the small
 cross-cutting summary.
 
 ## Look at perceptual questions on the target hardware
