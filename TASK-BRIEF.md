@@ -1,6 +1,6 @@
 # Active task — the host settings menu
 
-Status: **ready, implementation not started**
+Status: **in progress; implementation branch created, application changes not started**
 
 This is the single active product work order. It is temporary and does not
 override `AGENTS.md`, the creative brief, the flow, or the roadmap.
@@ -24,22 +24,14 @@ behavior and remains an open defect.
 
 ## Branch and baseline
 
-No implementation branch exists yet.
+Implementation branch: `codex/host-settings-menu`
 
-This brief was prepared against `bulan` at `30aaa57d`. That is a planning
-baseline, not permission to use a stale commit after the documentation work
-lands.
+Exact baseline: `bulan` and `origin/bulan` at
+`6a6ffa7ec677c3a630613c68cfd55ed5a708a082`, verified after fetching
+`origin/bulan` on 31 July 2026.
 
-When implementation begins:
-
-- inspect Git and the working tree first;
-- start from the latest approved `bulan`;
-- create a short task branch from that exact commit; and
-- update this section and `HANDOFF.md` with the resulting branch and baseline.
-
-Do not branch the application task from the documentation-reorganization
-branch. Do not assume the baseline recorded in an earlier session is still
-current.
+The branch was created from the clean integration branch. No application change
+had been made when this state was recorded.
 
 ## Scope
 
@@ -55,16 +47,18 @@ carousel. This is the only approved visual change to that screen in this task.
 SELECT currently opens a panel showing what upstream's “View Details” showed.
 It should open a host menu.
 
-The confirmed menu contents are:
+The confirmed private-v1 menu contents are:
 
 | Item | Behavior already available |
 |---|---|
+| View All Apps | Host/app navigation behavior retained from upstream |
 | Host details | `actHostSettings()` in `HostCarousel.qml` |
-| Wake PC | `actWake()` |
+| Wake PC | `actWake()`; visible only for an offline, wakeable host |
 | Forget PC | Host removal behavior in `PcView.qml` |
 
-Rename and Test Network also exist in `PcView.qml`, but the client has not
-decided whether they belong in this menu.
+Rename PC and Test Network also exist in `PcView.qml`, but the client deferred
+both from the private-v1 menu to v1.x. Their upstream behavior must remain
+intact even though the carousel will not expose them in this task.
 
 ### 3. Startup toolbar defect
 
@@ -90,6 +84,18 @@ it to claim it explicitly. This is small in code but broad in effect because
 ## Decisions already settled
 
 - The carousel rebuild is finished and accepted.
+- The menu is an overlay over the carousel. Its background is blurred, and B
+  closes it directly back to the same focused host.
+- The mockup's glass-effect border is the visual precedent for this and future
+  popup menus.
+- For an offline host, Host Details and Forget PC remain available. Wake PC is
+  shown only when that host is wakeable. Actions that cannot work are omitted
+  rather than displayed disabled.
+- Forget PC requires confirmation because accidental controller activation
+  would otherwise remove the stored host relationship.
+- Rename PC and Test Network are deferred to v1.x. Rename carries text-entry and
+  Steam-keyboard work; Test Network exposes technical diagnostics that do not
+  belong in Bulan's private-v1 front-facing menu.
 - “Forget PC” is the approved wording. Bulan forgets the host; the host does not
   forget Bulan.
 - All permanent interface, token, focus, validation, and client-decision rules
@@ -100,15 +106,11 @@ it to claim it explicitly. This is small in code but broad in effect because
 - Deck-specific glyph art is not required for v1 because the practical glyph
   shapes are identical to the current XInput set.
 
-## Questions requiring the client
+## Client decision gate
 
-Do not design or implement the menu until these are answered. Give a preferred
-option and its consequence with each question.
-
-1. Does the menu appear as an overlay over the carousel, or as a pushed screen?
-2. What should the menu show when the focused host is offline?
-3. Does Forget PC require confirmation?
-4. Do Rename PC and Test Network belong in the v1 menu?
+Resolved on 31 July 2026. The overlay form, offline-host contents, Forget PC
+confirmation, and Rename PC/Test Network deferral are recorded under
+*Decisions already settled*. No host-menu design question remains open.
 
 ## Implementation risks
 
@@ -195,6 +197,6 @@ have moved to their permanent homes.
 
 ## Next action
 
-Ask the four client questions above with recommendations. After the answers,
-create the implementation branch and record its exact baseline before editing
-application files.
+Present this branch-and-decision record for client review. After approval,
+commit it as an independently reviewable setup change, then implement the
+host-label spacing correction as the first application change.

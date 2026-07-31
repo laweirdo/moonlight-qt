@@ -1,6 +1,6 @@
 # Bulan — current handoff
 
-Current as of **30 July 2026**.
+Current as of **31 July 2026**.
 
 This file is the authority for current repository and validation state. Permanent
 operating rules are in `AGENTS.md`; product intent is in the creative brief;
@@ -11,11 +11,11 @@ sequencing is in the roadmap; the implementation work order is in
 
 | Item | State |
 |---|---|
-| Integration branch | `bulan`; this snapshot is prepared on a short state-only branch |
-| Published documentation baseline | `73be60bc` on `origin/bulan` |
-| Documentation branch baseline | `bulan` at `30aaa57d` |
+| Current task branch | `codex/host-settings-menu` |
+| Exact task baseline | `bulan` and `origin/bulan` at `6a6ffa7ec677c3a630613c68cfd55ed5a708a082` |
+| Baseline verification | `origin/bulan` fetched and matched the clean local `bulan` on 31 July 2026 |
 | Documentation state | Stages 1 through 6 are merged and pushed; the completed task branch was deleted |
-| Working tree before this state-only snapshot | Clean |
+| Working tree before task setup | Clean |
 | Configured remotes | `origin` only in this checkout |
 | Application source changes in the documentation work | None |
 
@@ -79,12 +79,11 @@ stage is awaiting review.
 
 ## Active implementation task
 
-The host-settings task remains the single active product work order, but its
-implementation session has **not started**.
+The host-settings task remains the single active product work order. Its task
+branch exists, but no application implementation has started.
 
-`TASK-BRIEF.md` owns its objective, scope, non-goals, unresolved client
-questions, risks, acceptance criteria, and required tests. No implementation
-branch exists yet.
+`TASK-BRIEF.md` owns its objective, scope, non-goals, settled client decisions,
+risks, acceptance criteria, and required tests.
 
 The task contains three logical changes:
 
@@ -152,19 +151,22 @@ and a functional regression from upstream.
 The upstream observations in `UI-AUDIT.md` remain historical redesign findings,
 not accepted Bulan defects.
 
-## Unresolved decisions and blockers
+## Settled host-menu decisions and blockers
 
-There is no known technical blocker to beginning the host-settings task.
+There is no known decision or technical blocker to beginning the
+host-settings task.
 
-Four client design decisions are required before implementation:
+The client settled all four design questions on 31 July 2026:
 
-1. Overlay or pushed screen?
-2. What should the menu show for an offline host?
-3. Does Forget PC require confirmation?
-4. Do Rename PC and Test Network belong in the v1 menu?
+1. Use an overlay with a blurred carousel background. Its glass-effect border
+   is the precedent for popup menus moving forward.
+2. Offline hosts retain Host Details and Forget PC. Wake PC appears only when
+   the host is wakeable; actions that cannot work are omitted.
+3. Forget PC requires confirmation.
+4. Rename PC and Test Network are deferred from private v1 to v1.x.
 
-They are recorded in `TASK-BRIEF.md`. The implementing agent must bring a
-recommendation and consequence for each rather than deciding silently.
+`TASK-BRIEF.md` records the implementation consequences and approved private-v1
+menu contents.
 
 LCD banding and panel-specific visual validation remain deferred until LCD
 hardware is available. They do not block private v1.
@@ -219,10 +221,11 @@ authority.
 
 For the host-settings implementation:
 
-1. Ask the four client questions in `TASK-BRIEF.md`.
-2. Inspect the latest approved `bulan` and create the implementation branch.
-3. Record that exact branch and baseline here.
-4. Implement and validate one approved logical change at a time.
+1. Review and commit the branch-and-decision setup documentation.
+2. Implement the host-label spacing correction.
+3. Implement and validate the approved host menu.
+4. Repair and validate the startup toolbar.
+5. Continue one approved logical change at a time.
 
 ## Do not touch before the host-settings implementation
 

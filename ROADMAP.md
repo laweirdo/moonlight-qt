@@ -163,12 +163,13 @@ full loop, and has an honest validation record.
 
 Ordered by expected value, not effort:
 
-1. Sound pack
-2. Boot animation
-3. Ambient background motion
-4. Stream overlay, if hardware validation shows Bulan needs one
-5. Merged multi-host library, if separate libraries prove awkward in use
-6. Public-release preparation
+1. Host-menu parity: Rename PC and Test Network, deferred from private v1
+2. Sound pack
+3. Boot animation
+4. Ambient background motion
+5. Stream overlay, if hardware validation shows Bulan needs one
+6. Merged multi-host library, if separate libraries prove awkward in use
+7. Public-release preparation
 
 ## Standing risks
 
