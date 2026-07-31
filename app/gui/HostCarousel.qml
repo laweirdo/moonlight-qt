@@ -1,4 +1,5 @@
 import QtQuick 2.9
+import QtQuick.Effects
 // Imported for the StackView attached properties (StackView.onActivated) only --
 // this screen pushes and pops through the app's existing StackView. No stock
 // control from this module is instantiated anywhere in the Bulan screens.
@@ -84,7 +85,9 @@ FocusScope {
                     name: n, online: on, paired: paired, statusUnknown: unknown === true,
                     wakeable: canWake === undefined ? !on : canWake,
                     serverSupported: true,
-                    address: addr, details: "Name: " + n + "\nStatus: " + (on ? "Online" : "Offline")
+                    address: addr,
+                    details: "Name: " + n + "\nStatus: " + (on ? "Online" : "Offline"),
+                    uuid: "review:" + n
                 }
             }
             if (fakeHosts === "none") {
@@ -141,6 +144,7 @@ FocusScope {
 
     // Index whose connection is in flight, or -1.
     property int connectingIndex: -1
+    property bool reviewMenuOpened: false
 
     // The selection. This is the whole of the carousel's state: every tile's
     // position, scale and opacity is a function of the distance between its own
@@ -182,6 +186,7 @@ FocusScope {
         var model = Qt.createQmlObject('import ComputerModel 1.0; ComputerModel {}', root, '')
         model.initialize(ComputerManager)
         model.pairingCompleted.connect(pairingComplete)
+        model.connectionTestCompleted.connect(connectionTestComplete)
         return model
     }
 
@@ -191,6 +196,30 @@ FocusScope {
             messagePanel.show(qsTr("Couldn't pair"), error)
         }
         recount()
+    }
+
+    function connectionTestComplete(result, blockedPorts) {
+        // Leaving the progress page abandons only its presentation; the
+        // upstream connectivity task is allowed to finish in the background.
+        if (!hostSettingsMenu.visible || !hostSettingsMenu.networkTestPending) {
+            return
+        }
+
+        if (result === -1) {
+            hostSettingsMenu.showFeedback(
+                        qsTr("Test unavailable"),
+                        qsTr("Moonlight couldn't reach its connection-testing servers. Check this device's internet connection and try again."))
+        } else if (result === 0) {
+            hostSettingsMenu.showFeedback(
+                        qsTr("Network looks ready"),
+                        qsTr("Moonlight did not detect any blocked streaming ports on this network."))
+        } else {
+            hostSettingsMenu.showFeedback(
+                        qsTr("Streaming ports are blocked"),
+                        qsTr("This network may prevent streaming over the internet.")
+                            + "\n\n" + qsTr("Blocked ports:")
+                            + "\n" + blockedPorts)
+        }
     }
 
     // --- ready count ---------------------------------------------------------
@@ -249,6 +278,39 @@ FocusScope {
     // One function per hint, so the buttons and the mouse share a single path and
     // cannot drift apart.
 
+    function openAppView(computerIndex, hostName, showHiddenGames) {
+        connectingIndex = computerIndex
+        var component = Qt.createComponent("AppView.qml")
+        // Without these checks a failure to build the game grid is completely
+        // silent: createObject() returns null, push(null) does nothing, and A
+        // looks dead with no clue on screen.
+        if (component.status !== Component.Ready) {
+            console.error("AppView.qml failed to load:", component.errorString())
+            connectingIndex = -1
+            messagePanel.show(qsTr("Can't open %1").arg(hostName),
+                              qsTr("Something went wrong loading the game list."))
+            return
+        }
+
+        var properties = {
+            "computerIndex": computerIndex,
+            "objectName": hostName
+        }
+        if (showHiddenGames) {
+            properties.showHiddenGames = true
+        }
+
+        var view = component.createObject(stackView, properties)
+        if (view === null) {
+            console.error("AppView.qml loaded but could not be created")
+            connectingIndex = -1
+            messagePanel.show(qsTr("Can't open %1").arg(hostName),
+                              qsTr("Something went wrong loading the game list."))
+            return
+        }
+        stackView.push(view)
+    }
+
     function actConfirm() {
         if (host === null) {
             return
@@ -299,32 +361,7 @@ FocusScope {
             return
         }
 
-        connectingIndex = root.currentIndex
-        var component = Qt.createComponent("AppView.qml")
-        // Defect 3. Without these checks a failure to build the game grid is
-        // completely silent: createObject() returns null, push(null) does
-        // nothing, and A looks like a dead button with no clue on screen. Say
-        // so instead -- an error the user can report beats a button that
-        // appears broken.
-        if (component.status !== Component.Ready) {
-            console.error("AppView.qml failed to load:", component.errorString())
-            connectingIndex = -1
-            messagePanel.show(qsTr("Can't open %1").arg(host.hostName),
-                              qsTr("Something went wrong loading the game list."))
-            return
-        }
-        var view = component.createObject(stackView, {
-                                              "computerIndex": root.currentIndex,
-                                              "objectName": host.hostName
-                                          })
-        if (view === null) {
-            console.error("AppView.qml loaded but could not be created")
-            connectingIndex = -1
-            messagePanel.show(qsTr("Can't open %1").arg(host.hostName),
-                              qsTr("Something went wrong loading the game list."))
-            return
-        }
-        stackView.push(view)
+        openAppView(root.currentIndex, host.hostName, false)
     }
 
     function actWake() {
@@ -390,11 +427,56 @@ FocusScope {
         if (host === null) {
             return
         }
-        // MINIMAL / NOT YET DESIGNED. The spec routes SELECT here, but no host
-        // settings screen has been specified, so this shows what the old grid's
-        // "View Details" showed and nothing more. Rename, delete and the network
-        // test have no home in this view yet -- see SPEC-host-carousel.md.
-        messagePanel.show(host.hostName, host.details)
+        hostSettingsMenu.showForHost({
+            uuid: host.uuid,
+            name: host.hostName,
+            address: host.address,
+            details: host.details,
+            online: host.online,
+            paired: host.paired,
+            wakeable: host.wakeable,
+            statusUnknown: host.statusUnknown,
+            reviewMode: root.useFakeHosts
+        })
+    }
+
+    function handleHostMenuAction(actionId, hostUuid, hostName) {
+        // A fake row number can name a real machine at the same position. Block
+        // the entire real-action path before resolving or dispatching anything.
+        if (root.useFakeHosts) {
+            hostSettingsMenu.showFeedback(
+                        qsTr("Review mode"),
+                        qsTr("%1 isn't a real PC, so nothing was changed.")
+                            .arg(hostName))
+            return
+        }
+
+        // Resolve the stable identity at activation time. Discovery may have
+        // inserted, removed or reordered rows since the overlay opened.
+        var computerIndex = computerModel.computerIndexForUuid(hostUuid)
+        if (computerIndex < 0) {
+            hostSettingsMenu.showFeedback(
+                        qsTr("PC no longer available"),
+                        qsTr("%1 changed while this menu was open. Close it and try again.")
+                            .arg(hostName))
+            return
+        }
+
+        if (actionId === "apps") {
+            hostSettingsMenu.close()
+            openAppView(computerIndex, hostName, true)
+        } else if (actionId === "wake") {
+            computerModel.wakeComputer(computerIndex)
+            hostSettingsMenu.showFeedback(
+                        qsTr("Waking %1").arg(hostName),
+                        qsTr("Give it a moment to come back."))
+        } else if (actionId === "testNetwork") {
+            hostSettingsMenu.showNetworkTestPending()
+            computerModel.testConnectionForComputer(computerIndex)
+        } else if (actionId === "forget") {
+            hostSettingsMenu.close()
+            computerModel.deleteComputer(computerIndex)
+        }
     }
 
     // --- lifecycle -----------------------------------------------------------
@@ -418,8 +500,30 @@ FocusScope {
                 }
             }
         }
+        if (root.useFakeHosts &&
+                typeof hostSettingsReviewIndex !== "undefined" &&
+                hostSettingsReviewIndex >= 0 &&
+                hostSettingsReviewIndex < hostRepeater.count) {
+            root.currentIndex = hostSettingsReviewIndex
+        }
         refreshHost()
         root.forceActiveFocus()
+
+        if (root.useFakeHosts && !reviewMenuOpened &&
+                typeof openHostSettingsForReview !== "undefined" &&
+                openHostSettingsForReview) {
+            reviewMenuOpened = true
+            Qt.callLater(function() {
+                root.actHostSettings()
+                if (typeof hostSettingsReviewAction !== "undefined" &&
+                        hostSettingsReviewAction !== "") {
+                    Qt.callLater(function() {
+                        hostSettingsMenu.activateActionForReview(
+                                    hostSettingsReviewAction)
+                    })
+                }
+            })
+        }
     }
 
     StackView.onDeactivating: {
@@ -455,17 +559,31 @@ FocusScope {
         if (root.StackView.status !== StackView.Active) {
             return
         }
-        if (messagePanel.visible || pinPanel.visible || addPcPanel.visible) {
+        if (messagePanel.visible || pinPanel.visible || addPcPanel.visible ||
+                hostSettingsMenu.visible) {
             return
         }
         root.forceActiveFocus()
     }
 
-    Atmosphere { anchors.fill: parent }
+    Item {
+        id: screenContent
+        anchors.fill: parent
+        layer.enabled: hostSettingsMenu.visible
+        layer.effect: MultiEffect {
+            autoPaddingEnabled: false
+            blurEnabled: true
+            blur: Bulan.popupBackdropBlurStrength
+            blurMax: Bulan.popupBackdropBlurRadius
+        }
 
-    // --- header --------------------------------------------------------------
-    Image {
-        id: wordmark
+        Atmosphere {
+            anchors.fill: parent
+        }
+
+        // --- header ----------------------------------------------------------
+        Image {
+            id: wordmark
         anchors.left: parent.left
         anchors.leftMargin: Bulan.layoutScreenMarginX
         anchors.top: parent.top
@@ -479,10 +597,10 @@ FocusScope {
         smooth: true
     }
 
-    Row {
+        Row {
         anchors.right: parent.right
         anchors.rightMargin: Bulan.layoutScreenMarginX
-        anchors.verticalCenter: wordmark.verticalCenter
+        y: wordmark.y + wordmark.height / 2 - height / 2
         spacing: Bulan.spaceXs
         visible: root.totalCount > 0
 
@@ -506,8 +624,8 @@ FocusScope {
     // --- warm halo behind the focused tile -----------------------------------
     // One instance, centred, rather than one per delegate: the focused item is
     // always the centred one, so the halo never has to move or be repainted.
-    Canvas {
-        id: focusBloom
+        Canvas {
+            id: focusBloom
         width: Bulan.hostTileSize * 2.2
         height: width
         x: carousel.x + carousel.width / 2 - width / 2
@@ -543,12 +661,11 @@ FocusScope {
     // --- carousel ------------------------------------------------------------
     // A band the tiles are positioned inside. Not a view: it lays nothing out and
     // scrolls nothing. Every tile's place is worked out from its own index.
-    Item {
-        id: carousel
+        Item {
+            id: carousel
 
         anchors.horizontalCenter: parent.horizontalCenter
-        anchors.top: wordmark.bottom
-        anchors.topMargin: Bulan.space3xl
+        y: wordmark.y + wordmark.height + Bulan.space3xl
         width: parent.width
         height: Bulan.hostTileSize * 1.6
 
@@ -585,6 +702,7 @@ FocusScope {
                 serverSupported: model.serverSupported
                 address: model.address
                 details: model.details
+                uuid: model.uuid
 
                 // How far this host sits from the selected one, clamped to two
                 // slots either side.
@@ -702,7 +820,7 @@ FocusScope {
     // Two stacked elements, per spec. The copy is deliberately off-register from
     // the rest of the app: this is a screen you see once, which makes it the one
     // place a joke costs nothing.
-    Column {
+        Column {
         anchors.centerIn: parent
         anchors.verticalCenterOffset: -Bulan.space2xl
         spacing: Bulan.spaceLg
@@ -738,8 +856,8 @@ FocusScope {
     }
 
     // --- hint bar ------------------------------------------------------------
-    HintBar {
-        id: hintBar
+        HintBar {
+            id: hintBar
         anchors.left: parent.left
         anchors.right: parent.right
         anchors.bottom: parent.bottom
@@ -775,6 +893,7 @@ FocusScope {
             : [
                   { action: "start", label: qsTr("Client Settings") }
               ]
+        }
     }
 
     // --- input ---------------------------------------------------------------
@@ -860,5 +979,14 @@ FocusScope {
                 ComputerManager.addNewHostManually(text.trim())
             }
         }
+    }
+
+    HostSettingsOverlay {
+        id: hostSettingsMenu
+        anchors.fill: parent
+        onActionRequested: function(actionId, hostUuid, hostName) {
+            root.handleHostMenuAction(actionId, hostUuid, hostName)
+        }
+        onVisibleChanged: if (!visible) Qt.callLater(root.reclaimFocus)
     }
 }

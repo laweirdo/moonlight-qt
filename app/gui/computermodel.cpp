@@ -45,6 +45,8 @@ QVariant ComputerModel::data(const QModelIndex& index, int role) const
     case AddressRole:
         // Without the port: this is shown to the user, not dialled.
         return computer->activeAddress.address();
+    case UuidRole:
+        return computer->uuid;
     case DetailsRole: {
         QString state, pairState;
 
@@ -114,8 +116,22 @@ QHash<int, QByteArray> ComputerModel::roleNames() const
     names[ServerSupportedRole] = "serverSupported";
     names[DetailsRole] = "details";
     names[AddressRole] = "address";
+    names[UuidRole] = "uuid";
 
     return names;
+}
+
+int ComputerModel::computerIndexForUuid(const QString& uuid) const
+{
+    for (int i = 0; i < m_Computers.count(); i++) {
+        NvComputer* computer = m_Computers[i];
+        QReadLocker lock(&computer->lock);
+        if (computer->uuid == uuid) {
+            return i;
+        }
+    }
+
+    return -1;
 }
 
 Session* ComputerModel::createSessionForCurrentGame(int computerIndex)

@@ -1094,6 +1094,27 @@ int main(int argc, char *argv[])
         // without pairing or unpairing real machines. Inert unless set.
         engine.rootContext()->setContextProperty("fakeHosts",
                                                  QString::fromUtf8(qgetenv("MOONLIGHT_FAKE_HOSTS")));
+        // Review hook: opens the host-settings overlay after a fake-host
+        // carousel settles, so controller-only UI can be captured without
+        // sending synthetic input. Inert unless explicitly enabled.
+        engine.rootContext()->setContextProperty("openHostSettingsForReview",
+                                                 qEnvironmentVariableIsSet("MOONLIGHT_OPEN_HOST_SETTINGS"));
+        // Optional companion to the overlay review hook. It selects a fake
+        // host by row before opening the menu, which makes otherwise
+        // unreachable states (such as offline-but-wakeable) capturable without
+        // synthesizing input. Invalid or absent values leave normal selection
+        // behavior unchanged.
+        bool hostSettingsReviewIndexOk = false;
+        int hostSettingsReviewIndex =
+                qEnvironmentVariableIntValue("MOONLIGHT_HOST_SETTINGS_REVIEW_INDEX",
+                                             &hostSettingsReviewIndexOk);
+        engine.rootContext()->setContextProperty("hostSettingsReviewIndex",
+                                                 hostSettingsReviewIndexOk
+                                                 ? hostSettingsReviewIndex : -1);
+        // Optional fake-only action to expose secondary menu pages to the
+        // screenshot hook. HostCarousel ignores it outside fake-host review.
+        engine.rootContext()->setContextProperty("hostSettingsReviewAction",
+                                                 QString::fromUtf8(qgetenv("MOONLIGHT_HOST_SETTINGS_REVIEW_ACTION")));
         // Suppress the startup warning dialogs in token proof mode -- they would
         // otherwise open modally on top of the sheet.
         engine.rootContext()->setContextProperty("runConfigChecks",

@@ -52,13 +52,16 @@ The confirmed private-v1 menu contents are:
 | Item | Behavior already available |
 |---|---|
 | View All Apps | Host/app navigation behavior retained from upstream |
+| Test Network | Existing Moonlight connectivity test and result signal |
 | Host details | `actHostSettings()` in `HostCarousel.qml` |
 | Wake PC | `actWake()`; visible only for an offline, wakeable host |
 | Forget PC | Host removal behavior in `PcView.qml` |
 
-Rename PC and Test Network also exist in `PcView.qml`, but the client deferred
-both from the private-v1 menu to v1.x. Their upstream behavior must remain
-intact even though the carousel will not expose them in this task.
+The initial menu decision deferred both Rename PC and Test Network. On 31 July
+2026, the client superseded the Test Network part of that decision after
+reviewing the upstream menu: Test Network is included in private v1. Rename PC
+remains deferred to v1.x because it requires text entry and Deck keyboard work.
+Both upstream behaviors must remain intact.
 
 ### 3. Startup toolbar defect
 
@@ -93,9 +96,11 @@ it to claim it explicitly. This is small in code but broad in effect because
   rather than displayed disabled.
 - Forget PC requires confirmation because accidental controller activation
   would otherwise remove the stored host relationship.
-- Rename PC and Test Network are deferred to v1.x. Rename carries text-entry and
-  Steam-keyboard work; Test Network exposes technical diagnostics that do not
-  belong in Bulan's private-v1 front-facing menu.
+- Test Network is included in private v1, superseding its initial deferral. It
+  uses Moonlight's existing connectivity test rather than new diagnostic
+  infrastructure.
+- Rename PC remains deferred to v1.x because it carries text-entry and
+  Steam-keyboard work.
 - “Forget PC” is the approved wording. Bulan forgets the host; the host does not
   forget Bulan.
 - All permanent interface, token, focus, validation, and client-decision rules

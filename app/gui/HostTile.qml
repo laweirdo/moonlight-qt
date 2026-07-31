@@ -32,6 +32,7 @@ Item {
     property bool serverSupported: true
     property string address: ""
     property string details: ""
+    property string uuid: ""
 
     property bool isCurrent: false
 

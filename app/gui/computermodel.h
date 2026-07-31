@@ -20,7 +20,11 @@ class ComputerModel : public QAbstractListModel
         // Bare active address for display, e.g. "192.168.1.24". DetailsRole
         // already carries it, but only inside a translated human-readable
         // blob that a view would have to parse back out.
-        AddressRole
+        AddressRole,
+        // Stable host identity for actions that outlive a view index. Discovery
+        // can reorder the model while an overlay is open; a stored row number
+        // can then point at a different machine.
+        UuidRole
     };
 
 public:
@@ -36,6 +40,8 @@ public:
     virtual QHash<int, QByteArray> roleNames() const override;
 
     Q_INVOKABLE void deleteComputer(int computerIndex);
+
+    Q_INVOKABLE int computerIndexForUuid(const QString& uuid) const;
 
     Q_INVOKABLE QString generatePinString();
 

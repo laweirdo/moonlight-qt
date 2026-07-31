@@ -35,6 +35,7 @@ QtObject {
     readonly property color textSecondary: "#A8AECB"
     readonly property color statusSuccess: "#7FC7A8"
     readonly property color statusError:   "#E08B7D"
+    readonly property color transparent:   "transparent"
 
     // Derived surfaces. Not in Figma — needed for interaction states, which the
     // token file does not define. Rules stated so they can be replaced when it
@@ -126,6 +127,24 @@ QtObject {
     readonly property bool atmosphereGradientEnabled: true
     readonly property bool atmosphereVignetteEnabled: true
     readonly property bool atmosphereGrainEnabled:    true
+
+    // --- Popup glass ---------------------------------------------------------
+    // Client-approved for the host-settings overlay on 31 July 2026, and the
+    // visual precedent for popup menus moving forward. The background remains
+    // recognisable as context but cannot compete with the menu above it.
+    readonly property int  popupBackdropBlurRadius:   48
+    readonly property real popupBackdropBlurStrength: 1.0
+    readonly property real popupScrimOpacity:          0.62
+    readonly property real popupGlassSurfaceOpacity:   0.92
+    readonly property real popupGlassBorderOpacity:    0.28
+
+    readonly property color popupScrim:
+        Qt.rgba(bgBaseOled.r, bgBaseOled.g, bgBaseOled.b, popupScrimOpacity)
+    readonly property color popupGlassSurface:
+        Qt.rgba(bgSurface.r, bgSurface.g, bgSurface.b, popupGlassSurfaceOpacity)
+    readonly property color popupGlassBorder:
+        Qt.rgba(textSecondary.r, textSecondary.g, textSecondary.b,
+                popupGlassBorderOpacity)
 
     // --- Motion (creative brief §6) -------------------------------------------
     // Durations and scales are the brief's stated values. Not in Figma: variables

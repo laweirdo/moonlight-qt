@@ -25,6 +25,7 @@
         <file>gui/GlyphProof.qml</file>
         <file>gui/HintBar.qml</file>
         <file>gui/HostPanel.qml</file>
+        <file>gui/HostSettingsOverlay.qml</file>
         <file>gui/HostTile.qml</file>
         <file>gui/HostCarousel.qml</file>
         <file>gui/TokenProof.qml</file>

@@ -163,7 +163,9 @@ full loop, and has an honest validation record.
 
 Ordered by expected value, not effort:
 
-1. Host-menu parity: Rename PC and Test Network, deferred from private v1
+1. Host-menu parity: Rename PC, deferred from private v1 for Deck keyboard work.
+   Test Network was initially deferred with it, then restored to private-v1
+   scope by the client on 31 July 2026.
 2. Sound pack
 3. Boot animation
 4. Ambient background motion
