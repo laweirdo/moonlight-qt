@@ -352,6 +352,30 @@ continuous and low-contrast, and are deliberately paced five times slower than
 `motionFocusMs` (900 ms against 180 ms) so they read as breathing rather than as
 the interface responding to something.
 
+**Accepted on the Windows review station, 1 August 2026.** The client drove the
+`mixed` fake-host preset with a hardware gamepad and reported that everything
+looked right. That covers the waking treatment and its resolution, the
+connecting treatment, the dots travelling with a host as the carousel scrolls
+and shrinking with it, the no-op repeats, the withheld Wake hint and *Wake PC*
+entry, and B still reaching the quit confirmation rather than cancelling.
+
+It was a single overall judgement, not an item-by-item sign-off, and three
+things were outside the run entirely and remain unseen:
+
+- The **wake-failure state** — `"Couldn't wake <name>. It may still be asleep."`
+  and its 3-second hold. The review build was set to resolve successfully, so
+  the give-up path never ran. The copy is built and shares the same status-line
+  code as the states that were seen, but nobody has read it on screen.
+- **Real wake timing.** 30 seconds is a judgement made against a fake host that
+  returns in three. Whether it is right for a machine genuinely leaving sleep,
+  and whether the discovery poll's ~3 second notice latency is perceptible, are
+  Deck-and-real-host questions.
+- **Deck appearance.** The dot size, gap and bounce height were judged on a
+  scaled desktop panel. `hostTileBusyDotSize` was raised from 10 to 18 during
+  this session precisely because a size derived from arithmetic read wrongly on
+  a real screen — which is the same lesson `sizeCaption` taught in July, and a
+  reason to look at these three values again on the 7-inch panel.
+
 **Validated toolbar boundary — Bulan hides inherited chrome; inherited screens
 claim it.** `ff42d3d1` starts the shared toolbar hidden, preventing it from
 painting during carousel startup. `AppView`, `SettingsView`, and the retained
@@ -387,7 +411,7 @@ their durable disposition; `ROADMAP.md` owns sequencing for unfinished work.
 | 1 | *"The far tile jarringly disappears instead of shifting farther or fading out."* | **Done** in `1d813d2e`. The tile now travels out past the screen edge while fading, because the engine gives it somewhere to go. |
 | 2 | *"Text stays static at the bottom of the screen. The text should be part of the carousel."* | **Done** in `f0635789`. Every host carries its own name, status and address, which travel with its tile and grow and brighten into focus. |
 | 3 | *"It read '1 of 1 ready' instead of '1 of 2' when Steambox was unpaired."* | **Done** in `58de72f1`. |
-| 4 | *"Waking should not create a popup. It should create a 'loading' overlay, perhaps with 3 animated bouncing dots, until the host is awake or fails to wake."* | **Done, 31 July 2026 — but not as asked.** `actWake()` no longer raises `HostPanel`. The client's own wording called for a "loading" **overlay**; when the work was scoped on 31 July the client chose a **tile-level treatment with no overlay at all** — the disc dims and the same three bouncing dots run over the tile itself. This is recorded as an accepted evolution, not a silent substitution: the overlay was the original request, the tile treatment is the later decision, taken before anything was built. The client has not yet reviewed the built result. It resolves on the host's model row reporting online, or gives up after 30 seconds. See "v1 decision — host tile busy state" below for the full design. Phase D's *Waking PC waiting overlay* item was pulled forward and completed here; `ROADMAP.md` records that. |
+| 4 | *"Waking should not create a popup. It should create a 'loading' overlay, perhaps with 3 animated bouncing dots, until the host is awake or fails to wake."* | **Done, 31 July 2026 — but not as asked.** `actWake()` no longer raises `HostPanel`. The client's own wording called for a "loading" **overlay**; when the work was scoped on 31 July the client chose a **tile-level treatment with no overlay at all** — the disc dims and the same three bouncing dots run over the tile itself. This is recorded as an accepted evolution, not a silent substitution: the overlay was the original request, the tile treatment is the later decision, taken before anything was built. The client reviewed the built result with a hardware gamepad on 1 August 2026 and accepted it. It resolves on the host's model row reporting online, or gives up after 30 seconds. See "v1 decision — host tile busy state" below for the full design. Phase D's *Waking PC waiting overlay* item was pulled forward and completed here; `ROADMAP.md` records that. |
 | 5 | *"Left arrow key turns the carousel into an infinite scroll until right arrow key is pressed."* plus *"mouse hover still focuses the hovered host"* | **Closed.** Fixed in `8c40e196` and confirmed by the client with a mouse. See `docs/retrospectives/DEFECTS-carousel.md`, investigation 6. |
 | 6 | *"On 2 hosts, even on the leftmost host selected, I see the host that would've been on the right appear faded on the left."* | **Done** in `1d813d2e`. Verified frame by frame: across 338 frames at two hosts, the second tile was drawn left of centre zero times. |
 

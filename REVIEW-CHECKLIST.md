@@ -273,6 +273,32 @@ offline, and the hint bar should now offer **Y Wake**. Press it.
 **If it does not work:** the "Asleep" state shown on hosts is a promise the app
 cannot keep, and the wording has to change — that is a copy decision, and yours.
 
+### 3.3 — The waiting state, on a real machine and a real panel
+
+Added 1 August 2026. The tile busy state — dimmed disc, three bouncing dots —
+was accepted on the Windows review station with a hardware gamepad, but **every
+number in it was judged against a fake host that came back in three seconds, on
+a scaled desktop monitor.** This is the check that tests it against reality.
+
+**Do:** run 3.2's wake on a genuinely sleeping host and watch the tile rather
+than the outcome.
+
+**Answer these:**
+
+| Item | What is needed |
+|---|---|
+| 30-second give-up | Did the host return inside it? Was the wait too long to sit through, or too short for the machine? |
+| Notice latency | Once the PC was actually up, how long before the dots stopped? Budget is about 3 seconds of discovery poll. Imperceptible, or a visible lag? |
+| Dot size, gap, bounce | 18 / 20 / 14 px, set on a desktop panel. Right on a 7-inch one at 204 ppi, or wrong the way `sizeCaption` nearly was? |
+| Disc dim | 0.55. Does the monogram still read underneath, and does the tile read as busy rather than disabled? |
+
+**Also see the failure state at least once**, which nobody has yet. Wake a host
+that cannot come back — unplug it, or use a fake host with
+`MOONLIGHT_FAKE_WAKE_OUTCOME=timeout` — and read *"Couldn't wake `<name>`. It
+may still be asleep."* It holds for three seconds and then reverts on its own.
+**Judge whether three seconds is long enough to read it**, since there is
+nothing to press and no second chance to see it.
+
 ---
 
 ## What comes back from the session

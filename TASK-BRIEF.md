@@ -65,6 +65,18 @@ Committed one at a time, with a client review stop between each.
 6. Fake-host review hooks
 7. Documentation, `HANDOFF.md` last
 
+## Status
+
+**Accepted 1 August 2026.** The client drove the review build on the `mixed`
+fake-host preset with a hardware gamepad and reported that everything looked
+right. All six acceptance criteria above are met, with the caveat that criterion
+3's failure half was not part of that run — the wake was set to succeed, so
+`"Couldn't wake …"` has still never been seen on screen. `HANDOFF.md` and
+`SPEC-host-carousel.md` record the limits of the review.
+
+All seven stages are complete. The branch is finished and waiting on a merge
+decision; neither a push nor a merge has been authorized.
+
 ## Close-out
 
-Delete this file when the task is accepted and merged.
+Delete this file when the task is merged.

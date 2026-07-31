@@ -255,8 +255,9 @@ their resolution is not lost.
   failure.~~ **Superseded, 31 July 2026.** The client chose a different
   destination before it was built: no overlay at all, a host-tile treatment
   (dimmed disc, three bouncing dots) that resolves the same way — on the host's
-  model row reporting online, or on a 30-second give-up. The client has not yet
-  reviewed the built result. The `WakingPC` node and its edges in the
+  model row reporting online, or on a 30-second give-up. Reviewed with a
+  hardware gamepad and accepted on 1 August 2026. The `WakingPC` node and its
+  edges in the
   diagram above are unchanged; this only updates what `WakingPC` looks like
   when reached. Full design and reasoning in `SPEC-host-carousel.md`'s "v1
   decision — host tile busy state".

@@ -1,6 +1,6 @@
 # Bulan - current handoff
 
-Current as of **31 July 2026**.
+Current as of **1 August 2026**.
 
 This file records live repository and validation state. `AGENTS.md` owns
 permanent operating rules; `ROADMAP.md` owns sequencing; `BUGS.md` owns
@@ -12,15 +12,16 @@ Always inspect Git before relying on this snapshot.
 | Item | State |
 |---|---|
 | Integration branch | `bulan` and `origin/bulan` at `351de13c` |
-| Task branch | `tile-busy-state`, cut from `bulan`, six commits ahead |
+| Task branch | `tile-busy-state`, cut from `bulan`, seven commits ahead |
 | Remote | `origin` only, the client's fork |
-| Pushed | **No.** Nothing on this branch has been pushed or merged |
+| Pushed or merged | **No.** Neither has been authorized |
 | Active task | `TASK-BRIEF.md` — the host tile's connecting and waking busy state |
 | Open defects | None recorded in `BUGS.md` |
 
-**The client has not yet reviewed this work.** It is built, it builds clean, and
-it has been looked at in screenshots on the Windows review station. It has not
-been accepted.
+**The client accepted this work on the Windows review station on 1 August 2026,
+driving it with a hardware gamepad.** The branch is finished and waiting on a
+merge decision. It has had no Steam Deck, Game Mode, or real-sleeping-host
+validation of any kind.
 
 ## What was built
 
@@ -39,6 +40,7 @@ owns the durable design and reasoning.
 | `5cff3caf` | `MOONLIGHT_FAKE_WAKE_OUTCOME`, `MOONLIGHT_FAKE_CONNECT_HOLD_MS` |
 | `7ffe1d27` | `MOONLIGHT_FAKE_WAKE_ON_START`, so the state can be photographed |
 | `bf92f5a0` | Dot size raised after seeing it on screen |
+| `7766b4c4` | Documentation, and the corrected Windows build trap |
 
 ## Current product state
 
@@ -91,6 +93,24 @@ owns the durable design and reasoning.
   10 px read as specks against a 324 px tile.
 - Application logs were read on every launch. The only warning was the known
   environmental `ToolTip attached property` line from `main.qml`.
+- A run with no review hooks set was checked against the real host list, to
+  confirm the hooks are inert and normal startup is unchanged. `Steambox`
+  appeared online and read `"Ready when you are."` as before.
+
+### Client controller review, 1 August 2026
+
+The client drove the deployed review executable on the `mixed` fake-host preset
+with a **hardware gamepad**, with the wake outcome set to succeed and the
+connecting hold enabled, and reported that everything looked right.
+
+They were asked to exercise: waking by Y and by A, the resolution back to
+`"Ready when you are."`, scrolling away from and back to a waking host, the
+dots shrinking with the tile, repeated presses on a busy host doing nothing,
+the Wake hint and the *Wake PC* entry disappearing while busy, the connecting
+dots, and B still reaching the quit confirmation.
+
+**This was one overall judgement, not an item-by-item sign-off.** Treat it as
+acceptance of the surface, not as independent confirmation of each behaviour.
 
 ### Build caveat resolved
 
@@ -106,17 +126,20 @@ workaround is in place on this branch.
 
 ### Not performed
 
-- **No client review.** Nobody has pressed a button on this build.
-- No controller test of any kind. The whole busy state has been seen only in
-  still screenshots driven by an environment variable.
-- No Steam Deck Desktop Mode or Game Mode validation.
-- No real sleeping host. The 30-second timeout, whether it feels right in the
-  hand, and whether the ~3 second notice latency is perceptible are all
-  unanswered and can only be answered on real hardware.
-- The **connecting** dots and the **wake failed** state were not captured. Both
-  are built and both share the tile code path that was captured, but neither has
-  been seen. `MOONLIGHT_FAKE_CONNECT_HOLD_MS` exists to capture the first; the
-  second needs a 30-second wait the screenshot hook does not allow for.
+- **No Steam Deck validation, in either Desktop Mode or Game Mode.** Everything
+  above happened on the Windows review station, which `BUILDING-WINDOWS.md` is
+  explicit is not a product target.
+- **No real sleeping host.** The 30-second timeout was judged against a fake
+  host that returns in three seconds. Whether it suits a machine genuinely
+  leaving sleep, and whether the discovery poll's ~3 second notice latency is
+  perceptible, remain unanswered.
+- **The wake-failure state has never been seen.** The review run was set to
+  resolve successfully, so `"Couldn't wake …"` and its 3-second hold never ran.
+  The copy is built and shares the status-line code that was reviewed, but
+  nobody has read it on screen.
+- The dot size, gap and bounce height were judged on a scaled desktop panel, not
+  on a 7-inch one at 204 ppi. One of the three was already changed once for
+  exactly this reason during the session.
 - No stream, pairing, discovery, or real-host destructive flow was invoked.
 
 ## Required reading before continuation

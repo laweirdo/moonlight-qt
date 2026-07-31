@@ -102,9 +102,11 @@ controller review.
 Remaining work, in order:
 
 1. ~~**Connecting state** — replace the placeholder with the approved
-   experience.~~ **Done, 31 July 2026.** Built as one designed tile-level busy
-   state shared with waking (Phase D's *Waking PC waiting overlay*, pulled
-   forward — see below). Durable design in `SPEC-host-carousel.md`.
+   experience.~~ **Done 31 July 2026, accepted 1 August 2026** after a hardware
+   gamepad review on the Windows review station. Built as one designed
+   tile-level busy state shared with waking (Phase D's *Waking PC waiting
+   overlay*, pulled forward — see below). Durable design and the limits of that
+   review are in `SPEC-host-carousel.md`. No Deck validation yet.
 2. **Game grid** — Recent and Library views.
 3. **Game detail and launch** — follow the navigation authority in `FLOW.md`.
 4. **Screen transitions** — wire the existing 220 ms transition token into the
