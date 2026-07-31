@@ -36,6 +36,9 @@ CenteredGridView {
     }
 
     StackView.onActivated: {
+        // AppView retains the inherited toolbar for its navigation controls.
+        toolBar.visible = true
+
         appModel.computerLost.connect(computerLost)
         activated = true
 

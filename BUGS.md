@@ -47,8 +47,9 @@ no initial `visible` value, so it starts shown. The first Bulan screen cannot
 hide it until that screen has been pushed and activated after early
 initialization.
 
-The likely repair is to start the toolbar hidden and require every inherited
-screen that needs it to show it explicitly.
+The repair is staged on `codex/startup-toolbar`: the toolbar starts hidden and
+the inherited `AppView.qml`, `SettingsView.qml`, and `PcView.qml` screens show
+it explicitly.
 
 ### Uncertainty
 
@@ -60,15 +61,16 @@ default. Missing one could silently remove navigation from that screen.
 ### Next action
 
 The host-label spacing and host-settings overlay stages are merged
-(`394a2870` and `1c941ed5`). Implement the repair now as the third independently
-reviewable change in `TASK-BRIEF.md`:
+(`394a2870` and `1c941ed5`). The third independently reviewable repair is now
+staged on `codex/startup-toolbar`:
 
-1. Start the toolbar hidden.
-2. Make each inherited toolbar screen claim it explicitly.
-3. Capture launch from the first visible frame.
-4. Visit every screen that should retain a toolbar.
-5. Close this defect only after both the startup and inherited-screen checks
-   pass.
+1. Start the toolbar hidden. **Implemented.**
+2. Make each inherited toolbar screen claim it explicitly. **Implemented for
+   the audited inherited screens.**
+3. Capture launch from the first visible frame. **Captured at
+   `build\first-frame.png`; no upstream header was visible.**
+4. Visit every screen that should retain a toolbar with controller input.
+5. Close this defect only after the startup and inherited-screen checks pass.
 
 ### Relevant files and commits
 
@@ -83,7 +85,9 @@ reviewable change in `TASK-BRIEF.md`:
 | `TASK-BRIEF.md` | Active implementation scope and acceptance criteria |
 | `f32ec616` | Commit that recorded the measured defect |
 
-There is no fix commit yet.
+The repair is implemented in `app/gui/main.qml` and the audited inherited
+screens; the defect remains open only for inherited-screen and controller
+validation.
 
 ## Carousel B opens an inherited quit confirmation
 

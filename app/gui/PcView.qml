@@ -33,6 +33,9 @@ CenteredGridView {
     // also be done in CliStartStreamSegue.qml, since this code does not run
     // for command-line initiated streams.
     StackView.onActivated: {
+        // PcView retains the inherited toolbar for add-PC and navigation.
+        toolBar.visible = true
+
         // Setup signals on CM
         ComputerManager.computerAddCompleted.connect(addComplete)
 

@@ -72,6 +72,9 @@ Flickable {
     }
 
     StackView.onActivated: {
+        // SettingsView retains the inherited toolbar for navigation and help.
+        toolBar.visible = true
+
         // This enables Tab and BackTab based navigation rather than arrow keys.
         // It is required to shift focus between controls on the settings page.
         SdlGamepadKeyNavigation.setUiNavMode(true)

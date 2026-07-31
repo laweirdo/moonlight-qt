@@ -311,6 +311,10 @@ ApplicationWindow {
 
     header: ToolBar {
         id: toolBar
+        // Bulan screens claim the inherited toolbar explicitly. Starting
+        // hidden prevents upstream chrome from painting before the first view
+        // has activated and decided which surface owns it.
+        visible: false
         height: Bulan.targetRowHeight
         anchors.topMargin: 0
         anchors.bottomMargin: 0

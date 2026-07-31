@@ -1,6 +1,6 @@
 # Active task — the host settings menu
 
-Status: **in progress; label spacing and host-settings overlay merged; startup-toolbar repair outstanding**
+Status: **in progress; label spacing and host-settings overlay merged; startup-toolbar repair implemented, validation outstanding**
 
 This is the single active product work order. It is temporary and does not
 override `AGENTS.md`, the creative brief, the flow, or the roadmap.
@@ -80,9 +80,11 @@ Both upstream behaviors must remain intact.
 Upstream's toolbar is visible for approximately **567 ms** during launch. It
 starts visible and is not hidden until the first Bulan screen activates.
 
-The intended repair is to start the toolbar hidden and require screens that use
-it to claim it explicitly. This is small in code but broad in effect because
-`AppView`, `SettingsView`, and `PcView` currently rely on the visible default.
+The repair is staged on `codex/startup-toolbar`: the toolbar starts hidden and
+`AppView`, `SettingsView`, and `PcView` claim it explicitly. This is small in
+code but broad in effect because those screens previously relied on the visible
+default. First-frame validation is complete; inherited-screen and controller
+validation remain.
 
 ## Non-goals
 
@@ -214,8 +216,7 @@ have moved to their permanent homes.
 
 ## Next action
 
-Implement the startup-toolbar repair as the third and final logical change in
-this task. It must begin with the toolbar hidden, make every inherited screen
-that needs it claim it explicitly, capture the first visible launch frames, and
-verify controller navigation on each retained-toolbar screen. Keep this brief
-active until that work and its durable documentation are complete.
+Complete the remaining validation of the staged startup-toolbar repair. The
+first-frame capture is complete; the inherited screens that need the toolbar
+must still be visited with controller input. Keep this brief active until that
+work and its durable documentation are complete.

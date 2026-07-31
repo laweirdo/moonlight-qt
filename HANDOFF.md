@@ -11,12 +11,12 @@ Always inspect Git before relying on this snapshot.
 
 | Item | State |
 |---|---|
-| Integration branch before this progress-documentation update | `bulan` and `origin/bulan` at `6e345967ce463a0511bae70ce9e5c08e80ca85df` |
-| Progress-documentation branch | `codex/host-settings-progress-docs`, cut from that accepted integration state and approved for merge into `bulan` |
+| Integration branch before this work | `bulan` and `origin/bulan` at `9122299e92d015c7c6b77cc02ca774bb1e8c2185` |
+| Current task branch | `codex/startup-toolbar`, cut from that accepted integration state; toolbar repair is staged in the worktree and has not been committed |
 | Original task baseline | `bulan` and `origin/bulan` at `6a6ffa7ec677c3a630613c68cfd55ed5a708a082` |
 | Original task branch | `codex/host-settings-menu`, fast-forwarded into `bulan` and deleted locally; its accepted commits remain reachable from `bulan` |
 | Remote | `origin` only, the client's fork |
-| Current worktree state | This snapshot documents the approved progress update; inspect Git before acting |
+| Current worktree state | Four QML files and three state documents modified for the startup-toolbar repair; no unrelated changes |
 
 The active host-settings task is not complete. Do not delete or archive
 `TASK-BRIEF.md` until the toolbar repair is implemented, validated, and its
@@ -46,11 +46,15 @@ The client approved and integrated the first two logical application changes:
 | Fake-host mode | Blocks before any real-host lookup or action and gives visible review feedback. |
 | Test Network | Included in private v1 through Moonlight's existing connection-test path. |
 | Rename PC | Deferred to v1.x for Steam keyboard and text-entry work. |
-| Startup toolbar | Still appears during first launch frames; open defect and final stage of the active task. |
+| Startup toolbar | First-frame capture shows no upstream header; defect remains open pending inherited-screen and controller validation. |
 | Root-carousel B | Opens an inherited, non-Bulan quit confirmation that the client reported as non-responsive to XInput; separate open defect. |
 
 The menu's glass border and blurred backdrop are the approved precedent for
 future popup menus. `SPEC-host-carousel.md` owns the durable surface decisions.
+
+The startup-toolbar repair is implemented on `codex/startup-toolbar`. The
+first-frame capture now passes; the defect remains open pending the inherited
+screen regression and controller validation.
 
 ## Validation record
 
@@ -71,6 +75,30 @@ future popup menus. `SPEC-host-carousel.md` owns the durable surface decisions.
   real-host action was performed.
 - The client used a real XInput controller in the Windows review build and
   reported the root-carousel B defect now recorded in `BUGS.md`.
+- The startup-toolbar branch starts the inherited toolbar hidden in
+  `app/gui/main.qml` and explicitly restores it in `AppView.qml`,
+  `SettingsView.qml`, and `PcView.qml`.
+- `qmllint` exited 0 for the four changed QML files. It emitted the expected
+  standalone registered-import and unqualified-access warnings, with no
+  syntax errors.
+- The Windows review executable was rebuilt with Qt 6.9.3 and carried build
+  stamp `2026-07-31T21:08:22`. Settled startup captures showed the Bulan
+  carousel without the upstream header for fake-host presets `none`, `one`,
+  `two`, `offline`, `mixed`, and `many`.
+- The latest review log contained no QML load error. It retained the existing
+  tooltip warning and restricted-network update warnings.
+- A first-frame validation capture is saved at `build\first-frame.png`. It was
+  taken from an exact copy of the checkout-built executable,
+  `build\deploy-x64-release\BulanReview.exe`, with only the debug capture timer
+  shortened for that run. The normal timer was restored before the final build.
+  The frame shows the Bulan carousel and hint bar with no upstream header.
+- The final deployed checkout executable,
+  `build\deploy-x64-release\Moonlight.exe`, was rebuilt afterward with build
+  stamp `2026-07-31T21:08:22`; its settled startup capture is
+  `build\final-startup.png`.
+- The installed upstream executable was not used for review. The Windows app
+  launcher resolved it when given the generic Moonlight identity, so that
+  process was stopped and subsequent review used the checkout path explicitly.
 
 ### Not performed or not yet clean
 
@@ -79,8 +107,10 @@ future popup menus. `SPEC-host-carousel.md` owns the durable surface decisions.
 - A complete real-controller acceptance matrix for every overlay action is not
   separately recorded; do not infer it from the client approval or from the
   fake-host screenshots.
-- The startup-toolbar repair was not implemented, so no first-frame launch
-  capture or inherited-toolbar-screen regression pass exists for it.
+- Controller navigation for the startup-toolbar stage and a complete
+  inherited-toolbar-screen regression pass were not performed. A standalone
+  `PcView.qml`/`AppView.qml` debug launch entered unrelated fake-stream/error
+  paths, so those results were excluded rather than treated as acceptance.
 - One interactive Windows launch using the default D3D11 path showed an
   application-error dialog in `d3d11.dll`. Relaunching the review build with
   `QSG_RHI_BACKEND=opengl` displayed the app. This is an unconfirmed
@@ -91,9 +121,10 @@ future popup menus. `SPEC-host-carousel.md` owns the durable surface decisions.
 
 `BUGS.md` has two open defects:
 
-1. The inherited toolbar is visible for about 567 ms during cold launch. It
-   remains **open** and must be closed only after the repaired launch and every
-   inherited toolbar screen have been verified.
+1. The inherited toolbar was visible for about 567 ms during cold launch. The
+   repair is implemented on `codex/startup-toolbar`, and the first-frame check
+   passes. The defect remains **open** until the inherited-screen and
+   controller checks are complete.
 2. Root-carousel B opens an inherited quit confirmation that neither uses the
    approved popup language nor reliably responds to the client's XInput
    controller. It is a follow-up task, not incidental host-menu cleanup.
@@ -104,12 +135,9 @@ screens. `TASK-BRIEF.md` stays active until then.
 
 ## Next recommended action
 
-After this documentation update is merged into `bulan`, start a fresh short
-implementation branch from the latest accepted `bulan`.
-Implement the toolbar repair with the minimum scope described in `BUGS.md` and
-`TASK-BRIEF.md`, then capture from the first visible launch frame, visit every
-inherited screen that retains a toolbar, inspect the log, and obtain controller
-review before closing that defect.
+Obtain client review of `codex/startup-toolbar`, visit every inherited screen
+that retains a toolbar, inspect the log, and obtain controller review before
+closing that defect.
 
 ## Required reading before continuation
 
