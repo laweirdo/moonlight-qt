@@ -175,8 +175,8 @@ QtObject {
     // has nothing at 56, and this is a carousel measurement like the two above
     // rather than generic padding. Client's call, 28 July 2026 -- the label was
     // set at spaceMd (16) when the text moved onto the tile, and they asked for
-    // 40 more.
-    readonly property int  hostTileLabelGap:        56
+    // 30 more.
+    readonly property int  hostTileLabelGap:        46
 
     // Peak alpha of the warm halo behind the focused tile. The brief's ambient
     // radial glow is 3-6%; a focus halo is the foreground case of the same
