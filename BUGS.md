@@ -47,7 +47,7 @@ no initial `visible` value, so it starts shown. The first Bulan screen cannot
 hide it until that screen has been pushed and activated after early
 initialization.
 
-The repair is staged on `codex/startup-toolbar`: the toolbar starts hidden and
+The repair is merged in `ff42d3d1`: the toolbar starts hidden and
 the inherited `AppView.qml`, `SettingsView.qml`, and `PcView.qml` screens show
 it explicitly.
 
@@ -61,8 +61,8 @@ default. Missing one could silently remove navigation from that screen.
 ### Next action
 
 The host-label spacing and host-settings overlay stages are merged
-(`394a2870` and `1c941ed5`). The third independently reviewable repair is now
-staged on `codex/startup-toolbar`:
+(`394a2870` and `1c941ed5`). The third independently reviewable repair is
+merged in `ff42d3d1`:
 
 1. Start the toolbar hidden. **Implemented.**
 2. Make each inherited toolbar screen claim it explicitly. **Implemented for
@@ -85,7 +85,7 @@ staged on `codex/startup-toolbar`:
 | `TASK-BRIEF.md` | Active implementation scope and acceptance criteria |
 | `f32ec616` | Commit that recorded the measured defect |
 
-The repair is implemented in `app/gui/main.qml` and the audited inherited
+The repair is implemented in `ff42d3d1` in `app/gui/main.qml` and the audited inherited
 screens; the defect remains open only for inherited-screen and controller
 validation.
 

@@ -1,6 +1,6 @@
 # Active task — the host settings menu
 
-Status: **in progress; label spacing and host-settings overlay merged; startup-toolbar repair implemented, validation outstanding**
+Status: **in progress; label spacing and host-settings overlay merged; startup-toolbar repair merged, inherited-screen/controller validation outstanding**
 
 This is the single active product work order. It is temporary and does not
 override `AGENTS.md`, the creative brief, the flow, or the roadmap.
@@ -80,7 +80,7 @@ Both upstream behaviors must remain intact.
 Upstream's toolbar is visible for approximately **567 ms** during launch. It
 starts visible and is not hidden until the first Bulan screen activates.
 
-The repair is staged on `codex/startup-toolbar`: the toolbar starts hidden and
+The repair is merged in `ff42d3d1`: the toolbar starts hidden and
 `AppView`, `SettingsView`, and `PcView` claim it explicitly. This is small in
 code but broad in effect because those screens previously relied on the visible
 default. First-frame validation is complete; inherited-screen and controller
