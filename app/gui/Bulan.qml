@@ -189,7 +189,7 @@ QtObject {
     // How far a dot travels. Small on purpose: the tile is already dimmed and
     // the dots are the only thing moving on the screen, so they do not need
     // amplitude to be noticed.
-    readonly property int  motionBusyBounceHeight:    8
+    readonly property int  motionBusyBounceHeight:   14
 
     // --- Host carousel --------------------------------------------------------
     // Proportions measured off the design mockup at 1280x800: the focused tile is
@@ -233,11 +233,11 @@ QtObject {
 
     // Dot diameter, about 3% of the tile. Large enough to see at neighbour scale,
     // small enough not to compete with the monogram behind it.
-    readonly property int  hostTileBusyDotSize:       10
+    readonly property int  hostTileBusyDotSize:       18
 
     // Gap between dots. A carousel measurement like hostTileSpread and
     // hostTileLabelGap, not a step on the generic spacing scale.
-    readonly property int  hostTileBusyDotGap:        14
+    readonly property int  hostTileBusyDotGap:        20
 
     // How long a wake attempt bounces before the app admits it did not work.
     // Client's call, 31 July 2026: 30 seconds. Long enough for a PC to leave
