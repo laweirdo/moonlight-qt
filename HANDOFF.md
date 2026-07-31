@@ -4,24 +4,24 @@ Current as of **1 August 2026**.
 
 This file records live repository and validation state. `AGENTS.md` owns
 permanent operating rules; `ROADMAP.md` owns sequencing; `BUGS.md` owns
-acknowledged unintended behavior. The active task brief is `TASK-BRIEF.md`.
+acknowledged unintended behavior. There is no active task brief.
 Always inspect Git before relying on this snapshot.
 
 ## Repository state when written
 
 | Item | State |
 |---|---|
-| Integration branch | `bulan` and `origin/bulan` at `351de13c` |
-| Task branch | `tile-busy-state`, cut from `bulan`, seven commits ahead |
-| Remote | `origin` only, the client's fork |
-| Pushed or merged | **No.** Neither has been authorized |
-| Active task | `TASK-BRIEF.md` — the host tile's connecting and waking busy state |
+| Integration branch | `bulan`, merged and pushed to `origin/bulan` |
+| Task branch | `tile-busy-state`, merged at the client's instruction and deleted |
+| Remote | `origin` only, the client's fork. Never pushed to upstream Moonlight |
+| Active task | **None.** `TASK-BRIEF.md` was removed on completion |
 | Open defects | None recorded in `BUGS.md` |
 
 **The client accepted this work on the Windows review station on 1 August 2026,
-driving it with a hardware gamepad.** The branch is finished and waiting on a
-merge decision. It has had no Steam Deck, Game Mode, or real-sleeping-host
-validation of any kind.
+driving it with a hardware gamepad, then authorized the merge and the push.** It
+has had no Steam Deck, Game Mode, or real-sleeping-host validation of any kind.
+
+The next objective is `ROADMAP.md`'s Phase B item 2, the game grid.
 
 ## What was built
 
@@ -150,7 +150,7 @@ workaround is in place on this branch.
 4. `FLOW.md`
 5. `ROADMAP.md`
 6. This file
-7. `TASK-BRIEF.md`
-8. `BUGS.md`
-9. `SPEC-host-carousel.md`
+7. `BUGS.md`
+8. `SPEC-host-carousel.md`
+9. The active task brief, if one has been created
 10. The applicable `BUILDING-*.md` before a build
