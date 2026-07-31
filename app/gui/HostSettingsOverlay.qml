@@ -27,6 +27,14 @@ FocusScope {
     property bool hostWakeable: false
     property bool hostStatusUnknown: false
     property bool reviewMode: false
+    // Set by the caller from its own busy state (HostCarousel.wakingHostUuid
+    // naming this host), not derived here -- the overlay has no idea what a wake
+    // or a connection is, only what the carousel tells it about this host. Wake PC
+    // is withheld while this is true, for the same reason the carousel's own hint
+    // bar withholds its Wake hint while busy: the wake is already running, so
+    // offering the action again would promise a second wake that pressing it
+    // would not actually start.
+    property bool wakePending: false
 
     property string page: "menu"
     property var menuActions: []
@@ -53,6 +61,7 @@ FocusScope {
         hostWakeable = snapshot.wakeable
         hostStatusUnknown = snapshot.statusUnknown
         reviewMode = snapshot.reviewMode
+        wakePending = snapshot.wakePending
 
         var actions = []
         if (hostOnline && hostPaired) {
@@ -63,7 +72,7 @@ FocusScope {
                 destructive: false
             })
         }
-        if (!hostOnline && hostWakeable) {
+        if (!hostOnline && hostWakeable && !wakePending) {
             actions.push({
                 actionId: "wake",
                 label: qsTr("Wake PC"),

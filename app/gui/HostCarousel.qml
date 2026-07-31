@@ -142,9 +142,116 @@ FocusScope {
         }
     }
 
-    // Index whose connection is in flight, or -1.
-    property int connectingIndex: -1
+    // Which host is connecting, which is waking, and which one's wake just
+    // failed -- three independent slots rather than one shared "busy" pair.
+    //
+    // Keyed on UUID rather than carousel index, unlike the provisional
+    // `connectingIndex` this replaces. A connection lived for one JS tick, so an
+    // index was safe for it -- nothing could reorder the list in that window. A
+    // wake is held open for up to 30 seconds (hostTileWakeTimeoutMs), and in that
+    // span discovery can insert, remove or reorder rows -- that is exactly why
+    // hostRepeater.onItemAdded/onItemRemoved below already re-resolve the
+    // selection -- and the player is free to navigate to a different host while
+    // the wake they started is still running. An index recorded at the moment
+    // the wake began would silently point at whatever host now happens to sit
+    // there. HostSettingsOverlay hit this same identity problem first: it stores
+    // hostUuid and has the caller re-resolve it via computerIndexForUuid()
+    // immediately before acting, rather than trusting a row captured when the
+    // menu opened. This is the same fix applied to the tile's busy state.
+    //
+    // Separate from the UUID question is why there are three properties instead
+    // of one pair. A single busyHostUuid/busyKind used to hold both connecting
+    // and waking, on the assumption that only one host is ever busy at a time.
+    // That assumption breaks the moment the player wakes host A, then -- with
+    // A's 30-second clock still running -- selects a different, already-online
+    // host B and presses A: setBusy(B.uuid, "connecting") would overwrite A's
+    // entry outright, stop A's timeout timer, and leave A's wake dangling with
+    // nothing left to ever resolve it. Connecting and waking are genuinely
+    // independent in time -- one lasts a JS tick, the other up to 30 seconds and
+    // survives navigating away -- so they need independent storage. Only one
+    // wake is tracked at a time even so: waking a second host while the first is
+    // still waking is not supported, and there is no fake-host preset or client
+    // decision asking for it.
+    property string connectingHostUuid: ""
+    property string wakingHostUuid: ""
+    property string wakeResultUuid: ""   // set on failure; "" once the hold ends
     property bool reviewMenuOpened: false
+
+    // Starts (or restarts) a connection wait. One tick long in practice, but not
+    // timed -- it ends when openAppView() either pushes AppView or hits one of
+    // its own error returns, not on a clock.
+    function beginConnecting(uuid) {
+        connectingHostUuid = uuid
+    }
+
+    // Ends the connection wait, on success (AppView pushed) or failure alike.
+    function clearConnecting() {
+        connectingHostUuid = ""
+    }
+
+    // Starts (or restarts) a wake. Restarting matters: a second wake on a
+    // different host, begun after the first settled or was abandoned, needs the
+    // 30-second clock to run fresh rather than inherit whatever the timer was
+    // doing before.
+    function beginWake(uuid) {
+        wakingHostUuid = uuid
+        wakeResultUuid = ""
+        busyResultHoldTimer.stop()
+        wakeTimeoutTimer.restart()
+    }
+
+    // Resolves the wake for the given host. Takes the UUID, rather than acting
+    // on "whatever is currently waking", and is ignored outright if it does not
+    // match wakingHostUuid -- that is what makes a stray call safe: the timeout
+    // firing just after the host happens to come online, or (per the fix this
+    // replaces) a second host's wake finishing while this one still holds
+    // wakeResultUuid from an earlier failure.
+    //
+    // Success clears the waking slot outright: the tile has nothing to hold on
+    // screen once the host is back, so it reads its normal "Ready when you are."
+    // copy on the very next frame. Failure is a verdict rather than a
+    // transition, so it moves into wakeResultUuid and starts the hold timer --
+    // brief §8's "Couldn't wake" needs to be legible for a moment rather than
+    // vanishing the instant the 30 seconds expire -- and clearing wakeResultUuid
+    // at the end of that hold reverts the tile to its normal offline copy with
+    // nothing left for the player to dismiss, per the acceptance criteria.
+    function resolveWake(uuid, success) {
+        if (uuid !== wakingHostUuid) {
+            return
+        }
+        wakeTimeoutTimer.stop()
+        wakingHostUuid = ""
+        if (success) {
+            wakeResultUuid = ""
+        } else {
+            wakeResultUuid = uuid
+            busyResultHoldTimer.restart()
+        }
+    }
+
+    // True while the FOCUSED host -- the one actConfirm()/actWake() would act on
+    // right now -- is connecting or waking. wakeFailed is deliberately excluded:
+    // that is a settled verdict, not a wait, so it must not block a fresh press
+    // the way an in-flight action does (see actConfirm()/actWake()'s no-op guard
+    // below, and the Wake hint's visibility).
+    readonly property bool hostIsBusy: host !== null &&
+                                        (host.uuid === connectingHostUuid || host.uuid === wakingHostUuid)
+
+    // Gives up on a wake that has run for hostTileWakeTimeoutMs (30s, the
+    // client's figure) without the host coming back.
+    Timer {
+        id: wakeTimeoutTimer
+        interval: Bulan.hostTileWakeTimeoutMs
+        onTriggered: root.resolveWake(root.wakingHostUuid, false)
+    }
+
+    // Holds "wakeFailed" on screen long enough to read as a verdict before the
+    // tile reverts to its ordinary offline copy on its own.
+    Timer {
+        id: busyResultHoldTimer
+        interval: Bulan.hostTileBusyResultHoldMs
+        onTriggered: root.wakeResultUuid = ""
+    }
 
     // The selection. This is the whole of the carousel's state: every tile's
     // position, scale and opacity is a function of the distance between its own
@@ -278,15 +385,15 @@ FocusScope {
     // One function per hint, so the buttons and the mouse share a single path and
     // cannot drift apart.
 
-    function openAppView(computerIndex, hostName, showHiddenGames) {
-        connectingIndex = computerIndex
+    function openAppView(computerIndex, hostUuid, hostName, showHiddenGames) {
+        beginConnecting(hostUuid)
         var component = Qt.createComponent("AppView.qml")
         // Without these checks a failure to build the game grid is completely
         // silent: createObject() returns null, push(null) does nothing, and A
         // looks dead with no clue on screen.
         if (component.status !== Component.Ready) {
             console.error("AppView.qml failed to load:", component.errorString())
-            connectingIndex = -1
+            clearConnecting()
             messagePanel.show(qsTr("Can't open %1").arg(hostName),
                               qsTr("Something went wrong loading the game list."))
             return
@@ -303,7 +410,7 @@ FocusScope {
         var view = component.createObject(stackView, properties)
         if (view === null) {
             console.error("AppView.qml loaded but could not be created")
-            connectingIndex = -1
+            clearConnecting()
             messagePanel.show(qsTr("Can't open %1").arg(hostName),
                               qsTr("Something went wrong loading the game list."))
             return
@@ -313,6 +420,15 @@ FocusScope {
 
     function actConfirm() {
         if (host === null) {
+            return
+        }
+        // A repeated press on a host that is already connecting or waking does
+        // nothing, rather than restarting the connection or the wake. This is
+        // checked before flashPress() deliberately: flashPress() is the visual
+        // acknowledgement that a press landed and did something, and a no-op
+        // press did not, so giving press feedback here would tell the player
+        // their input mattered when it was thrown away.
+        if (root.hostIsBusy) {
             return
         }
         host.flashPress()
@@ -361,7 +477,7 @@ FocusScope {
             return
         }
 
-        openAppView(root.currentIndex, host.hostName, false)
+        openAppView(root.currentIndex, host.uuid, host.hostName, false)
     }
 
     function actWake() {
@@ -373,11 +489,19 @@ FocusScope {
                               qsTr("%1 didn't tell us how to wake it.").arg(host.hostName))
             return
         }
+        // Repeating Wake (or Confirm, which redirects here for an offline host)
+        // on a host that is already waking must do nothing -- the packet was
+        // already sent and there is nothing a second press can add to it.
+        if (root.hostIsBusy) {
+            return
+        }
         if (!root.useFakeHosts) {
             computerModel.wakeComputer(root.currentIndex)
         }
-        messagePanel.show(qsTr("Waking %1").arg(host.hostName),
-                          qsTr("Give it a moment to come back."))
+        // No popup here any more. The client rejected the HostPanel "Waking…"
+        // message on 28 July 2026 review -- this task folds that decision in --
+        // and the tile now carries the wait itself via busyKind === "waking".
+        beginWake(host.uuid)
     }
 
     // Move the selection one host, clamping at both ends.
@@ -436,7 +560,8 @@ FocusScope {
             paired: host.paired,
             wakeable: host.wakeable,
             statusUnknown: host.statusUnknown,
-            reviewMode: root.useFakeHosts
+            reviewMode: root.useFakeHosts,
+            wakePending: host.uuid === root.wakingHostUuid
         })
     }
 
@@ -464,12 +589,16 @@ FocusScope {
 
         if (actionId === "apps") {
             hostSettingsMenu.close()
-            openAppView(computerIndex, hostName, true)
+            openAppView(computerIndex, hostUuid, hostName, true)
         } else if (actionId === "wake") {
+            // Closed before waking, not after: the busy tile this produces is
+            // drawn on the carousel behind the overlay, and leaving the overlay
+            // open would hide the very feedback the action just produced. No
+            // showFeedback() call either, for the same reason the popup is gone
+            // from actWake() -- the tile now carries the wait.
+            hostSettingsMenu.close()
             computerModel.wakeComputer(computerIndex)
-            hostSettingsMenu.showFeedback(
-                        qsTr("Waking %1").arg(hostName),
-                        qsTr("Give it a moment to come back."))
+            beginWake(hostUuid)
         } else if (actionId === "testNetwork") {
             hostSettingsMenu.showNetworkTestPending()
             computerModel.testConnectionForComputer(computerIndex)
@@ -487,7 +616,18 @@ FocusScope {
         // Arrow-key navigation, not the settings page's tab chain.
         SdlGamepadKeyNavigation.setUiNavMode(false)
 
-        connectingIndex = -1
+        // Only the connecting slot. Arriving on this screen at all means the
+        // AppView a connection was waiting on either never opened or has since
+        // been left, so whatever it was waiting for is moot either way.
+        //
+        // A wake is untouched here, and that is the point of the two slots being
+        // separate. Pushing and popping another host's AppView deactivates and
+        // reactivates this carousel without destroying it, so a wake that was
+        // running before the push is still genuinely running now -- the packet
+        // was sent, the machine is still booting, and its timeout is still
+        // counting. Clearing it here would drop it on the floor with no success
+        // and no failure to show for it.
+        clearConnecting()
         recount()
         // Start on the first reachable host rather than whichever happens to be
         // first: opening on an offline machine would make the screen look broken.
@@ -751,8 +891,41 @@ FocusScope {
                 // rather than snapping when it gets there.
                 focusAmount: distance === 0 ? 1.0 : 0.0
 
-                // The tile draws the connecting state; the carousel knows about it.
-                connecting: root.connectingIndex === index
+                // The tile draws the busy state; the carousel knows about it.
+                //
+                // Waking wins over connecting if the two ever named the same
+                // host -- they should not in practice, since a host that is
+                // already waking is by definition offline and actConfirm() would
+                // have routed a press on it to actWake() rather than
+                // openAppView(), but a wake is the longer-lived truth of the two
+                // and the one worth trusting if that assumption is ever wrong.
+                //
+                // A NEIGHBOUR tile can legitimately be the one showing dots
+                // here: if the player navigates away from a host that is still
+                // waking, the wake keeps running (it is a magic packet already
+                // sent, not something tied to being on screen) and the dots
+                // travel with the host's own tile rather than staying pinned to
+                // whatever index used to be selected. That following-the-host
+                // behaviour is the entire reason this is keyed on UUID instead
+                // of the old connectingIndex.
+                busyKind: root.wakingHostUuid === uuid ? "waking"
+                        : root.wakeResultUuid === uuid ? "wakeFailed"
+                        : root.connectingHostUuid === uuid ? "connecting"
+                        : ""
+
+                // Resolves a wake the instant this host's model row reports
+                // online, with no C++ change needed: ComputerModel::
+                // handleComputerStateChanged already emits a per-row dataChanged
+                // whenever ComputerManager's monitor thread sees a state flip, so
+                // model.online is already live -- it is the same signal that
+                // drives this tile's ordinary offline copy. The poll cycle bounds
+                // how quickly that arrives to roughly 3 seconds after the machine
+                // actually answers.
+                onOnlineChanged: {
+                    if (online && uuid === root.wakingHostUuid) {
+                        root.resolveWake(uuid, true)
+                    }
+                }
 
                 // One clock for the whole move: position, drop, scale and fade
                 // all run for motionFocusMs on the same curve, so a tile travels,
@@ -877,8 +1050,14 @@ FocusScope {
                   //   produces "it didn't tell us how to wake it", which is a
                   //   refusal the hint bar should not have promised. Shoebox is
                   //   this case permanently.
+                  //
+                  //   The wake is already running. Advertising Wake while
+                  //   hostIsBusy would offer a third button that does nothing --
+                  //   actWake() no-ops on a host that is already connecting or
+                  //   waking, per the guard added there -- so it is withheld for
+                  //   exactly the same reason as the two cases above.
                   { action: "alternate", label: qsTr("Wake"),
-                    visible: !root.hostOnline && root.hostWakeable },
+                    visible: !root.hostOnline && root.hostWakeable && !root.hostIsBusy },
                   { action: "options",   label: qsTr("Add a PC") }
               ]
             : [
