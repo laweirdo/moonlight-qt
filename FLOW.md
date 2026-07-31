@@ -250,9 +250,17 @@ These items were open questions on the exported board and are retained here so
 their resolution is not lost.
 
 - **Wake works.** A genuinely sleeping, wakeable host returned after the action
-  was tested end to end on 28 July 2026. The “Asleep” state is accurate. The
-  designed destination is a waiting overlay that resolves on success or
-  failure.
+  was tested end to end on 28 July 2026. The “Asleep” state is accurate.
+  ~~The designed destination is a waiting overlay that resolves on success or
+  failure.~~ **Superseded, 31 July 2026.** The client chose a different
+  destination before it was built: no overlay at all, a host-tile treatment
+  (dimmed disc, three bouncing dots) that resolves the same way — on the host's
+  model row reporting online, or on a 30-second give-up. Reviewed with a
+  hardware gamepad and accepted on 1 August 2026. The `WakingPC` node and its
+  edges in the
+  diagram above are unchanged; this only updates what `WakingPC` looks like
+  when reached. Full design and reasoning in `SPEC-host-carousel.md`'s "v1
+  decision — host tile busy state".
 - **Libraries remain separate by host for v1.** A merged multi-host library is
   deferred unless the separate model proves awkward after use.
 - **The Bulan stream overlay is deferred pending input validation.**

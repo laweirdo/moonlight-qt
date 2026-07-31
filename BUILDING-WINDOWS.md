@@ -171,6 +171,51 @@ Check any file a script has touched:
 quote — PowerShell re-splits the argument and git reads the fragments as
 pathspecs. Write the message to a file and use `git commit -F`.
 
+### Chaining `vcvarsall.bat && set PATH=... && jom` on one line throws away the compiler it just added
+
+`HANDOFF.md` previously recorded that the Windows shell "could not find the MSVC
+tools through the generated makefiles," and that the generated build-tree
+makefiles under `build\build-x64-release` were patched locally with absolute
+MSVC tool paths plus `/MANIFEST:NO` as a review-build workaround. **That
+diagnosis was wrong, and the workaround was unnecessary.** Verified 31 July
+2026: with the fix below, a full clean-ish `jom release` succeeded against the
+documented build recipe completely unmodified, the manifest embedded normally,
+and the only link warning was the pre-existing `LNK4291`.
+
+The real cause is cmd's expansion order. Chaining the three build steps on one
+command line —
+
+```
+call vcvarsall.bat x64 && set PATH=C:\Users\faris\Qt\6.9.3\msvc2022_64\bin;%PATH% && jom
+```
+
+— has cmd substitute `%PATH%` **at parse time, before `vcvarsall.bat` has run**,
+because the whole line is tokenized once before any of it executes. The `PATH`
+that gets prepended to is the shell's PATH from before `vcvarsall`, and the
+MSVC tool directories `vcvarsall` adds a moment later are simply not there yet
+when that substitution happens — they are added to the *live* environment
+variable, not rewritten back into the command line that already captured
+`%PATH%`'s old value. The net effect is that `cl` is missing from `PATH` for
+the rest of the chain, and `jom` fails to find the compiler.
+
+**Why the wrong diagnosis was believable.** The failure mode — `cl` not found,
+right after a `vcvarsall.bat` call that is supposed to put it there — looks
+exactly like the tools not being registered with the generated makefiles at
+all, especially once qmake has already written absolute paths for some other
+tools into those makefiles. Patching the makefiles with more absolute paths
+"fixed" it in the sense that the build then succeeded, which is what made the
+workaround look like the real fix rather than a way of stepping around the
+actual, unexamined cause.
+
+**The fix:** put the three build commands in a `.bat` file rather than
+chaining them on one interactive line. cmd parses and executes a script line by
+line, so by the time the `set PATH=...` line runs, `vcvarsall.bat`'s own line
+has already executed and already modified the live environment — the `%PATH%`
+expansion on the next line sees the updated value. No makefile patching and no
+`/MANIFEST:NO` are needed; the documented recipe (`qmake` then `jom.exe
+release`) works unmodified once each step is its own parsed-and-executed line
+instead of one pre-tokenized chain.
+
 ### Installing the toolchain needs an administrator
 
 The Build Tools installer refuses a `--quiet` or `--passive` run that did not

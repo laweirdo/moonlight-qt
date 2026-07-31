@@ -6,7 +6,8 @@
 
 **Current phase:** Phase B — Close the core loop
 
-**Next milestone:** Connecting state
+**Next milestone:** Game grid. The previous milestone, the host tile's
+connecting/waking busy state, was completed 31 July 2026 — see Phase B below.
 
 This file governs v1 scope, phase order, exit conditions, and the next
 milestone. It does not govern live repository state (`HANDOFF.md`), the active
@@ -100,11 +101,21 @@ controller review.
 
 Remaining work, in order:
 
-1. **Connecting state** — replace the placeholder with the approved experience.
+1. ~~**Connecting state** — replace the placeholder with the approved
+   experience.~~ **Done 31 July 2026, accepted 1 August 2026** after a hardware
+   gamepad review on the Windows review station. Built as one designed
+   tile-level busy state shared with waking (Phase D's *Waking PC waiting
+   overlay*, pulled forward — see below). Durable design and the limits of that
+   review are in `SPEC-host-carousel.md`. No Deck validation yet.
 2. **Game grid** — Recent and Library views.
 3. **Game detail and launch** — follow the navigation authority in `FLOW.md`.
 4. **Screen transitions** — wire the existing 220 ms transition token into the
    completed core route.
+
+**New Phase B gap, raised 31 July 2026 and explicitly deferred by the client
+until after the game grid:** `StreamSegue.qml` remains stock upstream Qt. It was
+out of scope for the connecting/waking tile work above and has not been
+touched. Raise it again once item 2 (game grid) lands.
 
 **Exit:** launch → pick host → pick game → stream → return, with no screen in
 the user journey that still reads as upstream Moonlight.
@@ -132,7 +143,13 @@ the normal loop without encountering an upstream screen.
 - Couldn't start stream
 - Empty library for a paired host
 - Zero hosts
-- Waking PC waiting overlay, held until success or failure
+- ~~Waking PC waiting overlay, held until success or failure~~ **Done, pulled
+  forward into Phase B on 31 July 2026.** Its designed form changed on the way:
+  the client asked for a waiting *overlay* on 28 July and, when the work was
+  scoped on 31 July, chose a host-tile treatment instead — no overlay at all,
+  and decided before anything was built rather than after. See
+  `SPEC-host-carousel.md`'s "v1 decision — host tile busy state" and the
+  client-review table entry for item 4.
 - Disconnect confirmation
 
 **Exit:** every reachable failure or empty state has a designed, controller-safe

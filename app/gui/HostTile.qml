@@ -36,9 +36,17 @@ Item {
 
     property bool isCurrent: false
 
-    // True while this host's connection is in flight. Owned by the carousel,
-    // which is what knows about connections; the tile only draws it.
-    property bool connecting: false
+    // What this host is currently waiting on: "" | "connecting" | "waking" |
+    // "wakeFailed". Owned by the carousel, which is what knows about connections
+    // and wake attempts; the tile only draws it.
+    //
+    // It was a bool called `connecting` until the wake state needed the same
+    // treatment. One property rather than two flags, because the states are
+    // mutually exclusive by nature -- a host cannot be connecting and waking at
+    // once -- and two bools would let that be expressed.
+    property string busyKind: ""
+    readonly property bool busy: tile.busyKind === "connecting"
+                                 || tile.busyKind === "waking"
 
     // Set by the carousel: 1.0 for the focused tile, the neighbour scale for the
     // rest. The carousel animates it, so this is a plain value here -- see the
@@ -139,6 +147,81 @@ Item {
             font.pixelSize: Bulan.hostTileSize * 0.42
             opacity: tile.online ? 0.85 : 0.5
         }
+
+        // --- waiting ---------------------------------------------------------
+        // Both of these are children of the circle deliberately, so they inherit
+        // its scale and the tile keeps reading as one object while it travels.
+        // Client's call, 31 July 2026: the dots shrink with the tile rather than
+        // holding a fixed size, so nothing changes size as you scroll past.
+
+        // Dims the disc, inset by the border so the amber focus ring is NOT
+        // dimmed. Focus has to read identically in every state or it stops being
+        // a reliable signal -- a waiting host is still the host you are on.
+        Rectangle {
+            anchors.fill: parent
+            anchors.margins: circle.border.width
+            radius: width / 2
+            color: Bulan.bgBaseOled
+            visible: opacity > 0
+            opacity: tile.busy ? Bulan.hostTileBusyDimOpacity : 0
+            Behavior on opacity {
+                NumberAnimation { duration: Bulan.motionFocusMs }
+            }
+        }
+
+        // Three bouncing dots on one shared clock.
+        //
+        // One looping NumberAnimation drives a phase, and each dot reads its
+        // height off that phase with an offset. No SequentialAnimation, which
+        // keeps SPEC-host-carousel.md's statement about this screen true, and no
+        // second clock -- the "animating an animation" fault noted above.
+        Item {
+            id: busyDots
+            anchors.centerIn: parent
+            visible: tile.busy
+            width: Bulan.hostTileBusyDotSize * 3 + Bulan.hostTileBusyDotGap * 2
+            height: Bulan.hostTileBusyDotSize + Bulan.motionBusyBounceHeight
+
+            // No initializer: a declared real already defaults to 0, and giving
+            // it one here as well as the animation's own `from: 0` combines an
+            // initial-value binding with a value source on the same property,
+            // which qmllint flags as [duplicate-property-binding].
+            property real phase
+            NumberAnimation on phase {
+                running: busyDots.visible
+                from: 0
+                to: 1
+                duration: Bulan.motionBusyBounceMs
+                loops: Animation.Infinite
+                // Linear: the arch below does the easing. A curve here would ease
+                // the clock as well and the three dots would drift apart.
+                easing.type: Easing.Linear
+            }
+
+            Repeater {
+                model: 3
+                Rectangle {
+                    width: Bulan.hostTileBusyDotSize
+                    height: width
+                    radius: width / 2
+                    color: Bulan.accentPrimary
+
+                    x: index * (Bulan.hostTileBusyDotSize + Bulan.hostTileBusyDotGap)
+                    y: busyDots.height - height - lift
+
+                    // sin over half a turn is one clean arch per period: up,
+                    // over, down, with the slow part at the top where a bounce
+                    // wants it. The stagger is subtracted from the shared phase
+                    // and wrapped, so each dot is the same motion started later.
+                    property real lift: {
+                        var p = busyDots.phase
+                                - index * (Bulan.motionBusyStaggerMs / Bulan.motionBusyBounceMs)
+                        p -= Math.floor(p)
+                        return Math.sin(p * Math.PI) * Bulan.motionBusyBounceHeight
+                    }
+                }
+            }
+        }
     }
 
     // --- the host's own text -------------------------------------------------
@@ -188,7 +271,9 @@ Item {
                 id: shortStatus
                 width: parent.width
                 horizontalAlignment: Text.AlignHCenter
-                text: tile.connecting     ? qsTr("Connecting…")
+                text: tile.busyKind === "connecting" ? qsTr("Connecting…")
+                    : tile.busyKind === "waking"     ? qsTr("Waking…")
+                    : tile.busyKind === "wakeFailed" ? qsTr("Couldn't wake")
                     : tile.statusUnknown  ? qsTr("Checking…")
                     : !tile.online        ? qsTr("Offline")
                     : !tile.paired        ? qsTr("Not paired")
@@ -204,19 +289,23 @@ Item {
                 width: parent.width
                 horizontalAlignment: Text.AlignHCenter
                 // Brief §8 verbatim wherever it specifies a line.
-                text: tile.connecting     ? qsTr("Connecting…")
+                text: tile.busyKind === "connecting" ? qsTr("Connecting…")
+                    : tile.busyKind === "waking"     ? qsTr("Waking %1. Give it a moment.").arg(tile.hostName)
+                    : tile.busyKind === "wakeFailed" ? qsTr("Couldn't wake %1. It may still be asleep.").arg(tile.hostName)
                     : tile.statusUnknown  ? qsTr("Looking for your PC…")
                     : !tile.online        ? qsTr("Couldn't reach %1").arg(tile.hostName)
                     : !tile.paired        ? qsTr("Not paired yet.")
                                           : qsTr("Ready when you are.")
                 // Red and green state only what is settled: unreachable, or
-                // ready. The in-between states -- still looking, connecting, not
-                // yet paired -- are not a verdict, so they stay neutral rather
-                // than claiming a success or a failure that has not happened.
-                color: tile.connecting || tile.statusUnknown ? Bulan.textSecondary
-                     : !tile.online                          ? Bulan.statusError
-                     : !tile.paired                          ? Bulan.textSecondary
-                                                             : Bulan.statusSuccess
+                // ready. The in-between states -- still looking, connecting,
+                // waking, not yet paired -- are not a verdict, so they stay
+                // neutral rather than claiming a success or a failure that has
+                // not happened. A wake that gave up IS a verdict, so it is red.
+                color: tile.busy || tile.statusUnknown  ? Bulan.textSecondary
+                     : tile.busyKind === "wakeFailed"   ? Bulan.statusError
+                     : !tile.online                     ? Bulan.statusError
+                     : !tile.paired                     ? Bulan.textSecondary
+                                                        : Bulan.statusSuccess
                 font.family: Bulan.familyUi
                 font.pixelSize: Bulan.sizeBodyLg
                 opacity: tile.focusAmount

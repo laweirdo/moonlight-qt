@@ -168,6 +168,29 @@ QtObject {
     // built -- but stated here so the value does not get invented twice.
     readonly property int  motionTransitionMs: 220
 
+    // Waiting motion: the three bouncing dots drawn over a busy host tile.
+    //
+    // Brief §6 rule 1 is "never bounce twice", and this loops forever, so it
+    // needs saying why that is not a contradiction. That rule -- and the "no
+    // SequentialAnimation on the carousel" decision in SPEC-host-carousel.md --
+    // are both about motion that ANSWERS AN INPUT: one press, one settle. A
+    // waiting indicator answers nothing and has no target to settle into. It
+    // belongs to the brief's other motion category, ambient: continuous, low
+    // contrast, and deliberately slower than anything reactive.
+    //
+    // Hence 900 against motionFocusMs's 180 -- five times slower, so it reads as
+    // breathing rather than as the interface responding to something.
+    readonly property int  motionBusyBounceMs:      900
+
+    // Offset between one dot and the next, as a fraction of the period. Enough
+    // that the three read as a cascade; synchronised dots read as a blink.
+    readonly property int  motionBusyStaggerMs:     140
+
+    // How far a dot travels. Small on purpose: the tile is already dimmed and
+    // the dots are the only thing moving on the screen, so they do not need
+    // amplitude to be noticed.
+    readonly property int  motionBusyBounceHeight:   14
+
     // --- Host carousel --------------------------------------------------------
     // Proportions measured off the design mockup at 1280x800: the focused tile is
     // a little over a quarter of the panel width, and its neighbours are just
@@ -196,6 +219,38 @@ QtObject {
     // set at spaceMd (16) when the text moved onto the tile, and they asked for
     // 30 more.
     readonly property int  hostTileLabelGap:        46
+
+    // --- Host tile: the waiting state -----------------------------------------
+    // Drawn while a host is connecting or being woken. The disc interior dims and
+    // three dots bounce over it; the focus ring is left alone, because focus has
+    // to read the same in every state or it stops being a reliable signal.
+
+    // How far the disc dims. disabledOpacity (0.38) reads as "not available" and
+    // popupScrimOpacity (0.62) reads as "something else is in front of this".
+    // Neither is right: this host is busy, not gone. 0.55 sits between them,
+    // closer to the scrim, so the monogram stays legible underneath.
+    readonly property real hostTileBusyDimOpacity:   0.55
+
+    // Dot diameter, about 3% of the tile. Large enough to see at neighbour scale,
+    // small enough not to compete with the monogram behind it.
+    readonly property int  hostTileBusyDotSize:       18
+
+    // Gap between dots. A carousel measurement like hostTileSpread and
+    // hostTileLabelGap, not a step on the generic spacing scale.
+    readonly property int  hostTileBusyDotGap:        20
+
+    // How long a wake attempt bounces before the app admits it did not work.
+    // Client's call, 31 July 2026: 30 seconds. Long enough for a PC to leave
+    // sleep and bring its network back, short enough that a machine that is not
+    // coming back does not leave you watching dots. The app notices a host
+    // answering within roughly one 3s discovery poll of it doing so, so almost
+    // all of this budget is the machine's, not ours.
+    readonly property int  hostTileWakeTimeoutMs:  30000
+
+    // How long "Couldn't wake" holds before the tile falls back to its normal
+    // offline copy. The failure needs to be read, not dismissed -- there is no
+    // popup here and nothing for the player to press.
+    readonly property int  hostTileBusyResultHoldMs: 3000
 
     // Peak alpha of the warm halo behind the focused tile. The brief's ambient
     // radial glow is 3-6%; a focus halo is the foreground case of the same
