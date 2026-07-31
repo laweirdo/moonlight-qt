@@ -1115,6 +1115,27 @@ int main(int argc, char *argv[])
         // screenshot hook. HostCarousel ignores it outside fake-host review.
         engine.rootContext()->setContextProperty("hostSettingsReviewAction",
                                                  QString::fromUtf8(qgetenv("MOONLIGHT_HOST_SETTINGS_REVIEW_ACTION")));
+        // Review hook: a fake host's `online` in fakeModel is a static false, so
+        // with no way to flip it a fake wake could only ever be reviewed failing
+        // -- it always runs the full 30-second timeout and gives up. This lets a
+        // wake started on a fake host resolve successfully instead, so the
+        // success half of TASK-BRIEF.md's acceptance criterion 6 has something
+        // to look at, not just the failure half. "timeout" and unset both leave
+        // the existing 30-second give-up untouched. HostCarousel reads this only
+        // inside its fake-host branch; it does nothing on a real wake.
+        engine.rootContext()->setContextProperty("fakeWakeOutcome",
+                                                 QString::fromUtf8(qgetenv("MOONLIGHT_FAKE_WAKE_OUTCOME")));
+        // Review hook: actConfirm() on a fake host has always stopped at the
+        // "Review mode" message rather than reaching openAppView(), because
+        // openAppView() indexes into the REAL host list -- see the guard's own
+        // comment in HostCarousel.qml for the crash that produced that rule.
+        // This does not touch that guard; it only gives the connecting dots (the
+        // OTHER half of this task's busy state) something to be reviewed on,
+        // by holding the tile in "connecting" for a fixed, fake duration instead
+        // of the one real JS tick a genuine connection takes. Unset or zero
+        // changes nothing.
+        engine.rootContext()->setContextProperty("fakeConnectHoldMs",
+                                                 qEnvironmentVariableIntValue("MOONLIGHT_FAKE_CONNECT_HOLD_MS"));
         // Suppress the startup warning dialogs in token proof mode -- they would
         // otherwise open modally on top of the sheet.
         engine.rootContext()->setContextProperty("runConfigChecks",

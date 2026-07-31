@@ -253,6 +253,49 @@ FocusScope {
         onTriggered: root.wakeResultUuid = ""
     }
 
+    // Review hook: MOONLIGHT_FAKE_WAKE_OUTCOME=success. A fake host's `online`
+    // in fakeModel is a static false -- nothing in review mode ever flips it --
+    // so without this a fake wake could only ever be reviewed failing: it runs
+    // the full 30-second wakeTimeoutTimer and gives up every time. actWake()
+    // starts this alongside beginWake() when the outcome is "success", and on
+    // firing it calls fakeModel.setProperty(row, "online", true) rather than
+    // resolveWake() directly. That distinction is the whole point of the hook:
+    // setProperty() changes the delegate's own `online`, which drives the
+    // delegate's existing onOnlineChanged below to call resolveWake() itself --
+    // the same path a real host's poll-thread update takes. Calling
+    // resolveWake() from here instead would make the hook review its own call
+    // rather than the real resolution path. 3 seconds reads as a genuine wait
+    // without making a reviewer sit through anything close to the 30-second
+    // failure case. "timeout" or unset leaves this timer never started, so
+    // fake wakes give up exactly as before.
+    Timer {
+        id: fakeWakeSuccessTimer
+        interval: 3000
+        onTriggered: {
+            var uuid = root.wakingHostUuid
+            for (var i = 0; i < fakeModel.count; i++) {
+                if (fakeModel.get(i).uuid === uuid) {
+                    fakeModel.setProperty(i, "online", true)
+                    break
+                }
+            }
+        }
+    }
+
+    // Review hook: MOONLIGHT_FAKE_CONNECT_HOLD_MS. actConfirm()'s useFakeHosts
+    // branch (below) stops before openAppView() on purpose -- see that guard's
+    // own comment for the crash a fake row's index caused there -- which also
+    // means the connecting dots have never had anything to be reviewed on.
+    // This does not move or weaken that guard: it only runs beginConnecting()/
+    // clearConnecting(), the same pair a real connection's one JS tick would,
+    // held open for a chosen number of milliseconds instead. It never calls
+    // openAppView(), never reads computerIndex, and never resolves a real host.
+    Timer {
+        id: fakeConnectHoldTimer
+        interval: typeof fakeConnectHoldMs !== "undefined" ? fakeConnectHoldMs : 0
+        onTriggered: root.clearConnecting()
+    }
+
     // The selection. This is the whole of the carousel's state: every tile's
     // position, scale and opacity is a function of the distance between its own
     // index and this one, so there is no view offset, no phase and no join.
@@ -453,6 +496,22 @@ FocusScope {
         // the previous shape guarded pairing and missed the game list, and
         // would have missed the next branch added too.
         if (root.useFakeHosts) {
+            // Review hook: MOONLIGHT_FAKE_CONNECT_HOLD_MS. When set, rehearse
+            // the connecting dots instead of showing the message below --
+            // beginConnecting()/clearConnecting() are the exact pair a real
+            // connection's one JS tick runs, just held open on a timer. The
+            // "Review mode" message is withheld while this hold is running,
+            // not shown alongside it: that message is a full-screen HostPanel
+            // and would sit on top of the very tile the hold exists to make
+            // visible, hiding the thing under review. This still never calls
+            // openAppView() and never touches computerIndex -- see the guard
+            // comment a few lines below for the crash that rule prevents;
+            // this hook does not move or weaken it.
+            if (typeof fakeConnectHoldMs !== "undefined" && fakeConnectHoldMs > 0) {
+                beginConnecting(host.uuid)
+                fakeConnectHoldTimer.restart()
+                return
+            }
             // Says so out loud rather than doing nothing. A silent A is
             // indistinguishable from the dead-A defect this project has now
             // chased three times, and this screen is where that was chased.
@@ -497,6 +556,10 @@ FocusScope {
         }
         if (!root.useFakeHosts) {
             computerModel.wakeComputer(root.currentIndex)
+        } else if (typeof fakeWakeOutcome !== "undefined" && fakeWakeOutcome === "success") {
+            // See fakeWakeSuccessTimer above for why this starts a timer
+            // rather than resolving the wake itself.
+            fakeWakeSuccessTimer.restart()
         }
         // No popup here any more. The client rejected the HostPanel "Waking…"
         // message on 28 July 2026 review -- this task folds that decision in --
