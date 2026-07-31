@@ -93,7 +93,10 @@ The accepted carousel rebuild is the completed Phase B milestone. Its durable
 design and engineering reasoning is in `SPEC-host-carousel.md`.
 
 The host-settings work order is complete: the label spacing, controller-first
-host overlay, and startup-toolbar boundary were accepted and validated.
+host overlay, and startup-toolbar boundary were accepted and validated. The
+separate root-carousel quit confirmation follow-up is also complete: root
+B/Escape now opens a custom Bulan glass confirmation that passed Windows XInput
+controller review.
 
 Remaining work, in order:
 
@@ -130,7 +133,7 @@ the normal loop without encountering an upstream screen.
 - Empty library for a paired host
 - Zero hosts
 - Waking PC waiting overlay, held until success or failure
-- Quit and disconnect confirmation
+- Disconnect confirmation
 
 **Exit:** every reachable failure or empty state has a designed, controller-safe
 route back to the loop.

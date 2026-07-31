@@ -41,6 +41,7 @@ the implementation record:
 | `app/gui/HintBar.qml` | The persistent bottom bar. Declarative contents; display-only. |
 | `app/gui/ControllerGlyph.qml` | One button glyph, selected by semantic action and current controller. |
 | `app/gui/HostPanel.qml` | Modal overlay: scrim, surface, title, body, optional text field. |
+| `app/gui/BulanQuitConfirmation.qml` | Root quit confirmation: custom glass popup with controller-owned Cancel/Quit choices. |
 | `app/gui/Atmosphere.qml` | Shared ground: gradient, vignette, grain. |
 | `app/gui/Bulan.qml` | Design tokens. The only place a colour, size, duration or scale is defined. |
 
@@ -72,7 +73,7 @@ recoverable route.
 | **X** | `Key_Menu` | Add a PC. |
 | **START** | `Key_Hangup` | Client settings. |
 | **SELECT** | `Key_Context1` | Host settings for the focused host. |
-| **B** | `Key_Escape` | Handled by `main.qml`: quit confirmation at the root, back otherwise. |
+| **B** | `Key_Escape` | Handled by `main.qml`: Bulan quit confirmation at the root, back otherwise. |
 | Mouse hover | — | **Nothing.** Reversed by the client on 28 July 2026; it used to move focus to the hovered host. |
 | Mouse click | — | Focuses, then confirms. |
 
@@ -278,6 +279,24 @@ again so a discovery reorder cannot redirect an action. In fake-host review
 mode, the guard runs before any real-host lookup or action and presents visible
 feedback instead. Fake hosts therefore never identify a real machine.
 
+**v1 decision - root quit uses a custom Bulan confirmation.**
+`BulanQuitConfirmation.qml` replaces the inherited `NavigableMessageDialog` for
+root-level B/Escape from the carousel. It uses the same approved glass popup
+language as `HostSettingsOverlay.qml`, defaults focus to the safe Cancel choice,
+keeps the interactive choices at the tokenized 88px row height, and restores
+carousel focus when dismissed. The Quit choice preserves normal application quit
+behavior by calling `Qt.quit()` through `main.qml`.
+
+The implementation deliberately catches controller keys two ways. The popup owns
+QML active focus and handles `Keys.*`, but the SDL controller bridge sends
+synthetic key events to the focused window rather than to a controller-specific
+target. During Windows XInput review, visual focus alone was not reliable at the
+root level: the client saw the popup focused while controller input reached
+nothing useful. The accepted fix adds application-scoped, non-visual `Shortcut`s
+while the popup is visible for Left, Right, Return, Enter, Space, Escape, and
+Back. This gives the modal a controller catch even if the window/focus handoff is
+odd, without exposing any stock Qt Quick Controls in the Bulan surface.
+
 **Validated toolbar boundary — Bulan hides inherited chrome; inherited screens
 claim it.** `ff42d3d1` starts the shared toolbar hidden, preventing it from
 painting during carousel startup. `AppView`, `SettingsView`, and the retained
@@ -287,7 +306,7 @@ repeated visits to Client Settings and View all apps retained the toolbar,
 visible recoverable focus, and correct B return to the carousel. `PcView` is
 not naturally reachable from the current Bulan route; stream, quit, and CLI
 segues retain their own explicit visibility lifecycle. This boundary is
-independent of the separate root-carousel quit-confirmation defect.
+independent of the root-carousel quit-confirmation repair.
 
 **Only a hairline separates the hint bar.** No filled band: the atmosphere gradient
 is already at its darkest by the bottom of the screen.
@@ -356,6 +375,7 @@ This table records durable surface gaps, not the current task or branch.
 |---|---|---|
 | **Connecting** | **Provisional** | Status line reads `"Connecting…"` and nothing else changes. No design exists yet. |
 | **Host settings (SELECT)** | **v1 decision** | Opens the approved glass overlay. View all apps, Test Network, Host Details, conditional Wake PC, and confirmed Forget PC are reachable without a mouse. |
+| **Root quit confirmation** | **v1 decision** | Root B/Escape opens the custom Bulan glass confirmation. Cancel is the default focused choice; A confirms; B dismisses and restores carousel focus. |
 | **Rename PC** | **Deferred** | Its upstream behavior remains intact but is not exposed from the carousel in private v1 because it requires Steam keyboard work. |
 | **Host artwork** | **Accepted compromise** | The monogram is the current placeholder because the model has no artwork concept. |
 | **Deck glyphs** | **v1 decision** | Deck hardware is detected and intentionally resolves to the practically identical XInput art. Custom Deck vectors are not required for private v1. |

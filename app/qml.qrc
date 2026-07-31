@@ -21,6 +21,7 @@
         <file>gui/CliPair.qml</file>
         <file>gui/Bulan.qml</file>
         <file>gui/Atmosphere.qml</file>
+        <file>gui/BulanQuitConfirmation.qml</file>
         <file>gui/ControllerGlyph.qml</file>
         <file>gui/GlyphProof.qml</file>
         <file>gui/HintBar.qml</file>

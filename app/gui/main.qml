@@ -3,6 +3,7 @@ import QtQuick.Controls 2.2
 import QtQuick.Layouts 1.3
 import QtQuick.Window 2.2
 import QtQuick.Controls.Material 2.2
+import QtQuick.Effects
 
 import Bulan 1.0
 import ComputerManager 1.0
@@ -174,6 +175,14 @@ ApplicationWindow {
         id: stackView
         anchors.fill: parent
         focus: true
+        enabled: !quitConfirmationDialog.visible
+        layer.enabled: quitConfirmationDialog.visible
+        layer.effect: MultiEffect {
+            autoPaddingEnabled: false
+            blurEnabled: true
+            blur: Bulan.popupBackdropBlurStrength
+            blurMax: Bulan.popupBackdropBlurRadius
+        }
 
         // The shared atmosphere layer — gradient, vignette and grain — behind
         // every page. See Atmosphere.qml; each effect is individually
@@ -597,12 +606,17 @@ ApplicationWindow {
     }
 
     // This dialog appears when quitting via keyboard or gamepad button
-    NavigableMessageDialog {
+    BulanQuitConfirmation {
         id: quitConfirmationDialog
-        standardButtons: Dialog.Yes | Dialog.No
-        text: qsTr("Are you sure you want to quit?")
-        // For keyboard/gamepad navigation
-        onAccepted: Qt.quit()
+        anchors.fill: parent
+        onDismissed: {
+            if (stackView.currentItem) {
+                stackView.currentItem.forceActiveFocus()
+            } else {
+                stackView.forceActiveFocus()
+            }
+        }
+        onQuitRequested: Qt.quit()
     }
 
     // HACK: This belongs in StreamSegue but keeping a dialog around after the parent
