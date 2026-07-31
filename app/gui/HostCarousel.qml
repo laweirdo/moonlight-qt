@@ -176,6 +176,7 @@ FocusScope {
     property string wakingHostUuid: ""
     property string wakeResultUuid: ""   // set on failure; "" once the hold ends
     property bool reviewMenuOpened: false
+    property bool reviewWakeStarted: false
 
     // Starts (or restarts) a connection wait. One tick long in practice, but not
     // timed -- it ends when openAppView() either pushes AppView or hits one of
@@ -725,6 +726,24 @@ FocusScope {
                                     hostSettingsReviewAction)
                     })
                 }
+            })
+        }
+
+        // Review hook: MOONLIGHT_FAKE_WAKE_ON_START. Presses Wake for the
+        // screenshot hook, which grabs the window on a timer and cannot press a
+        // button itself. Without this the busy state could only ever be argued
+        // for, never looked at, on a machine with no host it can put to sleep.
+        //
+        // It calls actWake() rather than beginWake() directly, so the review
+        // goes through the same refusals and guards a real press does -- an
+        // unwakeable host still gets "Can't wake this one" here, exactly as it
+        // should, rather than the hook forcing dots onto a tile that would
+        // never show them in use.
+        if (root.useFakeHosts && !reviewWakeStarted &&
+                typeof fakeWakeOnStart !== "undefined" && fakeWakeOnStart) {
+            reviewWakeStarted = true
+            Qt.callLater(function() {
+                root.actWake()
             })
         }
     }

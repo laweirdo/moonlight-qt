@@ -1136,6 +1136,15 @@ int main(int argc, char *argv[])
         // changes nothing.
         engine.rootContext()->setContextProperty("fakeConnectHoldMs",
                                                  qEnvironmentVariableIntValue("MOONLIGHT_FAKE_CONNECT_HOLD_MS"));
+        // Review hook: starts a wake on the focused fake host once the carousel
+        // has settled, the same way MOONLIGHT_OPEN_HOST_SETTINGS opens the host
+        // menu. Without it the busy state cannot be captured at all, because the
+        // screenshot hook grabs the window on a timer and has no way to press a
+        // button first -- so the dots could be built and shipped having only
+        // ever been reasoned about. Pair it with MOONLIGHT_FAKE_WAKE_OUTCOME to
+        // choose which half of the wake the grab lands in. Inert unless set.
+        engine.rootContext()->setContextProperty("fakeWakeOnStart",
+                                                 qEnvironmentVariableIsSet("MOONLIGHT_FAKE_WAKE_ON_START"));
         // Suppress the startup warning dialogs in token proof mode -- they would
         // otherwise open modally on top of the sheet.
         engine.rootContext()->setContextProperty("runConfigChecks",
