@@ -6,7 +6,7 @@
 
 **Current phase:** Phase B — Close the core loop
 
-**Next milestone:** Host settings menu
+**Next milestone:** Finish the host-settings work order
 
 This file governs v1 scope, phase order, exit conditions, and the next
 milestone. It does not govern live repository state (`HANDOFF.md`), the active
@@ -94,9 +94,10 @@ design and engineering reasoning is in `SPEC-host-carousel.md`.
 
 Remaining work, in order:
 
-1. **Host settings menu** — next. Restore the host actions lost when the
-   upstream computers grid stopped being the initial screen. The active work
-   order is `TASK-BRIEF.md`.
+1. **Finish the host-settings work order** — host-label spacing and the
+   controller-first host overlay are merged. Repair and validate the inherited
+   startup toolbar next; `TASK-BRIEF.md` remains the active work order and
+   `BUGS.md` owns the defect.
 2. **Connecting state** — replace the placeholder with the approved experience.
 3. **Game grid** — Recent and Library views.
 4. **Game detail and launch** — follow the navigation authority in `FLOW.md`.

@@ -1,6 +1,6 @@
 # Active task — the host settings menu
 
-Status: **in progress; implementation branch created, application changes not started**
+Status: **in progress; label spacing and host-settings overlay merged; startup-toolbar repair outstanding**
 
 This is the single active product work order. It is temporary and does not
 override `AGENTS.md`, the creative brief, the flow, or the roadmap.
@@ -24,28 +24,40 @@ behavior and remains an open defect.
 
 ## Branch and baseline
 
-Implementation branch: `codex/host-settings-menu`
+Completed implementation branch: `codex/host-settings-menu`, fast-forwarded
+into `bulan` and `origin/bulan` at `6e345967ce463a0511bae70ce9e5c08e80ca85df`
+on 31 July 2026.
 
 Exact baseline: `bulan` and `origin/bulan` at
 `6a6ffa7ec677c3a630613c68cfd55ed5a708a082`, verified after fetching
 `origin/bulan` on 31 July 2026.
 
-The branch was created from the clean integration branch. No application change
-had been made when this state was recorded.
+The branch was created from the clean integration branch. Its accepted commits
+are `394a2870` (label spacing), `1c941ed5` (host-settings overlay), and
+`6e345967` (the separately scoped quit-confirmation defect record).
 
 ## Scope
 
 ### 1. Host-label spacing
 
-Change `Bulan.hostTileLabelGap` from **56 to 46**.
+**Completed and merged:** `394a2870` changed `Bulan.hostTileLabelGap` from 56
+to 46 and kept the duplicated review token synchronized. No other carousel
+visual change was made.
+
+The accepted implementation changed `Bulan.hostTileLabelGap` from **56 to 46**.
 
 The client judged the current gap 10 pixels too large after reviewing the rebuilt
 carousel. This is the only approved visual change to that screen in this task.
 
 ### 2. Host settings menu
 
-SELECT currently opens a panel showing what upstream's “View Details” showed.
-It should open a host menu.
+**Completed and merged:** `1c941ed5` replaces SELECT's temporary details panel
+with the approved overlay. It records a stable host UUID before dispatching an
+action, restores focus to the same carousel host on B, guards fake-host review
+mode before a real-host lookup, and uses the approved glass popup treatment.
+
+SELECT now opens the approved host menu rather than the panel that showed what
+upstream's “View Details” showed.
 
 The confirmed private-v1 menu contents are:
 
@@ -114,7 +126,7 @@ it to claim it explicitly. This is small in code but broad in effect because
 ## Client decision gate
 
 Resolved on 31 July 2026. The overlay form, offline-host contents, Forget PC
-confirmation, and Rename PC/Test Network deferral are recorded under
+confirmation, Test Network inclusion, and Rename PC deferral are recorded under
 *Decisions already settled*. No host-menu design question remains open.
 
 ## Implementation risks
@@ -202,6 +214,8 @@ have moved to their permanent homes.
 
 ## Next action
 
-Present this branch-and-decision record for client review. After approval,
-commit it as an independently reviewable setup change, then implement the
-host-label spacing correction as the first application change.
+Implement the startup-toolbar repair as the third and final logical change in
+this task. It must begin with the toolbar hidden, make every inherited screen
+that needs it claim it explicitly, capture the first visible launch frames, and
+verify controller navigation on each retained-toolbar screen. Keep this brief
+active until that work and its durable documentation are complete.

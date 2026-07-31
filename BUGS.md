@@ -59,8 +59,9 @@ default. Missing one could silently remove navigation from that screen.
 
 ### Next action
 
-Implement this as the third independently reviewable change in
-`TASK-BRIEF.md`, after the host-label spacing and host-settings menu:
+The host-label spacing and host-settings overlay stages are merged
+(`394a2870` and `1c941ed5`). Implement the repair now as the third independently
+reviewable change in `TASK-BRIEF.md`:
 
 1. Start the toolbar hidden.
 2. Make each inherited toolbar screen claim it explicitly.

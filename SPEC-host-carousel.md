@@ -256,6 +256,28 @@ the address and the only existing route to it was `DetailsRole` — a translated
 human-readable blob a view would have to parse back out. The new role touches no
 discovery or pairing logic.
 
+**Accepted task evolution — host-label gap is 46.** The client approved a
+10-pixel reduction from 56 after reviewing the rebuilt carousel. `394a2870`
+changes only `Bulan.hostTileLabelGap`; it does not alter carousel travel,
+easing, layout, or the accepted empty space.
+
+**v1 decision — SELECT opens a host-settings overlay.** `1c941ed5` replaces
+the temporary read-only panel with `HostSettingsOverlay.qml`. The carousel stays
+visible but is blurred behind the approved glass surface and scrim. B closes the
+overlay (or its current subpage) and returns focus to the same host.
+
+The menu exposes View all apps only for an online paired host; Test Network,
+Host Details, and Forget PC for every host; and Wake PC only for an offline,
+wakeable host. Forget PC has a confirmation whose safe choice is selected by
+default. Test Network is private-v1 scope; Rename PC remains deferred to v1.x
+because it needs deliberate Steam keyboard work.
+
+**Action identity and review safety are deliberate.** The overlay stores the
+host UUID, not a carousel row. On activation, the real model resolves that UUID
+again so a discovery reorder cannot redirect an action. In fake-host review
+mode, the guard runs before any real-host lookup or action and presents visible
+feedback instead. Fake hosts therefore never identify a real machine.
+
 **Only a hairline separates the hint bar.** No filled band: the atmosphere gradient
 is already at its darkest by the bottom of the screen.
 
@@ -322,8 +344,8 @@ This table records durable surface gaps, not the current task or branch.
 | Thing | Label | Durable state |
 |---|---|---|
 | **Connecting** | **Provisional** | Status line reads `"Connecting…"` and nothing else changes. No design exists yet. |
-| **Host settings (SELECT)** | **Provisional** | Opens the old read-only details panel. The active task brief owns the replacement menu. |
-| **Rename / Forget / Test Network** | **Provisional** | Not reachable from this screen. The upstream actions remain in `PcView.qml`; the task brief owns which ones enter the v1 menu. |
+| **Host settings (SELECT)** | **v1 decision** | Opens the approved glass overlay. View all apps, Test Network, Host Details, conditional Wake PC, and confirmed Forget PC are reachable without a mouse. |
+| **Rename PC** | **Deferred** | Its upstream behavior remains intact but is not exposed from the carousel in private v1 because it requires Steam keyboard work. |
 | **Host artwork** | **Accepted compromise** | The monogram is the current placeholder because the model has no artwork concept. |
 | **Deck glyphs** | **v1 decision** | Deck hardware is detected and intentionally resolves to the practically identical XInput art. Custom Deck vectors are not required for private v1. |
 
