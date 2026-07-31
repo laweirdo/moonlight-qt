@@ -6,89 +6,6 @@ This file contains acknowledged, open unintended behavior only. Active product
 work belongs in `TASK-BRIEF.md`; scope and sequencing belong in `ROADMAP.md`;
 upstream redesign findings remain historical in `UI-AUDIT.md`.
 
-## Startup toolbar appears before Bulan
-
-**Status:** Open
-
-**Impact:** High visual impact during every cold launch; no data-loss or
-streaming impact
-
-**Milestone:** Phase B, within the active host-settings work order
-
-**Priority:** Complete before the game-grid rebuild
-
-### Reproduction
-
-1. Fully stop the application.
-2. Start a Bulan build whose initial screen is the host carousel.
-3. Watch from the first visible window frame until the carousel appears.
-
-The inherited Moonlight toolbar is visible before the Bulan screen hides it.
-
-### Evidence
-
-The client first reported the upstream layout remnants during launch on
-28 July 2026. A frame probe then recorded:
-
-```text
-t=...297  stackView completed, toolBar.visible=true
-t=...864  after push,          toolBar.visible=false
-```
-
-The toolbar remained visible for approximately **567 ms**, long enough to read
-as a different interface appearing before Bulan.
-
-The investigation was recorded in documentation commit `f32ec616`.
-
-### Current diagnosis
-
-The application window's `header` is the toolbar in `app/gui/main.qml`. It has
-no initial `visible` value, so it starts shown. The first Bulan screen cannot
-hide it until that screen has been pushed and activated after early
-initialization.
-
-The repair is merged in `ff42d3d1`: the toolbar starts hidden and
-the inherited `AppView.qml`, `SettingsView.qml`, and `PcView.qml` screens show
-it explicitly.
-
-### Uncertainty
-
-The cause of the launch exposure is established. The remaining uncertainty is
-the repair's blast radius: inherited screens such as `AppView.qml`,
-`SettingsView.qml`, and `PcView.qml` currently rely on the toolbar's visible
-default. Missing one could silently remove navigation from that screen.
-
-### Next action
-
-The host-label spacing and host-settings overlay stages are merged
-(`394a2870` and `1c941ed5`). The third independently reviewable repair is
-merged in `ff42d3d1`:
-
-1. Start the toolbar hidden. **Implemented.**
-2. Make each inherited toolbar screen claim it explicitly. **Implemented for
-   the audited inherited screens.**
-3. Capture launch from the first visible frame. **Captured at
-   `build\first-frame.png`; no upstream header was visible.**
-4. Visit every screen that should retain a toolbar with controller input.
-5. Close this defect only after the startup and inherited-screen checks pass.
-
-### Relevant files and commits
-
-| Reference | Relevance |
-|---|---|
-| `app/gui/main.qml` | Owns the toolbar and its initial visibility |
-| `app/gui/HostCarousel.qml` | Hides the toolbar after the initial screen activates |
-| `app/gui/AppView.qml` | Inherited screen that currently relies on the visible default |
-| `app/gui/SettingsView.qml` | Inherited screen that currently relies on the visible default |
-| `app/gui/PcView.qml` | Inherited screen that currently relies on the visible default |
-| `app/gui/StreamSegue.qml`, `app/gui/QuitSegue.qml`, and CLI segue files | Existing explicit visibility transitions that must remain correct |
-| `TASK-BRIEF.md` | Active implementation scope and acceptance criteria |
-| `f32ec616` | Commit that recorded the measured defect |
-
-The repair is implemented in `ff42d3d1` in `app/gui/main.qml` and the audited inherited
-screens; the defect remains open only for inherited-screen and controller
-validation.
-
 ## Carousel B opens an inherited quit confirmation
 
 **Status:** Open
@@ -97,7 +14,7 @@ validation.
 opens a confirmation that does not use Bulan's popup language, and the client
 reported that its controls do not respond to the XInput controller.
 
-**Milestone:** Follow-up task after the active host-settings work order
+**Milestone:** Follow-up task after the completed host-settings work order
 
 ### Reproduction
 

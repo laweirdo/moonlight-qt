@@ -1,12 +1,12 @@
 # Bulan — roadmap
 
-**Current as of:** 30 July 2026
+**Current as of:** 31 July 2026
 
 **Owner:** Lao
 
 **Current phase:** Phase B — Close the core loop
 
-**Next milestone:** Finish the host-settings work order
+**Next milestone:** Connecting state
 
 This file governs v1 scope, phase order, exit conditions, and the next
 milestone. It does not govern live repository state (`HANDOFF.md`), the active
@@ -92,20 +92,16 @@ OLED Steam Deck.
 The accepted carousel rebuild is the completed Phase B milestone. Its durable
 design and engineering reasoning is in `SPEC-host-carousel.md`.
 
+The host-settings work order is complete: the label spacing, controller-first
+host overlay, and startup-toolbar boundary were accepted and validated.
+
 Remaining work, in order:
 
-1. **Finish the host-settings work order** — host-label spacing and the
-   controller-first host overlay are merged. Repair and validate the inherited
-   startup toolbar next; `TASK-BRIEF.md` remains the active work order and
-   `BUGS.md` owns the defect.
-2. **Connecting state** — replace the placeholder with the approved experience.
-3. **Game grid** — Recent and Library views.
-4. **Game detail and launch** — follow the navigation authority in `FLOW.md`.
-5. **Screen transitions** — wire the existing 220 ms transition token into the
+1. **Connecting state** — replace the placeholder with the approved experience.
+2. **Game grid** — Recent and Library views.
+3. **Game detail and launch** — follow the navigation authority in `FLOW.md`.
+4. **Screen transitions** — wire the existing 220 ms transition token into the
    completed core route.
-
-The host-settings work order also includes the startup-toolbar defect because
-the fix must preserve inherited toolbars. That defect is tracked in `BUGS.md`.
 
 **Exit:** launch → pick host → pick game → stream → return, with no screen in
 the user journey that still reads as upstream Moonlight.
@@ -176,9 +172,6 @@ Ordered by expected value, not effort:
 
 ## Standing risks
 
-- **Startup toolbar:** changing its visible-by-default behavior is small in code
-  but can silently remove navigation from inherited screens. The active task
-  requires checking every screen that should retain it.
 - **Manual address entry:** the onboarding escape hatch still needs a design
   that works with Steam's on-screen keyboard in Game Mode.
 - **Stream overlay input:** `Start+Select` remains an unvalidated proposed

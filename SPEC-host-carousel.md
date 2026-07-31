@@ -278,6 +278,17 @@ again so a discovery reorder cannot redirect an action. In fake-host review
 mode, the guard runs before any real-host lookup or action and presents visible
 feedback instead. Fake hosts therefore never identify a real machine.
 
+**Validated toolbar boundary — Bulan hides inherited chrome; inherited screens
+claim it.** `ff42d3d1` starts the shared toolbar hidden, preventing it from
+painting during carousel startup. `AppView`, `SettingsView`, and the retained
+legacy `PcView` explicitly show it when activated. On the Windows review build
+on 31 July 2026, cold startup remained free of the toolbar; controller-driven,
+repeated visits to Client Settings and View all apps retained the toolbar,
+visible recoverable focus, and correct B return to the carousel. `PcView` is
+not naturally reachable from the current Bulan route; stream, quit, and CLI
+segues retain their own explicit visibility lifecycle. This boundary is
+independent of the separate root-carousel quit-confirmation defect.
+
 **Only a hairline separates the hint bar.** No filled band: the atmosphere gradient
 is already at its darkest by the bottom of the screen.
 
