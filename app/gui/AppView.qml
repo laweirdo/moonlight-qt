@@ -53,7 +53,8 @@ FocusScope {
     // Emitted instead of building the confirmation. A on a game while a
     // DIFFERENT one is running must not launch -- see actConfirmOn() below.
     signal switchGameRequested(var appId, string origin,
-                               string runningName, string nextName)
+                               string runningName, string nextName,
+                               string returnTarget)
 
     // Stage 2 can bind its transient launch visual to this without introducing
     // another environment variable or a network-timed replay path.
@@ -985,27 +986,19 @@ FocusScope {
         var runningGame = fakeModel.count > 0 ? fakeModel.get(0) : null
         var nextGame = route.switching && sourceIndex >= 0
                 && sourceIndex < fakeModel.count ? fakeModel.get(sourceIndex) : null
-        var component = Qt.createComponent("QuitSegue.qml")
-        if (component.status !== Component.Ready) {
-            console.error("Review QuitSegue.qml failed to load:", component.errorString())
+        if (!runningGame) {
             return
         }
-        var segue = component.createObject(stackView, {
-            "appName": runningGame ? runningGame.name : qsTr("Review game"),
-            "nextAppName": nextGame ? nextGame.name : "",
-            "reviewMode": true,
-            "reviewOutcome": route.quitOutcome,
-            "reviewReturnTarget": route.returnTarget,
-            "reviewNextAppId": nextGame ? nextGame.appid : null,
-            "reviewNextSourceIndex": nextGame ? sourceIndex : -1,
-            "reviewNextOrigin": route.origin,
-            "reviewNextSourceAvailable": route.sourceAvailable && nextGame !== null
-        })
-        if (segue === null) {
-            console.error("Review QuitSegue.qml loaded but could not be created")
-            return
+
+        if (route.switching && nextGame) {
+            root.beginQuitAndSwitch(nextGame.appid, route.origin,
+                                    nextGame.name, route.returnTarget,
+                                    true, route.quitOutcome, route)
+        } else {
+            root.beginQuitOnly(runningGame.appid, route.origin,
+                               route.returnTarget, true,
+                               route.quitOutcome, route)
         }
-        stackView.push(segue)
     }
 
     // --- launching -------------------------------------------------------------
@@ -1019,6 +1012,33 @@ FocusScope {
     property int launchCaptureGeneration: 0
     property int launchWatchdogGeneration: -1
     property bool launchSeguePushCommitted: false
+
+    // Quit preparation is distinct from launch-busy: while the next game's
+    // source is being frozen/grabbed, no launch proxy is visible and no Session
+    // exists yet. Once the grab is accepted, the established early Session is
+    // created and both are retained here while QuitSegue owns the real wait.
+    property bool quitBusy: false
+    property var pendingQuit: null
+    property int quitCaptureGeneration: 0
+    property int quitWatchdogGeneration: -1
+    property bool quitSeguePushCommitted: false
+    property string pendingQuitReturnTarget: ""
+    property var pendingQuitReturnAppId: null
+    property string pendingQuitReturnOrigin: "recent"
+
+    Timer {
+        id: quitCaptureWatchdog
+        interval: Bulan.launchCaptureWatchdogMs
+        onTriggered: {
+            if (root.quitBusy && root.pendingQuit
+                    && root.pendingQuit.captureGeneration
+                       === root.quitWatchdogGeneration) {
+                root.invalidateQuitCapture()
+                root.abortQuitPreparation(
+                            "The next game's artwork capture timed out.")
+            }
+        }
+    }
 
     Timer {
         id: launchCaptureWatchdog
@@ -1076,7 +1096,7 @@ FocusScope {
     }
 
     function beginLaunchTransition(request) {
-        if (root.launchBusy || request === null) {
+        if (root.launchBusy || root.quitBusy || request === null) {
             return
         }
         var sourceIndex = root.sourceIndexForAppId(request.appId)
@@ -1169,12 +1189,38 @@ FocusScope {
         launchTransition.prepare(captureUrl, contract)
     }
 
+    function resumeHeldLaunchAfterQuit() {
+        if (!root.launchBusy || root.pendingLaunch === null
+                || root.pendingLaunch.heldAfterQuit !== true) {
+            return
+        }
+
+        // The prepared Session still names the intended game even if a poll
+        // removed its visible row while quitting. Never resolve a replacement
+        // row; use the honest title-card fallback if identity is no longer in
+        // the retained model.
+        if (root.sourceIndexForAppId(root.pendingLaunch.appId) < 0) {
+            root.frozenLaunchResult = null
+            root.frozenLaunchContract = root.fallbackLaunchContract(
+                        root.pendingLaunch.gameName)
+        }
+        if (root.frozenLaunchContract === null) {
+            root.rollbackLaunch("The prepared launch source was unavailable.")
+            return
+        }
+
+        root.pendingLaunch.heldAfterQuit = false
+        root.prepareLaunchProxy(root.pendingLaunch.preparedCaptureUrl || "",
+                                root.frozenLaunchContract)
+    }
+
     function launchTransitionProxyReady() {
         if (!root.launchBusy || root.pendingLaunch === null) {
             launchTransition.clear()
             return
         }
-        if (root.sourceIndexForAppId(root.pendingLaunch.appId) < 0) {
+        if (root.sourceIndexForAppId(root.pendingLaunch.appId) < 0
+                && root.pendingLaunch.preparedByQuit !== true) {
             root.rollbackLaunch("The selected game disappeared before launch.")
             return
         }
@@ -1242,7 +1288,10 @@ FocusScope {
     function completeProductionLaunch() {
         var request = root.pendingLaunch
         var sourceIndex = request ? root.sourceIndexForAppId(request.appId) : -1
-        if (!request || sourceIndex < 0 || root.appModel === null) {
+        var preparedSession = request && request.preparedSession
+                ? request.preparedSession : null
+        if (!request || (preparedSession === null
+                         && (sourceIndex < 0 || root.appModel === null))) {
             root.rollbackLaunch("The selected game is no longer available.")
             return
         }
@@ -1254,9 +1303,11 @@ FocusScope {
             return
         }
 
-        // This is deliberately after geometry capture and the visual handoff.
-        // createSessionForApp() stamps lastPlayed and can reorder Recent.
-        var session = root.appModel.createSessionForApp(sourceIndex)
+        // Ordinary launches construct here, after their visual handoff.
+        // Quit-and-switch instead supplies the one Session constructed after
+        // source capture but before quitting began; never create a second one.
+        var session = preparedSession !== null
+                ? preparedSession : root.appModel.createSessionForApp(sourceIndex)
         if (session === null || session === undefined) {
             root.rollbackLaunch("The streaming session could not be created.")
             return
@@ -1282,6 +1333,7 @@ FocusScope {
             root.rollbackLaunch("The launch screen could not be pushed.")
             return
         }
+        request.preparedSession = null
         launchTransition.clear()
         // Keep the grab result alive while StreamSegue displays its memory URL.
         // restoreAfterLaunch() releases it only after the retained AppView has
@@ -1306,6 +1358,10 @@ FocusScope {
         launchTransition.clear()
         root.reviewReplayActive = false
         root.launchSeguePushCommitted = false
+        if (root.pendingLaunch && root.pendingLaunch.preparedSession) {
+            root.pendingLaunch.preparedSession = null
+            gc()
+        }
         root.launchBusy = false
         root.pendingLaunch = null
         root.frozenLaunchResult = null
@@ -1332,6 +1388,10 @@ FocusScope {
         launchTransition.clear()
         root.reviewReplayActive = false
         root.launchSeguePushCommitted = false
+        if (root.pendingLaunch && root.pendingLaunch.preparedSession) {
+            root.pendingLaunch.preparedSession = null
+            gc()
+        }
         root.launchBusy = false
         root.pendingLaunch = null
         root.frozenLaunchResult = null
@@ -1383,7 +1443,7 @@ FocusScope {
             console.log("Review mode: launching does nothing on a fake game row.")
             return
         }
-        if (root.launchBusy) {
+        if (root.launchBusy || root.quitBusy) {
             return
         }
         var srcIndex = root.sourceIndexForAppId(appId)
@@ -1399,7 +1459,8 @@ FocusScope {
             // -- emit the signal the quit-and-switch confirmation is wired to
             // instead.
             root.switchGameRequested(appId, origin,
-                                     root.runningGameName, it.gameName)
+                                     root.runningGameName, it.gameName,
+                                     returnTarget === "options" ? "options" : "grid")
             return
         }
         root.beginLaunchTransition({
@@ -1511,7 +1572,11 @@ FocusScope {
         // already owned by this instance; no view is recreated.
         if (root.launchBusy && root.pendingLaunch !== null
                 && !root.reviewReplayActive) {
-            root.restoreAfterLaunch()
+            if (root.pendingLaunch.heldAfterQuit === true) {
+                Qt.callLater(root.resumeHeldLaunchAfterQuit)
+            } else {
+                root.restoreAfterLaunch()
+            }
         }
 
         // Null in review mode -- see createModel().
@@ -1521,6 +1586,13 @@ FocusScope {
 
         root.forceActiveFocus()
         root.attemptDirectLaunch()
+
+        if (root.pendingQuitReturnTarget === "options") {
+            Qt.callLater(root.restorePendingQuitReturn)
+        } else {
+            root.pendingQuitReturnTarget = ""
+            root.pendingQuitReturnAppId = null
+        }
 
         // Review hook: existing options/switch/library cases plus Stage 1's
         // deterministic launch and quit cases. Fake actions run once per launch
@@ -1589,6 +1661,9 @@ FocusScope {
         if (root.launchBusy && !root.launchSeguePushCommitted) {
             root.rollbackLaunch("Launch was interrupted by external navigation.")
         }
+        if (root.quitBusy && !root.quitSeguePushCommitted) {
+            root.abortQuitPreparation("Quit preparation was interrupted by external navigation.")
+        }
         if (gameReviewSettleTimer.running) {
             gameReviewSettleTimer.stop()
             root.pendingGameReviewRoute = null
@@ -1614,7 +1689,7 @@ FocusScope {
     // end of the current pass so this does not fight something mid-teardown.
     //
     onActiveFocusChanged: {
-        if (!root.launchBusy && !activeFocus
+        if (!root.launchBusy && !root.quitBusy && !activeFocus
                 && StackView.status === StackView.Active) {
             Qt.callLater(reclaimFocus)
         }
@@ -1627,7 +1702,7 @@ FocusScope {
     // on -- while snatching focus back off an open popup in the case that does
     // not.
     function reclaimFocus() {
-        if (root.launchBusy) {
+        if (root.launchBusy || root.quitBusy) {
             return
         }
         if (root.StackView.status !== StackView.Active) {
@@ -1647,6 +1722,7 @@ FocusScope {
     // identity problem HostSettingsOverlay solved by re-resolving its host.
     property var optionsAppId: null
     property string optionsOrigin: "recent"
+    property string optionsReturnTarget: "grid"
 
     function openGameOptions(appId, origin) {
         var snap = root.gameSnapshot(appId)
@@ -1655,16 +1731,18 @@ FocusScope {
         }
         root.optionsAppId = appId
         root.optionsOrigin = origin
+        root.optionsReturnTarget = "options"
         gameOptions.showForGame(snap)
     }
 
-    function openSwitchConfirmation(appId, origin) {
+    function openSwitchConfirmation(appId, origin, returnTarget) {
         var snap = root.gameSnapshot(appId)
         if (snap === null) {
             return
         }
         root.optionsAppId = appId
         root.optionsOrigin = origin
+        root.optionsReturnTarget = returnTarget === "options" ? "options" : "grid"
         gameOptions.showSwitchConfirmation(snap)
     }
 
@@ -1732,51 +1810,359 @@ FocusScope {
             }
         } else if (actionId === "quitGame") {
             gameOptions.close()
-            root.quitRunningGame(null, "")
+            root.beginQuitOnly(root.optionsAppId, root.optionsOrigin,
+                               "options", false, "pending", null)
         } else if (actionId === "quitAndSwitch") {
+            var switchAppId = root.optionsAppId
+            var switchOrigin = root.optionsOrigin
+            var switchName = it.gameName
+            var switchReturnTarget = root.optionsReturnTarget
             gameOptions.close()
-            root.quitRunningGame(srcIndex, it.gameName)
+            root.beginQuitAndSwitch(switchAppId, switchOrigin,
+                                    switchName, switchReturnTarget,
+                                    false, "pending", null)
         }
     }
 
-    // Quits the running game, optionally streaming a different one once it has
-    // gone. Reuses upstream's QuitSegue exactly as the old AppView did -- that
-    // component owns the wait and the failure, and rebuilding it is not in this
-    // task.
-    function quitRunningGame(nextSrcIndex, nextName) {
-        if (root.appModel === null) {
+    function invalidateQuitCapture() {
+        quitCaptureWatchdog.stop()
+        root.quitWatchdogGeneration = -1
+        root.quitCaptureGeneration++
+    }
+
+    function rememberQuitReturn(request) {
+        if (!request || request.returnTarget !== "options") {
+            root.pendingQuitReturnTarget = ""
+            root.pendingQuitReturnAppId = null
+            return
+        }
+        root.pendingQuitReturnTarget = "options"
+        root.pendingQuitReturnAppId = request.returnAppId
+        root.pendingQuitReturnOrigin = request.returnOrigin
+    }
+
+    function restorePendingQuitReturn() {
+        if (root.pendingQuitReturnTarget !== "options"
+                || root.StackView.status !== StackView.Active) {
+            return
+        }
+        var returnAppId = root.pendingQuitReturnAppId
+        var returnOrigin = root.pendingQuitReturnOrigin
+        root.pendingQuitReturnTarget = ""
+        root.pendingQuitReturnAppId = null
+        if (root.selectAppById(returnAppId, returnOrigin)) {
+            root.openGameOptions(returnAppId, returnOrigin)
+        }
+    }
+
+    function abortQuitPreparation(reason, restoreOrigin) {
+        if (reason) {
+            console.error(reason)
+        }
+        var request = root.pendingQuit
+        root.invalidateQuitCapture()
+        root.releaseLaunchSourceMotion()
+        if (restoreOrigin !== false) {
+            root.rememberQuitReturn(request)
+        }
+        if (request && request.preparedSession) {
+            request.preparedSession = null
+            gc()
+        }
+        root.pendingQuit = null
+        root.quitSeguePushCommitted = false
+        root.quitBusy = false
+        Qt.callLater(function() {
+            root.restorePendingQuitReturn()
+            root.reclaimFocus()
+        })
+    }
+
+    function beginQuitOnly(appId, origin, returnTarget,
+                           review, reviewOutcome, reviewRoute) {
+        if (root.launchBusy || root.quitBusy) {
+            return
+        }
+        var snapshot = root.gameSnapshot(appId)
+        if (snapshot === null || (!review && root.appModel === null)) {
+            root.reclaimFocus()
+            return
+        }
+
+        root.quitBusy = true
+        root.quitSeguePushCommitted = false
+        root.pendingQuit = {
+            switching: false,
+            appName: snapshot.gameName,
+            returnTarget: returnTarget === "options" ? "options" : "grid",
+            returnAppId: appId,
+            returnOrigin: origin,
+            review: review === true,
+            reviewOutcome: reviewOutcome,
+            reviewRoute: reviewRoute,
+            preparedSession: null,
+            captureGeneration: -1
+        }
+        root.pushPreparedQuitSegue()
+    }
+
+    function beginQuitAndSwitch(appId, origin, nextName, returnTarget,
+                                review, reviewOutcome, reviewRoute) {
+        if (root.launchBusy || root.quitBusy) {
+            return
+        }
+        var sourceIndex = root.sourceIndexForAppId(appId)
+        if (sourceIndex < 0 || (!review && root.appModel === null)) {
+            root.reclaimFocus()
+            return
+        }
+        var item = modelMirror.itemAt(sourceIndex)
+        if (!item || !root.sameAppId(item.appId, appId)) {
+            root.reclaimFocus()
+            return
+        }
+
+        root.selectAppById(appId, origin)
+        root.quitBusy = true
+        root.quitSeguePushCommitted = false
+        root.pendingQuit = {
+            switching: true,
+            appId: appId,
+            gameName: nextName || item.gameName,
+            appName: root.runningGameName,
+            origin: origin,
+            returnTarget: returnTarget === "options" ? "options" : "grid",
+            returnAppId: appId,
+            returnOrigin: origin,
+            review: review === true,
+            reviewOutcome: reviewOutcome,
+            reviewRoute: reviewRoute,
+            sourceAvailable: !reviewRoute || reviewRoute.sourceAvailable !== false,
+            sourceIndexAtCapture: sourceIndex,
+            sourceItemAtCapture: null,
+            captureResult: null,
+            captureUrl: "",
+            captureContract: null,
+            preparedSession: null,
+            captureGeneration: -1
+        }
+
+        var sourceMotionFrozen = root.pendingQuit.sourceAvailable
+                && root.freezeLaunchSourceMotion(appId, origin)
+        var source = root.sourceContractForApp(
+                    appId, origin, sourceMotionFrozen, root.pendingQuit.gameName)
+        root.pendingQuit.captureContract = source.contract
+
+        if (source.contract.fallback) {
+            root.releaseLaunchSourceMotion()
+            root.finishQuitSwitchCapture(null, source.contract)
+            return
+        }
+
+        var expectedTile = root.sourceTileForAppId(appId, origin)
+        var captureItem = source.item
+        if (!expectedTile || captureItem !== expectedTile.launchCaptureItem
+                || !root.sameAppId(expectedTile.appId, appId)) {
+            root.releaseLaunchSourceMotion()
+            root.finishQuitSwitchCapture(
+                        null, root.fallbackLaunchContract(root.pendingQuit.gameName))
+            return
+        }
+
+        root.pendingQuit.sourceItemAtCapture = captureItem
+        var generation = ++root.quitCaptureGeneration
+        root.pendingQuit.captureGeneration = generation
+        root.quitWatchdogGeneration = generation
+        var captureSize = Qt.size(Math.ceil(captureItem.width),
+                                  Math.ceil(captureItem.height))
+        quitCaptureWatchdog.restart()
+        var accepted = captureItem.grabToImage(function(result) {
+            root.acceptQuitSwitchCapture(result, source.contract, generation,
+                                         expectedTile, appId)
+        }, captureSize)
+        if (!accepted) {
+            root.invalidateQuitCapture()
+            root.abortQuitPreparation(
+                        "The next game's artwork could not be captured.")
+        }
+    }
+
+    function acceptQuitSwitchCapture(result, contract, generation,
+                                     expectedTile, expectedAppId) {
+        if (!root.quitBusy || root.pendingQuit === null
+                || generation !== root.quitWatchdogGeneration
+                || generation !== root.pendingQuit.captureGeneration) {
+            return
+        }
+        root.invalidateQuitCapture()
+
+        // Re-resolve by app ID after the asynchronous grab. A delegate reused
+        // for another row is never accepted as the intended game.
+        var sourceIndex = root.sourceIndexForAppId(expectedAppId)
+        if (sourceIndex < 0) {
+            root.abortQuitPreparation(
+                        "The next game disappeared before quit preparation completed.")
+            return
+        }
+        var currentTile = root.sourceTileForAppId(expectedAppId,
+                                                  root.pendingQuit.origin)
+        if (!expectedTile || currentTile !== expectedTile
+                || !root.sameAppId(expectedTile.appId, expectedAppId)
+                || !root.sameAppId(currentTile.appId, expectedAppId)
+                || !result || !result.url) {
+            root.releaseLaunchSourceMotion()
+            root.pendingQuit.sourceItemAtCapture = null
+            root.finishQuitSwitchCapture(
+                        null, root.fallbackLaunchContract(root.pendingQuit.gameName))
+            return
+        }
+
+        root.releaseLaunchSourceMotion()
+        root.pendingQuit.sourceItemAtCapture = null
+        root.finishQuitSwitchCapture(result, contract)
+    }
+
+    function finishQuitSwitchCapture(result, contract) {
+        if (!root.quitBusy || root.pendingQuit === null) {
+            return
+        }
+        var request = root.pendingQuit
+        var sourceIndex = root.sourceIndexForAppId(request.appId)
+        if (sourceIndex < 0) {
+            root.abortQuitPreparation(
+                        "The next game is no longer available for quit-and-switch.")
+            return
+        }
+        request.captureResult = result
+        request.captureUrl = result && result.url ? String(result.url) : ""
+        request.captureContract = contract
+
+        // This construction intentionally remains early: capture is complete,
+        // then createSessionForApp() stamps lastPlayed before the quit begins.
+        // The Session is only stored; QuitSegue cannot start it.
+        if (!request.review) {
+            request.preparedSession = root.appModel.createSessionForApp(sourceIndex)
+            if (request.preparedSession === null
+                    || request.preparedSession === undefined) {
+                root.abortQuitPreparation(
+                            "The next streaming session could not be prepared.")
+                return
+            }
+        }
+        root.pushPreparedQuitSegue()
+    }
+
+    function pushPreparedQuitSegue() {
+        var request = root.pendingQuit
+        if (!root.quitBusy || request === null) {
             return
         }
         var component = Qt.createComponent("QuitSegue.qml")
         if (component.status !== Component.Ready) {
             console.error("QuitSegue.qml failed to load:", component.errorString())
+            root.abortQuitPreparation("The quit screen could not be loaded.")
             return
         }
         var params = {
-            "appName": root.runningGameName,
-            "quitRunningAppFn": function() { root.appModel.quitRunningApp() }
-        }
-        if (nextSrcIndex !== null && nextSrcIndex >= 0) {
-            params.nextAppName = nextName
-            params.nextSession = root.appModel.createSessionForApp(nextSrcIndex)
-        } else {
-            params.nextAppName = null
-            params.nextSession = null
+            "appName": request.appName,
+            "nextAppName": request.switching ? request.gameName : "",
+            "returnTarget": request.returnTarget,
+            "reviewMode": request.review,
+            "reviewOutcome": request.reviewOutcome,
+            "quitRunningAppFn": request.review ? null : function() {
+                if (root.appModel !== null) root.appModel.quitRunningApp()
+            },
+            "successFn": function() { root.quitCompletedSuccessfully() },
+            "failureReturnFn": function() { root.quitFailureDismissed() }
         }
         var segue = component.createObject(stackView, params)
         if (segue === null) {
             console.error("QuitSegue.qml loaded but could not be created")
+            root.abortQuitPreparation("The quit screen could not be created.")
             return
         }
-        stackView.push(segue)
+        root.quitSeguePushCommitted = true
+        var pushed = null
+        try {
+            pushed = stackView.push(segue)
+        } catch (error) {
+            console.error("QuitSegue.qml push failed:", error)
+        }
+        if (pushed === null || pushed === undefined) {
+            root.quitSeguePushCommitted = false
+            segue.destroy()
+            root.abortQuitPreparation("The quit screen could not be pushed.")
+        }
+    }
+
+    function quitCompletedSuccessfully() {
+        var request = root.pendingQuit
+        if (!root.quitBusy || request === null) {
+            return
+        }
+        root.invalidateQuitCapture()
+        root.releaseLaunchSourceMotion()
+        root.quitSeguePushCommitted = false
+        root.quitBusy = false
+
+        if (!request.switching) {
+            root.pendingQuit = null
+            return
+        }
+
+        if (request.review) {
+            root.setFakeRunningIndex(-1)
+        }
+        root.launchBusy = true
+        root.launchSeguePushCommitted = false
+        root.pendingLaunch = {
+            appId: request.appId,
+            gameName: request.gameName,
+            origin: request.origin,
+            isResume: false,
+            sourceAvailable: !request.captureContract.fallback,
+            review: request.review,
+            reviewRoute: request.reviewRoute,
+            returnTarget: request.returnTarget,
+            restoreOptions: false,
+            sourceHidden: false,
+            sourceMotionFrozen: false,
+            captureGeneration: -1,
+            preparedSession: request.preparedSession,
+            preparedCaptureUrl: request.captureUrl,
+            preparedByQuit: true,
+            heldAfterQuit: true
+        }
+        root.frozenLaunchResult = request.captureResult
+        root.frozenLaunchContract = request.captureContract
+        request.preparedSession = null
+        root.pendingQuit = null
+    }
+
+    function quitFailureDismissed() {
+        var request = root.pendingQuit
+        if (!root.quitBusy || request === null) {
+            return
+        }
+        root.rememberQuitReturn(request)
+        root.invalidateQuitCapture()
+        root.releaseLaunchSourceMotion()
+        if (request.preparedSession) {
+            request.preparedSession = null
+            gc()
+        }
+        root.pendingQuit = null
+        root.quitSeguePushCommitted = false
+        root.quitBusy = false
     }
 
     onOptionsRequested: function(appId, origin) {
         root.openGameOptions(appId, origin)
     }
 
-    onSwitchGameRequested: function(appId, origin, runningName, nextName) {
-        root.openSwitchConfirmation(appId, origin)
+    onSwitchGameRequested: function(appId, origin, runningName, nextName,
+                                    returnTarget) {
+        root.openSwitchConfirmation(appId, origin, returnTarget)
     }
 
     // --- screen --------------------------------------------------------------
@@ -2383,7 +2769,7 @@ FocusScope {
     // onDraggingChanged stops it outright the instant a drag begins, so a
     // manual drag always wins over a focus-follow scroll still in flight.
     function ensureLibraryFocusVisible() {
-        if (root.launchBusy || root.gameCount === 0) {
+        if (root.launchBusy || root.quitBusy || root.gameCount === 0) {
             return
         }
         // Only while the Library is the tab on screen.
@@ -2646,10 +3032,11 @@ FocusScope {
     // --- input ---------------------------------------------------------------
     // Following SPEC-host-carousel.md's table and HostCarousel.qml's handlers.
     function consumeLaunchInput() {
-        if (!root.launchBusy) {
+        if (!root.launchBusy && !root.quitBusy) {
             return false
         }
-        if (launchTransition.running && launchTransition.visible) {
+        if (root.launchBusy && launchTransition.running
+                && launchTransition.visible) {
             launchTransition.completeImmediately()
         }
         return true
@@ -2811,7 +3198,7 @@ FocusScope {
     // receives presses during motion; this catches the brief capture interval.
     MouseArea {
         anchors.fill: parent
-        enabled: root.launchBusy
+        enabled: root.launchBusy || root.quitBusy
         onPressed: root.consumeLaunchInput()
     }
 }
