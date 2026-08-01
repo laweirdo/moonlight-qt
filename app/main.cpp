@@ -1094,6 +1094,20 @@ int main(int argc, char *argv[])
         // without pairing or unpairing real machines. Inert unless set.
         engine.rootContext()->setContextProperty("fakeHosts",
                                                  QString::fromUtf8(qgetenv("MOONLIGHT_FAKE_HOSTS")));
+        // Debug hook: MOONLIGHT_FAKE_GAMES=<preset> substitutes a fixed game
+        // list into AppView, the same way MOONLIGHT_FAKE_HOSTS substitutes a
+        // fixed host list into the carousel -- a fake host cannot open a real
+        // game list (see HostCarousel.actConfirm()'s review-mode guard), so
+        // without this the game grid could not be reviewed at all before the
+        // client sees it. Inert unless set.
+        engine.rootContext()->setContextProperty("fakeGames",
+                                                 QString::fromUtf8(qgetenv("MOONLIGHT_FAKE_GAMES")));
+        // Companion to the above: MOONLIGHT_FAKE_GAMES_ART points at a
+        // directory of images (1.jpg, 2.jpg, ...) so fake games can carry real
+        // box art during review instead of always falling back. Empty unless
+        // set, in which case fake art stays empty too.
+        engine.rootContext()->setContextProperty("fakeGamesArtDir",
+                                                 QString::fromUtf8(qgetenv("MOONLIGHT_FAKE_GAMES_ART")));
         // Review hook: opens the host-settings overlay after a fake-host
         // carousel settles, so controller-only UI can be captured without
         // sending synthetic input. Inert unless explicitly enabled.

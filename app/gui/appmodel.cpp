@@ -44,6 +44,28 @@ Session* AppModel::createSessionForApp(int appIndex)
     Q_ASSERT(appIndex < m_VisibleApps.count());
     NvApp app = m_VisibleApps.at(appIndex);
 
+    QDateTime now = QDateTime::currentDateTime();
+
+    {
+        QWriteLocker lock(&m_Computer->lock);
+
+        for (NvApp& realApp : m_Computer->appList) {
+            if (realApp.id == app.id) {
+                realApp.lastPlayed = now;
+                break;
+            }
+        }
+    }
+
+    m_ComputerManager->clientSideAttributeUpdated(m_Computer);
+
+    // Keep the model's copy consistent immediately rather than waiting for
+    // the next poll to pick up the change from m_Computer->appList.
+    m_VisibleApps[appIndex].lastPlayed = now;
+    emit dataChanged(createIndex(appIndex, 0),
+                     createIndex(appIndex, 0),
+                     QVector<int>() << LastPlayedRole);
+
     return new Session(m_Computer, app);
 }
 
@@ -93,6 +115,8 @@ QVariant AppModel::data(const QModelIndex &index, int role) const
         return app.directLaunch;
     case AppCollectorGameRole:
         return app.isAppCollectorGame;
+    case LastPlayedRole:
+        return app.lastPlayed;
     default:
         return QVariant();
     }
@@ -109,6 +133,7 @@ QHash<int, QByteArray> AppModel::roleNames() const
     names[AppIdRole] = "appid";
     names[DirectLaunchRole] = "directLaunch";
     names[AppCollectorGameRole] = "appCollectorGame";
+    names[LastPlayedRole] = "lastPlayed";
 
     return names;
 }

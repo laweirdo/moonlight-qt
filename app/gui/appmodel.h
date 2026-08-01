@@ -19,6 +19,10 @@ class AppModel : public QAbstractListModel
         AppIdRole,
         DirectLaunchRole,
         AppCollectorGameRole,
+        // Appended at the end rather than inserted in a "natural" spot, because
+        // this enum is an offset from Qt::UserRole. Reordering it would silently
+        // renumber every role after the insertion point for existing consumers.
+        LastPlayedRole,
     };
 
 public:

@@ -256,4 +256,24 @@ QtObject {
     // radial glow is 3-6%; a focus halo is the foreground case of the same
     // effect and carries more weight, matching the existing card focus bloom.
     readonly property real focusBloomOpacity: 0.22
+
+    // --- Game grid (PROPOSED -- pending client approval on real hardware) ----
+    // Measured off the client's mockups for the game-grid task, normalised to
+    // 1280x800, following the precedent of hostTileSpread, hostTileLabelGap and
+    // hostTileBusyDotGap: screen-specific measurements, not steps on the
+    // generic spacing scale. None of these is a settled value the way
+    // motionFocusMs's 180 became one after the 28 July review -- these have not
+    // yet been seen on a real screen at all.
+
+    // Library tile width, measured off the client's mockup at 1280x800.
+    readonly property int  gameTileWidth:       216
+    // 3:4 portrait against the above; matches real GFE box-art aspect.
+    readonly property int  gameTileHeight:      288
+    // Column count, from the mockup.
+    readonly property int  gameGridColumns:     5
+    // Column gap: 2*layoutScreenMarginX + 5*216 + 4*26 = exactly 1280, so five
+    // tiles fit the mockup's grid with no partial column at either edge.
+    readonly property int  gameGridGap:         26
+    // The small host disc in the header, measured off the mockup.
+    readonly property int  gameHeaderAvatarSize: 40
 }

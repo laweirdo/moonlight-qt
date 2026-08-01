@@ -6,6 +6,7 @@
 #define SER_APPCOLLECTOR "appcollector"
 #define SER_HIDDEN "hidden"
 #define SER_DIRECTLAUNCH "directlaunch"
+#define SER_LASTPLAYED "lastplayed"
 
 NvApp::NvApp(QSettings& settings)
 {
@@ -15,6 +16,7 @@ NvApp::NvApp(QSettings& settings)
     isAppCollectorGame = settings.value(SER_APPCOLLECTOR).toBool();
     hidden = settings.value(SER_HIDDEN).toBool();
     directLaunch = settings.value(SER_DIRECTLAUNCH).toBool();
+    lastPlayed = QDateTime::fromString(settings.value(SER_LASTPLAYED).toString(), Qt::ISODate);
 }
 
 void NvApp::serialize(QSettings& settings) const
@@ -25,4 +27,5 @@ void NvApp::serialize(QSettings& settings) const
     settings.setValue(SER_APPCOLLECTOR, isAppCollectorGame);
     settings.setValue(SER_HIDDEN, hidden);
     settings.setValue(SER_DIRECTLAUNCH, directLaunch);
+    settings.setValue(SER_LASTPLAYED, lastPlayed.toString(Qt::ISODate));
 }
