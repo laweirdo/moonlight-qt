@@ -197,6 +197,31 @@ ApplicationWindow {
         // switchable there.
         background: Atmosphere {}
 
+        // Backstop for upstream's toolbar appearing on a Bulan screen.
+        //
+        // Toolbar visibility is imperative all over this application: each
+        // screen writes toolBar.visible in its own onActivated or
+        // onDeactivating. That works while every screen agrees, and it stopped
+        // working when Bulan screens arrived, because upstream screens hand the
+        // toolbar back on the way out on the assumption that whatever is
+        // underneath wants it. StreamSegue and QuitSegue both do exactly that,
+        // and both of them sit on top of the game grid, which never wants it.
+        //
+        // Rather than rewrite every upstream screen's toolbar handling -- which
+        // would reach well past this task -- a Bulan screen declares itself with
+        // `bulanScreen`, and this runs after the push or pop has settled and
+        // takes the toolbar back off. callLater is what makes it deterministic:
+        // it runs at the end of the current pass, after both the outgoing
+        // screen's onDeactivating and the incoming screen's onActivated,
+        // whichever order those two happen to fire in. Reasoning about that
+        // order is exactly what made the flash intermittent to describe.
+        function hideToolBarOnBulanScreen() {
+            if (stackView.currentItem &&
+                    stackView.currentItem.bulanScreen === true) {
+                toolBar.visible = false
+            }
+        }
+
         Component.onCompleted: {
             // Perform our early initialization before constructing
             // the initial view and pushing it to the StackView
@@ -209,6 +234,7 @@ ApplicationWindow {
             if (currentItem) {
                 currentItem.forceActiveFocus()
             }
+            Qt.callLater(hideToolBarOnBulanScreen)
         }
 
         Keys.onEscapePressed: {

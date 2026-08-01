@@ -107,9 +107,10 @@ Remaining work, in order:
    tile-level busy state shared with waking (Phase D's *Waking PC waiting
    overlay*, pulled forward — see below). Durable design and the limits of that
    review are in `SPEC-host-carousel.md`. No Deck validation yet.
-2. ~~**Game grid** — Recent and Library views.~~ **Built 1 August 2026 on the
-   `game-grid` branch, awaiting client review.** Durable design in
-   `SPEC-game-grid.md`. Three things about it are worth carrying forward:
+2. ~~**Game grid** — Recent and Library views.~~ **Done 1 August 2026**, after a
+   client review on the Windows review station that produced four changes and
+   then the merge. Durable design in `SPEC-game-grid.md`. No Deck validation.
+   Three things about it are worth carrying forward:
    - The app now records **when each game was last played**, per host, so
      Recent has something real to sort by. That is an additive client-side
      attribute on `NvApp`, following `hidden` and `directLaunch`.

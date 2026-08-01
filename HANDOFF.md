@@ -11,15 +11,21 @@ snapshot.
 
 | Item | State |
 |---|---|
-| Integration branch | `bulan` at `6712ac83`. **Unchanged by this work.** |
-| Task branch | `game-grid`, cut from `bulan` at `6712ac83`. **Not merged. Not pushed. Not deleted.** |
-| Remote | `origin` only, the client's fork. Nothing has been pushed for this task |
-| Active task | **`TASK-BRIEF.md`, the game grid.** Built through stage 4; the client has not yet accepted it |
+| Integration branch | `bulan`, with the game grid merged and pushed to `origin/bulan` |
+| Task branch | `game-grid`, merged at the client's instruction and deleted |
+| Remote | `origin` only, the client's fork. Never pushed to upstream Moonlight |
+| Active task | **None.** `TASK-BRIEF.md` was removed on completion |
 | Open defects | None recorded in `BUGS.md` |
 
-**The client has approved stages 1 and 2 and instructed the work to continue
-through the remaining stages. They have not seen stages 3, 4 or 5.** Nothing on
-this branch has been driven with a hardware gamepad, by anyone.
+**The client drove the deployed review build on 1 August 2026** against the real
+`Steambox` library, reported four faults, and all four were fixed and merged in
+the same session — the running-game title block, Recent showing only three
+games, the typeface changing through focus, and upstream's toolbar flashing
+between screens. `SPEC-game-grid.md` carries each fix and its reasoning.
+
+**That review was the first time any of this was driven by a person rather than
+photographed.** It was not an item-by-item sign-off, and it happened on the
+Windows review station, not a Deck.
 
 The next objective after acceptance is `ROADMAP.md`'s Phase B item 3, game
 detail and launch — and the two Phase B gaps the grid raised, recorded there.

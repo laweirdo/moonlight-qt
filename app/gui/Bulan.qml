@@ -313,10 +313,19 @@ QtObject {
     // at 0.64 reads as a different object rather than the same one further away.
     readonly property real gameRecentNeighbourScale: 0.70
 
-    // Focused centre to neighbour centre. Leaves roughly 65px of clear ground
-    // between the focused edge and the neighbour edge -- the same breathing room
-    // hostTileSpread was chosen for, scaled to this tile.
-    readonly property int  gameRecentSpread:         290
+    // Focused centre to neighbour centre.
+    //
+    // Tightened from 290 on the client's instruction of 1 August 2026: Recent
+    // was showing three games however wide the screen was, and they asked it to
+    // expose as many as the space and the spacing permit. At 290 a fourth and
+    // fifth tile only fit by hanging over the screen edge; at 250, five sit
+    // whole inside layoutScreenMarginX at 1280 wide, with about 32px of clear
+    // ground between the focused tile and its neighbour.
+    //
+    // Closer than the ~65px this started at, and closer than hostTileSpread's
+    // equivalent on the carousel. That is the trade the instruction asks for --
+    // seeing more of the library beats air around the selected game.
+    readonly property int  gameRecentSpread:         250
 
     // Clear space under the focused tile before its title block.
     readonly property int  gameRecentLabelGap:        16

@@ -386,6 +386,61 @@ Existing carousel hooks (`MOONLIGHT_FAKE_HOSTS`, `MOONLIGHT_INITIAL_VIEW`,
 
 ---
 
+## Client review, 1 August 2026 — four changes
+
+The client drove the deployed review build against the real `Steambox` library
+and reported four faults. All four are fixed.
+
+**1. The focused game's title block broke on a running game.** `Running` was
+drawn in a `Row` beside a much larger title, and a `Row` aligns tops, so the
+smaller word rode up near cap height; centring the *pair* also dragged the
+title off-centre from its own artwork. `Running` now shares the title's
+baseline, and the title stays centred on the tile with `Running` hanging off
+its right-hand end. The title is bounded and elides — it previously carried
+`elide` with no width, which does nothing.
+
+**2. Recent showed three games however wide the screen was.** The ±2 slot clamp
+was copied from `HostCarousel.qml`, where three circular tiles is the whole
+design, and it was wrong here. The visible radius is now computed from the
+view's width, the spread and the neighbour's width, and only counts a slot
+whose tile lands **whole** inside `layoutScreenMarginX` — the first attempt
+counted slots whose centre fitted and sliced the outermost tile in half against
+the window edge. `gameRecentSpread` tightened from 290 to 250 so five tiles fit
+at 1280 rather than three. **Accepted evolution:** about 32px of clear ground
+between the focused tile and its neighbour, against the ~65px it started with.
+Seeing more of the library beats air around the selection.
+
+**3. The typeface changed as a game scrolled through focus.** The focused title
+was `familyDisplay` and the neighbours' `familyUi`, as two elements swapped by
+visibility. `HostTile.qml` had already met and settled this: *one text that
+grows into the other cannot change typeface on the way, so the branded face
+wins.* There is now one title per tile, always `familyDisplay`, with size and
+colour interpolated on a `focusAmount` animated on the same clock as the tile's
+travel. Secondary lines stay `familyUi`, matching `HostTile`'s status lines.
+
+**4. Upstream's toolbar flashed between the host carousel and the grid.**
+Toolbar visibility is imperative across this application — each screen writes
+`toolBar.visible` in its own activation handlers. That worked while every
+screen agreed, and stopped working once Bulan screens arrived: the carousel
+handed the toolbar back on the way out, the grid took it away on the way in,
+and the frames between the two handlers drew it.
+
+Neither Bulan screen restores it any more. Screens that genuinely want the
+toolbar already turn it on themselves. The remaining case is an **upstream**
+screen handing it back to a Bulan screen underneath — `StreamSegue` and
+`QuitSegue` both do that, and both sit on top of the game grid — so a Bulan
+screen declares `bulanScreen: true` and `main.qml` takes the toolbar off after
+the push or pop has settled. `Qt.callLater` is what makes it deterministic: it
+runs after both handlers, whichever order they fire in. Reasoning about that
+order is what made the fault awkward to describe in the first place.
+
+**Not verified:** the transition itself cannot be photographed — a screenshot
+hook grabs a settled frame, and the flash is the frames in between. The code
+path is deterministic by construction; whether the flash is gone needs an eye
+on it.
+
+---
+
 ## Client review outcome
 
 Not yet held. This file is written at the close of stage 4, before stage 5's

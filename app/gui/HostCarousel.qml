@@ -813,9 +813,19 @@ FocusScope {
         }
     }
 
-    StackView.onDeactivating: {
-        toolBar.visible = true
-    }
+    // Deliberately does NOT restore the toolbar.
+    //
+    // It used to, and that is what made upstream's toolbar flash across the
+    // screen every time you opened a host's games: this screen set it visible
+    // on the way out, the game grid set it hidden on the way in, and the frames
+    // between the two handlers drew it. Both screens are Bulan screens and
+    // neither ever wants it, so handing it back and forth was always a fiction.
+    //
+    // Every screen that genuinely wants the toolbar turns it on in its own
+    // onActivated -- SettingsView and PcView both do. main.qml carries the
+    // backstop for the reverse case, where an upstream screen hands the toolbar
+    // back to a Bulan screen that never asked for it; see `bulanScreen` there.
+    readonly property bool bulanScreen: true
 
     // Focus recovery.
     //

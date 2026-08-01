@@ -668,8 +668,12 @@ FocusScope {
 
     property bool gameReviewOpened: false
 
+    // Deliberately does NOT restore the toolbar -- see the matching note in
+    // HostCarousel.qml. Handing upstream's toolbar back on the way out is what
+    // made it flash between the host carousel and this screen.
+    readonly property bool bulanScreen: true
+
     StackView.onDeactivating: {
-        toolBar.visible = true
         if (appModel !== null) {
             appModel.computerLost.disconnect(computerLost)
         }
@@ -1062,6 +1066,40 @@ FocusScope {
             Bulan.gameRecentTileHeight * Bulan.motionFocusScale / 2,
             (height - labelReserve) / 2)
 
+        // How many neighbour slots fit on each side of the focused tile,
+        // worked out from the space actually on screen rather than the fixed
+        // ±2 this was copied from. That clamp is right for HostCarousel.qml,
+        // where three circular host tiles is the whole design; it is wrong
+        // here -- the client's instruction is that Recent shows as many
+        // games as the screen width and the spacing permit.
+        //
+        // One slot's worth of screen half-width divided by the spread
+        // between slot centres gives how many whole steps fit from the
+        // centre to the edge. Floors rather than rounds, so a slot only
+        // counts as visible if it genuinely fits; clamped to a minimum of 1
+        // so there is always at least one neighbour each side even on a
+        // narrow window.
+        // A slot counts as visible only if the WHOLE tile lands inside the
+        // screen margin. Dividing the bare half-width by the spread counted a
+        // slot whose centre fits but whose outer half hangs over the edge, and
+        // the client saw exactly that: the last game on each side sliced in
+        // half by the window. A tile cut by the screen edge reads as a bug
+        // rather than as "there is more this way".
+        //
+        // So the half-width gives up the screen margin and half a neighbour
+        // before the division, and floors -- a partial step is not a slot.
+        readonly property int recentVisibleRadius:
+            Math.max(1, Math.floor(
+                (width / 2 - Bulan.layoutScreenMarginX
+                 - (Bulan.gameRecentTileWidth * Bulan.gameRecentNeighbourScale) / 2)
+                / Bulan.gameRecentSpread))
+
+        // One extra slot beyond what is visible, kept as an off-screen
+        // parking slot -- see HostCarousel.qml's own `slot` comment for why:
+        // a tile leaving needs somewhere to travel to and fade, rather than
+        // being cut because it had nowhere further to go.
+        readonly property int recentParkSlot: recentVisibleRadius + 1
+
         Repeater {
             model: root.gameModel
 
@@ -1071,13 +1109,16 @@ FocusScope {
                 readonly property int rank:
                     root.recentRankBySourceIndex[index] !== undefined
                         ? root.recentRankBySourceIndex[index] : index
-                // Clamped to two slots either side, exactly like
-                // HostTile's `slot` in HostCarousel.qml -- distance 2 is
+                // Clamped to recentView.recentParkSlot either side -- computed
+                // from the screen width, not the fixed ±2 this was copied
+                // from. See recentView.recentVisibleRadius/recentParkSlot
+                // above for why and how many that is. Beyond the park slot is
                 // off-screen and invisible, which is what gives a departing
                 // tile somewhere to go rather than being cut.
                 readonly property int slot: {
                     var d = rank - root.recentFocusedIndex
-                    return d < -2 ? -2 : (d > 2 ? 2 : d)
+                    var park = recentView.recentParkSlot
+                    return d < -park ? -park : (d > park ? park : d)
                 }
                 readonly property int distance: slot < 0 ? -slot : slot
                 readonly property bool isFocused: rank === root.recentFocusedIndex
@@ -1087,6 +1128,26 @@ FocusScope {
                 property real tileScale:
                     distance === 0 ? 1.0 : Bulan.gameRecentNeighbourScale
 
+                // 0 while a neighbour, 1 while focused, animated below on the
+                // same clock as the tile's travel -- HostCarousel.qml's
+                // HostTile.focusAmount exactly. Everything that differs
+                // between the neighbour and focused title presentation
+                // interpolates on this instead of the title element being
+                // swapped for another one; see the label block below.
+                property real focusAmount: distance === 0 ? 1.0 : 0.0
+
+                // Linear blend between two colours, copied from
+                // HostTile.qml's mix() -- QML interpolates colours in
+                // animations but gives no expression for it, and the title
+                // needs to follow focusAmount rather than run a colour
+                // animation of its own.
+                function mix(a, b, f) {
+                    return Qt.rgba(a.r + (b.r - a.r) * f,
+                                   a.g + (b.g - a.g) * f,
+                                   a.b + (b.b - a.b) * f,
+                                   a.a + (b.a - a.a) * f)
+                }
+
                 width: Bulan.gameRecentTileWidth
                 height: Bulan.gameRecentTileHeight
 
@@ -1094,7 +1155,13 @@ FocusScope {
                 y: recentView.focusCenterY - height / 2
 
                 z: distance === 0 ? 2 : 0
-                opacity: distance === 0 ? 1.0 : (distance === 1 ? 0.5 : 0.0)
+                // Every non-focused VISIBLE tile stays at the same dimmed
+                // opacity the design already used (0.5) -- no per-distance
+                // gradient, which is a visual decision nobody has taken.
+                // "Visible" now means "within recentVisibleRadius" rather
+                // than the old fixed distance === 1.
+                opacity: distance === 0 ? 1.0
+                       : (distance <= recentView.recentVisibleRadius ? 0.5 : 0.0)
                 visible: opacity > 0.01
 
                 // One clock for the whole move, copying HostCarousel.qml's
@@ -1128,6 +1195,18 @@ FocusScope {
                     }
                 }
                 Behavior on opacity {
+                    enabled: recentSlot.settled
+                    NumberAnimation {
+                        duration: Bulan.motionFocusMs
+                        easing.type: Easing.InOutQuad
+                    }
+                }
+                // The ONE place focusAmount is animated. The title's pixel
+                // size and colour below read this value directly, with no
+                // Behavior of their own -- giving them one would be
+                // animating an animation, the fault HostTile.qml's
+                // interactionScale comment describes.
+                Behavior on focusAmount {
                     enabled: recentSlot.settled
                     NumberAnimation {
                         duration: Bulan.motionFocusMs
@@ -1182,21 +1261,66 @@ FocusScope {
                        + (recentSlot.isFocused ? Bulan.gameRecentLabelGap : Bulan.spaceMd)
                     spacing: Bulan.space2xs
 
-                    Row {
-                        visible: recentSlot.isFocused
+                    // ONE title element, always Bulan.familyDisplay, never
+                    // swapped for a second one drawn in Bulan.familyUi --
+                    // HostTile.qml's labelBlock solved exactly this jarring
+                    // typeface-swap-on-scroll defect already, and its own
+                    // comment gives the reason: a text that grows into
+                    // another cannot change typeface on the way, so the
+                    // branded face wins throughout. Pixel size, colour and
+                    // the bound it elides against all interpolate on
+                    // recentSlot.focusAmount instead.
+                    //
+                    // The width bound is itself interpolated: neighbourScale
+                    // of the tile width at focusAmount 0, matching what the
+                    // narrower neighbour tile used to bound its own separate
+                    // title to, and the full gameRecentTileWidth (256, the
+                    // tile's own accepted width) at focusAmount 1 -- which is
+                    // also the bound the title needs while focused, so the
+                    // pair with "Running" reads as centred under the tile
+                    // per the mockup rather than drifting off it.
+                    Item {
+                        id: titleRow
                         anchors.horizontalCenter: parent.horizontalCenter
-                        spacing: Bulan.spaceXs
+                        width: Bulan.gameRecentTileWidth
+                               * (Bulan.gameRecentNeighbourScale
+                                  + (1 - Bulan.gameRecentNeighbourScale) * recentSlot.focusAmount)
+                        height: titleText.height
 
                         Text {
+                            id: titleText
+                            anchors.horizontalCenter: parent.horizontalCenter
+                            width: parent.width
+                            horizontalAlignment: Text.AlignHCenter
                             text: model.name
-                            color: Bulan.textPrimary
+                            color: recentSlot.mix(Bulan.textSecondary, Bulan.textPrimary,
+                                                   recentSlot.focusAmount)
                             font.family: Bulan.familyDisplay
-                            font.pixelSize: Bulan.sizeTitleLg
+                            font.pixelSize: Bulan.sizeLabel
+                                            + (Bulan.sizeTitleLg - Bulan.sizeLabel) * recentSlot.focusAmount
                             elide: Text.ElideRight
                         }
 
+                        // Baseline-aligned against the title -- a Row aligns
+                        // its children's TOPS, which is why "Running" used to
+                        // ride high above the title's own baseline at a
+                        // smaller point size. This is a sibling anchored
+                        // directly to titleText's baseline instead.
+                        //
+                        // Positioned off titleText's actual PAINTED width,
+                        // not its bound width: the title elides/centres
+                        // within a fixed-width box, so "Running" has to hang
+                        // off the true right-hand edge of the glyphs, not the
+                        // edge of the box. Centring the pair as a whole (the
+                        // old Row) shifted the title left by half of this
+                        // label's width; anchoring it as a sibling like this
+                        // leaves the title itself centred on the tile.
                         Text {
-                            visible: model.running
+                            id: runningLabel
+                            visible: recentSlot.isFocused && model.running
+                            anchors.baseline: titleText.baseline
+                            x: titleText.x + titleText.width / 2
+                               + titleText.paintedWidth / 2 + Bulan.spaceXs
                             text: qsTr("Running")
                             color: Bulan.statusSuccess
                             font.family: Bulan.familyUi
@@ -1211,18 +1335,6 @@ FocusScope {
                         color: Bulan.accentPrimary
                         font.family: Bulan.familyUi
                         font.pixelSize: Bulan.sizeBody
-                    }
-
-                    Text {
-                        visible: !recentSlot.isFocused
-                        anchors.horizontalCenter: parent.horizontalCenter
-                        width: Bulan.gameRecentTileWidth * Bulan.gameRecentNeighbourScale
-                        horizontalAlignment: Text.AlignHCenter
-                        elide: Text.ElideRight
-                        text: model.name
-                        color: Bulan.textSecondary
-                        font.family: Bulan.familyUi
-                        font.pixelSize: Bulan.sizeLabel
                     }
 
                     Text {
