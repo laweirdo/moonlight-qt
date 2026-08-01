@@ -183,4 +183,6 @@ QtObject {
     readonly property int launchDestinationCenterY: 293
     // Keep synchronized with the runtime token in Bulan.qml.
     readonly property int launchCaptureWatchdogMs: 1100
+    readonly property int launchWarningDurationMs: 3500
+    readonly property int launchReviewCycleMs: 880
 }

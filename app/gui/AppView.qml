@@ -956,6 +956,13 @@ FocusScope {
         var segue = component.createObject(stackView, {
             "appName": game ? game.name : qsTr("Review game"),
             "isResume": route.resume,
+            "launchArtworkUrl": root.frozenLaunchResult
+                                    ? root.frozenLaunchResult.url : "",
+            "launchArtworkFallback": root.frozenLaunchContract
+                                         ? root.frozenLaunchContract.fallback : true,
+            "launchArtworkTitle": root.frozenLaunchContract
+                                      ? root.frozenLaunchContract.gameName
+                                      : (game ? game.name : qsTr("Review game")),
             "reviewMode": true,
             "reviewOutcome": route.launchOutcome,
             "reviewAppId": reviewState.appId,
@@ -1062,6 +1069,8 @@ FocusScope {
             sourceAvailable: route.sourceAvailable,
             review: true,
             reviewRoute: route,
+            returnTarget: "grid",
+            restoreOptions: false,
             sourceHidden: false
         })
     }
@@ -1188,6 +1197,15 @@ FocusScope {
     function launchTransitionFinished() {
         if (root.reviewReplayActive) {
             root.reviewReplayActive = false
+            var replayIndex = root.sourceIndexForAppId(
+                        root.pendingLaunch.appId)
+            if (replayIndex < 0
+                    || !root.pushReviewLaunch(
+                        root.pendingLaunch.reviewRoute, replayIndex)) {
+                root.rollbackLaunch(
+                            "The review launch screen could not be replayed.")
+                return
+            }
             launchTransition.clear()
             return
         }
@@ -1215,7 +1233,7 @@ FocusScope {
     function launchTransitionFailed() {
         if (root.reviewReplayActive) {
             root.reviewReplayActive = false
-            launchTransition.clear()
+            root.rollbackLaunch("The review launch replay could not be created.")
             return
         }
         root.rollbackLaunch("The launch artwork proxy could not be created.")
@@ -1246,7 +1264,14 @@ FocusScope {
         var segue = component.createObject(stackView, {
             "appName": request.gameName,
             "session": session,
-            "isResume": request.isResume
+            "isResume": request.isResume,
+            "launchArtworkUrl": root.frozenLaunchResult
+                                    ? root.frozenLaunchResult.url : "",
+            "launchArtworkFallback": root.frozenLaunchContract
+                                         ? root.frozenLaunchContract.fallback : true,
+            "launchArtworkTitle": root.frozenLaunchContract
+                                      ? root.frozenLaunchContract.gameName
+                                      : request.gameName
         })
         if (segue === null) {
             console.error("StreamSegue.qml loaded but could not be created")
@@ -1258,10 +1283,9 @@ FocusScope {
             return
         }
         launchTransition.clear()
-        // Production does not replay the review loop. Release the only
-        // transient texture as soon as StreamSegue owns the screen.
-        root.frozenLaunchResult = null
-        root.frozenLaunchContract = null
+        // Keep the grab result alive while StreamSegue displays its memory URL.
+        // restoreAfterLaunch() releases it only after the retained AppView has
+        // returned and the launch surface no longer references the image.
     }
 
     function rollbackLaunch(reason) {
@@ -1324,33 +1348,24 @@ FocusScope {
             return
         }
         root.reviewReplayActive = true
-        launchTransition.owner = root
-        launchTransition.prepare(root.frozenLaunchResult
-                                 ? root.frozenLaunchResult.url : "",
-                                 root.frozenLaunchContract)
-    }
-
-    // Reproduces upstream's launchOrResumeSelectedApp()/createSessionForApp()
-    // path (git show 6712ac83:app/gui/AppView.qml), through the unmodified
-    // StreamSegue.qml, with two differences: quitting-and-switching is not
-    // built here (it is emitted as a signal instead, see switchGameRequested
-    // above), and the whole path is guarded off in review mode.
-    function launchOrResumeApp(srcIndex, gameName, isResume) {
-        var component = Qt.createComponent("StreamSegue.qml")
-        if (component.status !== Component.Ready) {
-            console.error("StreamSegue.qml failed to load:", component.errorString())
-            return
+        root.setLaunchSourceHidden(root.pendingLaunch.appId,
+                                   root.pendingLaunch.origin, false)
+        root.pendingLaunch.sourceHidden = false
+        var reviewSegue = stackView.currentItem
+        if (reviewSegue && reviewSegue.reviewMode === true) {
+            reviewSegue.reviewRepeat = false
         }
-        var segue = component.createObject(stackView, {
-            "appName": gameName,
-            "session": appModel.createSessionForApp(srcIndex),
-            "isResume": isResume
+        stackView.pop()
+        Qt.callLater(function() {
+            if (!root.reviewReplayActive || !root.launchBusy
+                    || root.pendingLaunch === null) {
+                return
+            }
+            launchTransition.owner = root
+            launchTransition.prepare(root.frozenLaunchResult
+                                     ? root.frozenLaunchResult.url : "",
+                                     root.frozenLaunchContract)
         })
-        if (segue === null) {
-            console.error("StreamSegue.qml loaded but could not be created")
-            return
-        }
-        stackView.push(segue)
     }
 
     // The one real-action entry point for "launch or resume this SOURCE row",
@@ -1363,7 +1378,7 @@ FocusScope {
     // host; here, a real app) at the same position in the real list, and
     // reading past the end of that list segfaulted the app once already. This
     // never reaches createSessionForApp() in review mode.
-    function actConfirmApp(appId, origin) {
+    function actConfirmApp(appId, origin, returnTarget) {
         if (root.useFakeGames) {
             console.log("Review mode: launching does nothing on a fake game row.")
             return
@@ -1395,6 +1410,8 @@ FocusScope {
             sourceAvailable: true,
             review: false,
             reviewRoute: null,
+            returnTarget: returnTarget === "options" ? "options" : "grid",
+            restoreOptions: false,
             sourceHidden: false
         })
     }
@@ -1492,7 +1509,8 @@ FocusScope {
         // A successful launch retains this AppView under the segue. Returning
         // restores the exact source tile, tab selections, and Library contentY
         // already owned by this instance; no view is recreated.
-        if (root.launchBusy && root.pendingLaunch !== null) {
+        if (root.launchBusy && root.pendingLaunch !== null
+                && !root.reviewReplayActive) {
             root.restoreAfterLaunch()
         }
 
@@ -1700,11 +1718,18 @@ FocusScope {
             root.appModel.setAppDirectLaunch(srcIndex, !it.isDirectLaunch)
             gameOptions.close()
         } else if (actionId === "play" || actionId === "resume") {
-            // Closed before launching, not after: the stream segue is pushed on
-            // top of this screen and leaving the popup open would leave it
-            // drawn over whatever comes back when the stream ends.
+            // Close before the shared transition takes focus, while retaining
+            // stable identity and the tab that owns the rendered source. The
+            // app is re-resolved again inside actConfirmApp(), so a model update
+            // during the popup delay cannot redirect the launch.
+            var launchAppId = root.optionsAppId
+            var launchOrigin = root.optionsOrigin
             gameOptions.close()
-            root.launchOrResumeApp(srcIndex, it.gameName, it.isRunning)
+            if (root.selectAppById(launchAppId, launchOrigin)) {
+                Qt.callLater(function() {
+                    root.actConfirmApp(launchAppId, launchOrigin, "options")
+                })
+            }
         } else if (actionId === "quitGame") {
             gameOptions.close()
             root.quitRunningGame(null, "")
