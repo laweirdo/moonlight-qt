@@ -329,4 +329,17 @@ QtObject {
 
     // Clear space under the focused tile before its title block.
     readonly property int  gameRecentLabelGap:        16
+
+    // --- Selected-game launch ------------------------------------------------
+    // Measured from the client's 1867x1153 normal-launch raster and normalized
+    // to its 1280-wide Deck composition. The attachment is vertically cropped,
+    // so centre Y remains approximate; these are evidence-backed launch-only
+    // geometry values, not additions to the generic spacing scale.
+    readonly property int launchDestinationWidth:   202
+    readonly property int launchDestinationHeight:  302
+    readonly property int launchDestinationCenterX: 640
+    readonly property int launchDestinationCenterY: 293
+    // Five transition clocks gives an accepted scene-graph grab time to
+    // complete without allowing a lost callback to strand launch input.
+    readonly property int launchCaptureWatchdogMs: motionTransitionMs * 5
 }

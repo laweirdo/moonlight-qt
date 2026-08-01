@@ -163,7 +163,7 @@ ApplicationWindow {
             // The window root is a QQuickRootItem with no QML engine, so it
             // cannot be grabbed. Capture the content and the toolbar as two
             // images instead.
-            var ok = stackView.grabToImage(function(res) {
+            var ok = contentCapture.grabToImage(function(res) {
                 res.saveToFile(screenshotPath)
                 toolBar.grabToImage(function(res2) {
                     res2.saveToFile(screenshotPath.replace(".png", "-toolbar.png"))
@@ -179,9 +179,16 @@ ApplicationWindow {
         }
     }
 
-    StackView {
-        id: stackView
+    // Screenshot surface includes the retained navigation stack and the
+    // top-level launch proxy. The toolbar remains a separate capture because
+    // ApplicationWindow lays its header outside the content item.
+    Item {
+        id: contentCapture
         anchors.fill: parent
+
+        StackView {
+            id: stackView
+            anchors.fill: parent
         focus: true
         enabled: !quitConfirmationDialog.visible
         layer.enabled: quitConfirmationDialog.visible
@@ -271,6 +278,19 @@ ApplicationWindow {
         // the host carousel claims it for Wake.
         Keys.onCallPressed: {
             settingsButton.clicked()
+        }
+        }
+
+        // Frozen selected-game artwork above the retained AppView and every
+        // pushed segue. It is a sibling of StackView so source mapping includes
+        // all nested transforms while the proxy itself inherits none of them.
+        LaunchTransition {
+            id: launchTransition
+            anchors.fill: parent
+
+            onProxyReady: if (owner) owner.launchTransitionProxyReady()
+            onFinished: if (owner) owner.launchTransitionFinished()
+            onFailed: if (owner) owner.launchTransitionFailed()
         }
     }
 

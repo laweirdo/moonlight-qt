@@ -21,9 +21,52 @@ Item {
     id: tile
 
     property string gameName: ""
+    property var appId: null
     property url boxart: ""
     property bool running: false
     property bool isCurrent: false
+    property bool launchSourceHidden: false
+    property bool launchMotionFreezeRequested: false
+    property bool launchMotionFrozen: false
+    property real frozenLaunchInteractionScale: 1
+    property real frozenLaunchBorderWidth: 1
+    property color frozenLaunchBorderColor: Bulan.hairline
+    property real frozenLaunchFallbackOpacity: 1
+    property real frozenLaunchArtOpacity: 0
+
+    function freezeLaunchMotion() {
+        if (tile.launchMotionFrozen) {
+            return
+        }
+        tile.frozenLaunchInteractionScale = artRect.interactionScale
+        tile.frozenLaunchBorderWidth = artRect.border.width
+        tile.frozenLaunchBorderColor = artRect.border.color
+        tile.frozenLaunchFallbackOpacity = fallbackText.opacity
+        tile.frozenLaunchArtOpacity = art.opacity
+        tile.launchMotionFrozen = true
+    }
+
+    function releaseLaunchMotion() {
+        tile.launchMotionFrozen = false
+    }
+
+    onLaunchMotionFreezeRequestedChanged: {
+        if (launchMotionFreezeRequested) {
+            freezeLaunchMotion()
+        } else {
+            releaseLaunchMotion()
+        }
+    }
+    Component.onCompleted: {
+        if (launchMotionFreezeRequested) {
+            freezeLaunchMotion()
+        }
+    }
+
+    // Stage 2 captures this exact rendered item once. It contains the focus
+    // ring, rounded art/mask, and fallback, while excluding the Library/Recent
+    // label treatments that do not travel into launch.
+    property alias launchCaptureItem: artRect
 
     // Not in the brief's property list, but required to preserve the upstream
     // placeholder check exactly (see `art.isPlaceholder` below): GFE's
@@ -58,6 +101,7 @@ Item {
     // --- the artwork rectangle -------------------------------------------------
     Rectangle {
         id: artRect
+        opacity: tile.launchSourceHidden ? 0 : 1
         anchors.top: parent.top
         anchors.horizontalCenter: parent.horizontalCenter
         width: tile.tileWidth
@@ -65,9 +109,13 @@ Item {
         radius: Bulan.radiusMd
         color: Bulan.bgSurface
 
-        border.width: tile.isCurrent ? 2 : 1
-        border.color: tile.isCurrent ? Bulan.accentPrimary : Bulan.hairline
+        border.width: tile.launchMotionFrozen ? tile.frozenLaunchBorderWidth
+                                              : (tile.isCurrent ? 2 : 1)
+        border.color: tile.launchMotionFrozen ? tile.frozenLaunchBorderColor
+                                              : (tile.isCurrent ? Bulan.accentPrimary
+                                                                : Bulan.hairline)
         Behavior on border.color {
+            enabled: !tile.launchMotionFrozen
             ColorAnimation { duration: Bulan.motionFocusMs }
         }
 
@@ -78,9 +126,12 @@ Item {
         // HostCarousel does for its tiles) would animate its own transform
         // separately rather than feed this Behavior a moving target.
         property real interactionScale:
-            tile.pressed ? Bulan.motionPressScale
-                         : (tile.isCurrent ? Bulan.motionFocusScale : 1.0)
+            tile.launchMotionFrozen ? tile.frozenLaunchInteractionScale
+                                    : (tile.pressed ? Bulan.motionPressScale
+                                                    : (tile.isCurrent
+                                                       ? Bulan.motionFocusScale : 1.0))
         Behavior on interactionScale {
+            enabled: !tile.launchMotionFrozen
             NumberAnimation {
                 duration: tile.pressed ? Bulan.motionPressMs : Bulan.motionFocusMs
                 easing.type: tile.pressed ? Easing.OutCubic : Easing.OutBack
@@ -108,8 +159,10 @@ Item {
             font.family: Bulan.familyDisplay
             font.pixelSize: Bulan.sizeBody
 
-            opacity: art.showArt ? 0 : 1
+            opacity: tile.launchMotionFrozen ? tile.frozenLaunchFallbackOpacity
+                                             : (art.showArt ? 0 : 1)
             Behavior on opacity {
+                enabled: !tile.launchMotionFrozen
                 NumberAnimation { duration: Bulan.motionFocusMs; easing.type: Easing.OutCubic }
             }
         }
@@ -175,8 +228,10 @@ Item {
 
             readonly property bool showArt: status === Image.Ready && !isPlaceholder
 
-            opacity: showArt ? 1 : 0
+            opacity: tile.launchMotionFrozen ? tile.frozenLaunchArtOpacity
+                                             : (showArt ? 1 : 0)
             Behavior on opacity {
+                enabled: !tile.launchMotionFrozen
                 NumberAnimation { duration: Bulan.motionFocusMs; easing.type: Easing.OutCubic }
             }
 

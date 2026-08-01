@@ -48,11 +48,12 @@ FocusScope {
 
     // Emitted instead of building the popup. X on a tile means "show its
     // options"; this file only names which game, not what the popup contains.
-    signal optionsRequested(int sourceIndex)
+    signal optionsRequested(var appId, string origin)
 
     // Emitted instead of building the confirmation. A on a game while a
     // DIFFERENT one is running must not launch -- see actConfirmOn() below.
-    signal switchGameRequested(int sourceIndex, string runningName, string nextName)
+    signal switchGameRequested(var appId, string origin,
+                               string runningName, string nextName)
 
     // Stage 2 can bind its transient launch visual to this without introducing
     // another environment variable or a network-timed replay path.
@@ -471,6 +472,217 @@ FocusScope {
         return it ? it.isRunning : false
     }
 
+    function sameAppId(first, second) {
+        return first !== null && first !== undefined
+                && second !== null && second !== undefined
+                && String(first) === String(second)
+    }
+
+    function appIdAtSourceIndex(sourceIndex) {
+        if (sourceIndex < 0 || sourceIndex >= root.gameCount) {
+            return null
+        }
+        var item = modelMirror.itemAt(sourceIndex)
+        return item ? item.appId : null
+    }
+
+    // Model rows and Recent ranks can both change between input and dispatch.
+    // Every delayed action re-resolves the one durable identity instead.
+    function sourceIndexForAppId(appId) {
+        for (var i = 0; i < modelMirror.count; i++) {
+            var item = modelMirror.itemAt(i)
+            if (item && root.sameAppId(item.appId, appId)) {
+                return i
+            }
+        }
+        return -1
+    }
+
+    function selectAppById(appId, origin) {
+        var sourceIndex = root.sourceIndexForAppId(appId)
+        if (sourceIndex < 0) {
+            return false
+        }
+        root.selectReviewSource(sourceIndex, origin)
+        return true
+    }
+
+    function sourceTileForAppId(appId, origin) {
+        var sourceIndex = root.sourceIndexForAppId(appId)
+        if (sourceIndex < 0) {
+            return null
+        }
+        if (origin === "library") {
+            return libraryRepeater.itemAt(sourceIndex)
+        }
+        var recentSlot = recentRepeater.itemAt(sourceIndex)
+        return recentSlot ? recentSlot.gameTileItem : null
+    }
+
+    function sourceSlotForAppId(appId, origin) {
+        var sourceIndex = root.sourceIndexForAppId(appId)
+        if (sourceIndex < 0) {
+            return null
+        }
+        return origin === "recent" ? recentRepeater.itemAt(sourceIndex) : null
+    }
+
+    function mappedItemRect(item, target) {
+        var first = item.mapToItem(target, 0, 0)
+        var second = item.mapToItem(target, item.width, 0)
+        var third = item.mapToItem(target, 0, item.height)
+        var fourth = item.mapToItem(target, item.width, item.height)
+        var left = Math.min(first.x, second.x, third.x, fourth.x)
+        var right = Math.max(first.x, second.x, third.x, fourth.x)
+        var top = Math.min(first.y, second.y, third.y, fourth.y)
+        var bottom = Math.max(first.y, second.y, third.y, fourth.y)
+        return Qt.rect(left, top, right - left, bottom - top)
+    }
+
+    function intersectRects(first, second) {
+        var left = Math.max(first.x, second.x)
+        var top = Math.max(first.y, second.y)
+        var right = Math.min(first.x + first.width, second.x + second.width)
+        var bottom = Math.min(first.y + first.height, second.y + second.height)
+        return Qt.rect(left, top, Math.max(0, right - left),
+                       Math.max(0, bottom - top))
+    }
+
+    function effectiveItemOpacity(item) {
+        var opacity = 1
+        var node = item
+        while (node) {
+            if (node.visible === false) {
+                return 0
+            }
+            if (node.opacity !== undefined) {
+                opacity *= node.opacity
+            }
+            node = node.parent
+        }
+        return opacity
+    }
+
+    function launchDestinationRect() {
+        return Qt.rect(Bulan.launchDestinationCenterX
+                       - Bulan.launchDestinationWidth / 2,
+                       Bulan.launchDestinationCenterY
+                       - Bulan.launchDestinationHeight / 2,
+                       Bulan.launchDestinationWidth,
+                       Bulan.launchDestinationHeight)
+    }
+
+    function fallbackLaunchContract(gameName) {
+        var destination = root.launchDestinationRect()
+        return {
+            fallback: true,
+            gameName: gameName,
+            visibleRect: destination,
+            sourceCrop: Qt.rect(0, 0, destination.width, destination.height),
+            destinationCropRect: destination,
+            opacity: 0
+        }
+    }
+
+    function sourceContractForApp(appId, origin, sourceAvailable, gameName) {
+        if (!sourceAvailable) {
+            return { item: null, contract: root.fallbackLaunchContract(gameName) }
+        }
+
+        var tile = root.sourceTileForAppId(appId, origin)
+        var captureItem = tile ? tile.launchCaptureItem : null
+        if (!captureItem || captureItem.width <= 0 || captureItem.height <= 0) {
+            return { item: null, contract: root.fallbackLaunchContract(gameName) }
+        }
+
+        var fullRect = root.mappedItemRect(captureItem, launchTransition)
+        if (fullRect.width <= 0 || fullRect.height <= 0) {
+            return { item: null, contract: root.fallbackLaunchContract(gameName) }
+        }
+
+        var visibleRect = root.intersectRects(
+                    fullRect, Qt.rect(0, 0,
+                                      launchTransition.width,
+                                      launchTransition.height))
+        var node = captureItem.parent
+        while (node && visibleRect.width > 0 && visibleRect.height > 0) {
+            if (node.clip === true) {
+                visibleRect = root.intersectRects(
+                            visibleRect,
+                            root.mappedItemRect(node, launchTransition))
+            }
+            node = node.parent
+        }
+        if (visibleRect.width <= 0 || visibleRect.height <= 0) {
+            return { item: null, contract: root.fallbackLaunchContract(gameName) }
+        }
+
+        var crop = Qt.rect(
+                    (visibleRect.x - fullRect.x) * captureItem.width / fullRect.width,
+                    (visibleRect.y - fullRect.y) * captureItem.height / fullRect.height,
+                    visibleRect.width * captureItem.width / fullRect.width,
+                    visibleRect.height * captureItem.height / fullRect.height)
+        var destination = root.launchDestinationRect()
+        var destinationCrop = Qt.rect(
+                    destination.x + crop.x * destination.width / captureItem.width,
+                    destination.y + crop.y * destination.height / captureItem.height,
+                    crop.width * destination.width / captureItem.width,
+                    crop.height * destination.height / captureItem.height)
+        return {
+            item: captureItem,
+            contract: {
+                fallback: false,
+                gameName: gameName,
+                visibleRect: visibleRect,
+                sourceCrop: crop,
+                destinationCropRect: destinationCrop,
+                opacity: root.effectiveItemOpacity(captureItem)
+            }
+        }
+    }
+
+    function freezeLaunchSourceMotion(appId, origin) {
+        libraryScrollAnimation.stop()
+        libraryFlickable.cancelFlick()
+        root.frozenLaunchAppId = appId
+        var tile = root.sourceTileForAppId(appId, origin)
+        var slot = root.sourceSlotForAppId(appId, origin)
+        var valid = tile && root.sameAppId(tile.appId, appId)
+                && tile.launchMotionFrozen
+                && (origin !== "recent" || (slot && slot.launchMotionFrozen))
+        if (!valid) {
+            root.frozenLaunchAppId = null
+        }
+        return valid
+    }
+
+    function releaseLaunchSourceMotion() {
+        root.frozenLaunchAppId = null
+        if (root.pendingLaunch) {
+            root.pendingLaunch.sourceMotionFrozen = false
+        }
+    }
+
+    // Hiding is identity state, not an imperative mutation of one delegate.
+    // Both Recent and Library delegates therefore inherit it if either view is
+    // rebuilt while the launch segue owns the screen.
+    function setLaunchSourceHidden(appId, origin, hidden) {
+        if (!hidden) {
+            if (root.sameAppId(root.hiddenLaunchAppId, appId)) {
+                root.hiddenLaunchAppId = null
+            }
+            return true
+        }
+        root.hiddenLaunchAppId = appId
+        var tile = root.sourceTileForAppId(appId, origin)
+        var valid = tile && root.sameAppId(tile.appId, appId)
+                && tile.launchSourceHidden
+        if (!valid) {
+            root.hiddenLaunchAppId = null
+        }
+        return valid
+    }
+
     // Left/Right in the Library: one continuous index across the whole model,
     // clamped only at the first and last game overall. Crossing a row
     // boundary happens as a side effect of the index being contiguous, rather
@@ -713,7 +925,7 @@ FocusScope {
         if (route.kind === "quit") {
             root.pushReviewQuit(route, sourceIndex)
         } else {
-            root.pushReviewLaunch(route, sourceIndex)
+            root.beginReviewLaunch(route, sourceIndex)
         }
     }
 
@@ -739,7 +951,7 @@ FocusScope {
         var component = Qt.createComponent("StreamSegue.qml")
         if (component.status !== Component.Ready) {
             console.error("Review StreamSegue.qml failed to load:", component.errorString())
-            return
+            return false
         }
         var segue = component.createObject(stackView, {
             "appName": game ? game.name : qsTr("Review game"),
@@ -754,12 +966,12 @@ FocusScope {
         })
         if (segue === null) {
             console.error("Review StreamSegue.qml loaded but could not be created")
-            return
+            return false
         }
         segue.reviewCycleRequested.connect(function(cycle) {
             root.reviewLaunchCycleRequested(reviewState, cycle)
         })
-        stackView.push(segue)
+        return root.pushLaunchSegue(segue, "Review StreamSegue.qml")
     }
 
     function pushReviewQuit(route, sourceIndex) {
@@ -790,6 +1002,334 @@ FocusScope {
     }
 
     // --- launching -------------------------------------------------------------
+    property bool launchBusy: false
+    property var pendingLaunch: null
+    property var frozenLaunchResult: null
+    property var frozenLaunchContract: null
+    property bool reviewReplayActive: false
+    property var hiddenLaunchAppId: null
+    property var frozenLaunchAppId: null
+    property int launchCaptureGeneration: 0
+    property int launchWatchdogGeneration: -1
+    property bool launchSeguePushCommitted: false
+
+    Timer {
+        id: launchCaptureWatchdog
+        interval: Bulan.launchCaptureWatchdogMs
+        onTriggered: {
+            if (root.launchBusy && root.pendingLaunch
+                    && root.pendingLaunch.captureGeneration
+                       === root.launchWatchdogGeneration) {
+                root.invalidateLaunchCapture()
+                root.rollbackLaunch("The selected artwork capture timed out.")
+            }
+        }
+    }
+
+    function invalidateLaunchCapture() {
+        launchCaptureWatchdog.stop()
+        root.launchWatchdogGeneration = -1
+        root.launchCaptureGeneration++
+    }
+
+    function pushLaunchSegue(segue, label) {
+        root.launchSeguePushCommitted = true
+        var pushed = null
+        try {
+            pushed = stackView.push(segue)
+        } catch (error) {
+            console.error(label + " push failed:", error)
+        }
+        if (pushed === null || pushed === undefined) {
+            root.launchSeguePushCommitted = false
+            segue.destroy()
+            return false
+        }
+        return true
+    }
+
+    function beginReviewLaunch(route, sourceIndex) {
+        var game = sourceIndex >= 0 && sourceIndex < fakeModel.count
+                ? fakeModel.get(sourceIndex) : null
+        if (!game) {
+            return
+        }
+        root.beginLaunchTransition({
+            appId: game.appid,
+            gameName: game.name,
+            origin: route.origin,
+            isResume: route.resume,
+            sourceAvailable: route.sourceAvailable,
+            review: true,
+            reviewRoute: route,
+            sourceHidden: false
+        })
+    }
+
+    function beginLaunchTransition(request) {
+        if (root.launchBusy || request === null) {
+            return
+        }
+        var sourceIndex = root.sourceIndexForAppId(request.appId)
+        if (sourceIndex < 0) {
+            root.reclaimFocus()
+            return
+        }
+
+        root.launchBusy = true
+        root.pendingLaunch = request
+        root.pendingLaunch.sourceMotionFrozen = false
+        root.pendingLaunch.captureGeneration = -1
+        root.frozenLaunchResult = null
+        root.frozenLaunchContract = null
+        root.launchSeguePushCommitted = false
+        libraryScrollAnimation.stop()
+
+        if (request.sourceAvailable
+                && root.freezeLaunchSourceMotion(request.appId, request.origin)) {
+            root.pendingLaunch.sourceMotionFrozen = true
+        }
+
+        var source = root.sourceContractForApp(
+                    request.appId, request.origin,
+                    request.sourceAvailable
+                    && root.pendingLaunch.sourceMotionFrozen,
+                    request.gameName)
+        var contract = source.contract
+        if (contract.fallback) {
+            root.prepareLaunchProxy("", contract)
+            return
+        }
+
+        var expectedTile = root.sourceTileForAppId(request.appId, request.origin)
+        var captureItem = source.item
+        if (!expectedTile || captureItem !== expectedTile.launchCaptureItem
+                || !root.sameAppId(expectedTile.appId, request.appId)) {
+            root.prepareLaunchProxy("", root.fallbackLaunchContract(request.gameName))
+            return
+        }
+        var generation = ++root.launchCaptureGeneration
+        root.pendingLaunch.captureGeneration = generation
+        root.launchWatchdogGeneration = generation
+        var captureSize = Qt.size(Math.ceil(captureItem.width),
+                                  Math.ceil(captureItem.height))
+        launchCaptureWatchdog.restart()
+        var accepted = captureItem.grabToImage(function(result) {
+            root.acceptLaunchCapture(result, contract, generation,
+                                     expectedTile, request.appId)
+        }, captureSize)
+        if (!accepted) {
+            root.invalidateLaunchCapture()
+            root.rollbackLaunch("The selected artwork could not be captured.")
+            return
+        }
+    }
+
+    function acceptLaunchCapture(result, contract, generation,
+                                 expectedTile, expectedAppId) {
+        if (!root.launchBusy || root.pendingLaunch === null
+                || generation !== root.launchWatchdogGeneration
+                || generation !== root.pendingLaunch.captureGeneration) {
+            return
+        }
+        root.invalidateLaunchCapture()
+        if (root.sourceIndexForAppId(root.pendingLaunch.appId) < 0) {
+            root.rollbackLaunch("The selected game disappeared before launch.")
+            return
+        }
+        var currentTile = root.sourceTileForAppId(root.pendingLaunch.appId,
+                                                  root.pendingLaunch.origin)
+        if (!expectedTile || currentTile !== expectedTile
+                || !root.sameAppId(expectedTile.appId, expectedAppId)
+                || !root.sameAppId(currentTile.appId, expectedAppId)
+                || !result || !result.url) {
+            // A reused delegate can deliver a valid image for the wrong app.
+            // Reject that texture and continue with the honest no-source card.
+            root.frozenLaunchResult = null
+            root.prepareLaunchProxy(
+                        "", root.fallbackLaunchContract(root.pendingLaunch.gameName))
+            return
+        }
+        root.frozenLaunchResult = result
+        root.prepareLaunchProxy(result.url, contract)
+    }
+
+    function prepareLaunchProxy(captureUrl, contract) {
+        root.frozenLaunchContract = contract
+        launchTransition.owner = root
+        launchTransition.prepare(captureUrl, contract)
+    }
+
+    function launchTransitionProxyReady() {
+        if (!root.launchBusy || root.pendingLaunch === null) {
+            launchTransition.clear()
+            return
+        }
+        if (root.sourceIndexForAppId(root.pendingLaunch.appId) < 0) {
+            root.rollbackLaunch("The selected game disappeared before launch.")
+            return
+        }
+
+        if (!root.frozenLaunchContract.fallback) {
+            root.pendingLaunch.sourceHidden = root.setLaunchSourceHidden(
+                        root.pendingLaunch.appId,
+                        root.pendingLaunch.origin, true)
+            if (!root.pendingLaunch.sourceHidden) {
+                root.rollbackLaunch("The selected launch source could not be hidden.")
+                return
+            }
+        }
+        // Source hiding and proxy reveal are assigned in this same event-loop
+        // pass, so the scene graph never receives a frame containing both.
+        launchTransition.start()
+        root.releaseLaunchSourceMotion()
+    }
+
+    function launchTransitionFinished() {
+        if (root.reviewReplayActive) {
+            root.reviewReplayActive = false
+            launchTransition.clear()
+            return
+        }
+        if (!root.launchBusy || root.pendingLaunch === null) {
+            launchTransition.clear()
+            return
+        }
+
+        if (root.pendingLaunch.review) {
+            var reviewIndex = root.sourceIndexForAppId(root.pendingLaunch.appId)
+            if (reviewIndex < 0) {
+                root.rollbackLaunch("The selected review game disappeared.")
+                return
+            }
+            if (!root.pushReviewLaunch(root.pendingLaunch.reviewRoute, reviewIndex)) {
+                root.rollbackLaunch("The review launch screen could not be pushed.")
+                return
+            }
+            launchTransition.clear()
+            return
+        }
+        root.completeProductionLaunch()
+    }
+
+    function launchTransitionFailed() {
+        if (root.reviewReplayActive) {
+            root.reviewReplayActive = false
+            launchTransition.clear()
+            return
+        }
+        root.rollbackLaunch("The launch artwork proxy could not be created.")
+    }
+
+    function completeProductionLaunch() {
+        var request = root.pendingLaunch
+        var sourceIndex = request ? root.sourceIndexForAppId(request.appId) : -1
+        if (!request || sourceIndex < 0 || root.appModel === null) {
+            root.rollbackLaunch("The selected game is no longer available.")
+            return
+        }
+
+        var component = Qt.createComponent("StreamSegue.qml")
+        if (component.status !== Component.Ready) {
+            console.error("StreamSegue.qml failed to load:", component.errorString())
+            root.rollbackLaunch("The launch screen could not be loaded.")
+            return
+        }
+
+        // This is deliberately after geometry capture and the visual handoff.
+        // createSessionForApp() stamps lastPlayed and can reorder Recent.
+        var session = root.appModel.createSessionForApp(sourceIndex)
+        if (session === null || session === undefined) {
+            root.rollbackLaunch("The streaming session could not be created.")
+            return
+        }
+        var segue = component.createObject(stackView, {
+            "appName": request.gameName,
+            "session": session,
+            "isResume": request.isResume
+        })
+        if (segue === null) {
+            console.error("StreamSegue.qml loaded but could not be created")
+            root.rollbackLaunch("The launch screen could not be created.")
+            return
+        }
+        if (!root.pushLaunchSegue(segue, "StreamSegue.qml")) {
+            root.rollbackLaunch("The launch screen could not be pushed.")
+            return
+        }
+        launchTransition.clear()
+        // Production does not replay the review loop. Release the only
+        // transient texture as soon as StreamSegue owns the screen.
+        root.frozenLaunchResult = null
+        root.frozenLaunchContract = null
+    }
+
+    function rollbackLaunch(reason) {
+        if (reason) {
+            console.error(reason)
+        }
+        root.invalidateLaunchCapture()
+        if (root.pendingLaunch) {
+            root.selectAppById(root.pendingLaunch.appId,
+                               root.pendingLaunch.origin)
+        }
+        if (root.pendingLaunch && root.pendingLaunch.sourceHidden) {
+            root.setLaunchSourceHidden(root.pendingLaunch.appId,
+                                       root.pendingLaunch.origin, false)
+        }
+        root.hiddenLaunchAppId = null
+        root.releaseLaunchSourceMotion()
+        launchTransition.clear()
+        root.reviewReplayActive = false
+        root.launchSeguePushCommitted = false
+        root.launchBusy = false
+        root.pendingLaunch = null
+        root.frozenLaunchResult = null
+        root.frozenLaunchContract = null
+        Qt.callLater(root.reclaimFocus)
+    }
+
+    function restoreAfterLaunch() {
+        root.invalidateLaunchCapture()
+        if (root.pendingLaunch) {
+            // createSessionForApp() updates lastPlayed and may move this game
+            // to a different Recent rank while AppView is retained underneath
+            // the segue. Restore by stable identity before clearing the launch
+            // request so focus returns to the game that actually launched.
+            root.selectAppById(root.pendingLaunch.appId,
+                               root.pendingLaunch.origin)
+        }
+        if (root.pendingLaunch && root.pendingLaunch.sourceHidden) {
+            root.setLaunchSourceHidden(root.pendingLaunch.appId,
+                                       root.pendingLaunch.origin, false)
+        }
+        root.hiddenLaunchAppId = null
+        root.releaseLaunchSourceMotion()
+        launchTransition.clear()
+        root.reviewReplayActive = false
+        root.launchSeguePushCommitted = false
+        root.launchBusy = false
+        root.pendingLaunch = null
+        root.frozenLaunchResult = null
+        root.frozenLaunchContract = null
+    }
+
+    onReviewLaunchCycleRequested: function(reviewState, cycle) {
+        // Cycle 1 is the transition already played before the review segue was
+        // pushed. Later cycles reuse the same frozen texture and mapped contract
+        // without touching the inactive delegate or waiting on network state.
+        if (cycle <= 1 || !root.launchBusy || !root.pendingLaunch
+                || !root.pendingLaunch.review || root.reviewReplayActive
+                || launchTransition.running || root.frozenLaunchContract === null) {
+            return
+        }
+        root.reviewReplayActive = true
+        launchTransition.owner = root
+        launchTransition.prepare(root.frozenLaunchResult
+                                 ? root.frozenLaunchResult.url : "",
+                                 root.frozenLaunchContract)
+    }
+
     // Reproduces upstream's launchOrResumeSelectedApp()/createSessionForApp()
     // path (git show 6712ac83:app/gui/AppView.qml), through the unmodified
     // StreamSegue.qml, with two differences: quitting-and-switching is not
@@ -823,12 +1363,16 @@ FocusScope {
     // host; here, a real app) at the same position in the real list, and
     // reading past the end of that list segfaulted the app once already. This
     // never reaches createSessionForApp() in review mode.
-    function actConfirmOn(srcIndex) {
+    function actConfirmApp(appId, origin) {
         if (root.useFakeGames) {
             console.log("Review mode: launching does nothing on a fake game row.")
             return
         }
-        if (srcIndex < 0 || srcIndex >= root.gameCount) {
+        if (root.launchBusy) {
+            return
+        }
+        var srcIndex = root.sourceIndexForAppId(appId)
+        if (srcIndex < 0) {
             return
         }
         var it = modelMirror.itemAt(srcIndex)
@@ -839,14 +1383,37 @@ FocusScope {
             // A different game is running than the one focused. Do not launch
             // -- emit the signal the quit-and-switch confirmation is wired to
             // instead.
-            root.switchGameRequested(srcIndex, root.runningGameName, it.gameName)
+            root.switchGameRequested(appId, origin,
+                                     root.runningGameName, it.gameName)
             return
         }
-        root.launchOrResumeApp(srcIndex, it.gameName, it.isRunning)
+        root.beginLaunchTransition({
+            appId: appId,
+            gameName: it.gameName,
+            origin: origin,
+            isResume: it.isRunning,
+            sourceAvailable: true,
+            review: false,
+            reviewRoute: null,
+            sourceHidden: false
+        })
+    }
+
+    function actConfirmOn(srcIndex) {
+        var appId = root.appIdAtSourceIndex(srcIndex)
+        if (appId === null || appId === undefined) {
+            return
+        }
+        root.selectAppById(appId, root.activeTab)
+        root.actConfirmApp(appId, root.activeTab)
     }
 
     function actConfirm() {
-        root.actConfirmOn(root.currentSourceIndex())
+        var sourceIndex = root.currentSourceIndex()
+        var appId = root.appIdAtSourceIndex(sourceIndex)
+        if (appId !== null && appId !== undefined) {
+            root.actConfirmApp(appId, root.activeTab)
+        }
     }
 
     // True once this screen has tried the upstream direct-launch behaviour, so
@@ -855,6 +1422,33 @@ FocusScope {
     // from a stream). Follows upstream's own `showGames` guard, renamed for
     // what it actually tracks here.
     property bool directLaunchAttempted: false
+    property var pendingDirectLaunchAppId: null
+    property string pendingDirectLaunchOrigin: "recent"
+
+    Timer {
+        id: directLaunchSettleTimer
+        interval: Bulan.motionFocusMs
+        onTriggered: {
+            var appId = root.pendingDirectLaunchAppId
+            var origin = root.pendingDirectLaunchOrigin
+            root.pendingDirectLaunchAppId = null
+            if (root.sourceIndexForAppId(appId) < 0
+                    || !root.selectAppById(appId, origin)) {
+                return
+            }
+            root.actConfirmApp(appId, origin)
+        }
+    }
+
+    function settleDirectLaunch(appId, origin) {
+        if (root.sourceIndexForAppId(appId) < 0
+                || !root.selectAppById(appId, origin)) {
+            return
+        }
+        root.pendingDirectLaunchAppId = appId
+        root.pendingDirectLaunchOrigin = origin
+        directLaunchSettleTimer.restart()
+    }
 
     // STAGE 3: restores the direct-launch behaviour removed in stage 1.
     // Upstream auto-launched a direct-launch app whenever the host was opened
@@ -877,8 +1471,15 @@ FocusScope {
         if (directIndex < 0) {
             return
         }
+        // The model row is consumed synchronously. Only durable identity and
+        // origin cross the deferred selection/settle boundary.
+        var directAppId = root.appIdAtSourceIndex(directIndex)
+        var directOrigin = root.activeTab
+        if (directAppId === null || directAppId === undefined) {
+            return
+        }
         Qt.callLater(function() {
-            root.actConfirmOn(directIndex)
+            root.settleDirectLaunch(directAppId, directOrigin)
         })
     }
 
@@ -887,6 +1488,13 @@ FocusScope {
         // This is a Bulan screen now; the stock toolbar upstream's AppView kept
         // is gone, replaced by this screen's own header and hint bar.
         toolBar.visible = false
+
+        // A successful launch retains this AppView under the segue. Returning
+        // restores the exact source tile, tab selections, and Library contentY
+        // already owned by this instance; no view is recreated.
+        if (root.launchBusy && root.pendingLaunch !== null) {
+            root.restoreAfterLaunch()
+        }
 
         // Null in review mode -- see createModel().
         if (appModel !== null) {
@@ -935,13 +1543,14 @@ FocusScope {
                     for (var i = 0; i < root.gameCount; i++) {
                         var it = modelMirror.itemAt(i)
                         if (it && !it.isRunning) {
-                            root.openSwitchConfirmation(i)
+                            root.openSwitchConfirmation(root.appIdAtSourceIndex(i),
+                                                        root.activeTab)
                             return
                         }
                     }
                     return
                 }
-                root.openGameOptions(srcIndex)
+                root.openGameOptions(root.appIdAtSourceIndex(srcIndex), root.activeTab)
             })
         }
     }
@@ -957,6 +1566,11 @@ FocusScope {
     readonly property bool bulanScreen: true
 
     StackView.onDeactivating: {
+        directLaunchSettleTimer.stop()
+        root.pendingDirectLaunchAppId = null
+        if (root.launchBusy && !root.launchSeguePushCommitted) {
+            root.rollbackLaunch("Launch was interrupted by external navigation.")
+        }
         if (gameReviewSettleTimer.running) {
             gameReviewSettleTimer.stop()
             root.pendingGameReviewRoute = null
@@ -982,7 +1596,8 @@ FocusScope {
     // end of the current pass so this does not fight something mid-teardown.
     //
     onActiveFocusChanged: {
-        if (!activeFocus && StackView.status === StackView.Active) {
+        if (!root.launchBusy && !activeFocus
+                && StackView.status === StackView.Active) {
             Qt.callLater(reclaimFocus)
         }
     }
@@ -994,6 +1609,9 @@ FocusScope {
     // on -- while snatching focus back off an open popup in the case that does
     // not.
     function reclaimFocus() {
+        if (root.launchBusy) {
+            return
+        }
         if (root.StackView.status !== StackView.Active) {
             return
         }
@@ -1009,27 +1627,31 @@ FocusScope {
     // re-read from the mirror at activation time rather than trusted -- the app
     // list can be replaced by a poll while a menu is open, which is the same
     // identity problem HostSettingsOverlay solved by re-resolving its host.
-    property int optionsSourceIndex: -1
+    property var optionsAppId: null
+    property string optionsOrigin: "recent"
 
-    function openGameOptions(srcIndex) {
-        var snap = root.gameSnapshot(srcIndex)
+    function openGameOptions(appId, origin) {
+        var snap = root.gameSnapshot(appId)
         if (snap === null) {
             return
         }
-        root.optionsSourceIndex = srcIndex
+        root.optionsAppId = appId
+        root.optionsOrigin = origin
         gameOptions.showForGame(snap)
     }
 
-    function openSwitchConfirmation(srcIndex) {
-        var snap = root.gameSnapshot(srcIndex)
+    function openSwitchConfirmation(appId, origin) {
+        var snap = root.gameSnapshot(appId)
         if (snap === null) {
             return
         }
-        root.optionsSourceIndex = srcIndex
+        root.optionsAppId = appId
+        root.optionsOrigin = origin
         gameOptions.showSwitchConfirmation(snap)
     }
 
-    function gameSnapshot(srcIndex) {
+    function gameSnapshot(appId) {
+        var srcIndex = root.sourceIndexForAppId(appId)
         if (srcIndex < 0 || srcIndex >= root.gameCount) {
             return null
         }
@@ -1038,6 +1660,7 @@ FocusScope {
             return null
         }
         return {
+            appId: it.appId,
             gameName: it.gameName,
             running: it.isRunning,
             hidden: it.isHidden,
@@ -1049,7 +1672,7 @@ FocusScope {
     }
 
     function handleGameAction(actionId) {
-        var srcIndex = root.optionsSourceIndex
+        var srcIndex = root.sourceIndexForAppId(root.optionsAppId)
         if (srcIndex < 0 || srcIndex >= root.gameCount) {
             gameOptions.close()
             return
@@ -1123,12 +1746,12 @@ FocusScope {
         stackView.push(segue)
     }
 
-    onOptionsRequested: function(sourceIndex) {
-        root.openGameOptions(sourceIndex)
+    onOptionsRequested: function(appId, origin) {
+        root.openGameOptions(appId, origin)
     }
 
-    onSwitchGameRequested: function(sourceIndex, runningName, nextName) {
-        root.openSwitchConfirmation(sourceIndex)
+    onSwitchGameRequested: function(appId, origin, runningName, nextName) {
+        root.openSwitchConfirmation(appId, origin)
     }
 
     // --- screen --------------------------------------------------------------
@@ -1389,10 +2012,42 @@ FocusScope {
         readonly property int recentParkSlot: recentVisibleRadius + 1
 
         Repeater {
+            id: recentRepeater
             model: root.gameModel
 
             delegate: Item {
                 id: recentSlot
+                readonly property var gameTileItem: recentGameTile
+                readonly property bool launchMotionFreezeRequested:
+                    root.sameAppId(model.appid, root.frozenLaunchAppId)
+                property bool launchMotionFrozen: false
+                property real frozenLaunchX: 0
+                property real frozenLaunchY: 0
+                property real frozenLaunchScale: 1
+                property real frozenLaunchOpacity: 1
+
+                function freezeLaunchMotion() {
+                    if (recentSlot.launchMotionFrozen) {
+                        return
+                    }
+                    recentSlot.frozenLaunchX = recentSlot.x
+                    recentSlot.frozenLaunchY = recentSlot.y
+                    recentSlot.frozenLaunchScale = recentSlot.tileScale
+                    recentSlot.frozenLaunchOpacity = recentSlot.opacity
+                    recentSlot.launchMotionFrozen = true
+                }
+
+                function releaseLaunchMotion() {
+                    recentSlot.launchMotionFrozen = false
+                }
+
+                onLaunchMotionFreezeRequestedChanged: {
+                    if (launchMotionFreezeRequested) {
+                        freezeLaunchMotion()
+                    } else {
+                        releaseLaunchMotion()
+                    }
+                }
 
                 readonly property int rank:
                     root.recentRankBySourceIndex[index] !== undefined
@@ -1414,7 +2069,9 @@ FocusScope {
                 // HostCarousel.qml): a Behavior has to write this to animate
                 // it, and readonly would make the whole tile fail to load.
                 property real tileScale:
-                    distance === 0 ? 1.0 : Bulan.gameRecentNeighbourScale
+                    launchMotionFrozen ? frozenLaunchScale
+                                       : (distance === 0 ? 1.0
+                                                         : Bulan.gameRecentNeighbourScale)
 
                 // 0 while a neighbour, 1 while focused, animated below on the
                 // same clock as the tile's travel -- HostCarousel.qml's
@@ -1439,8 +2096,11 @@ FocusScope {
                 width: Bulan.gameRecentTileWidth
                 height: Bulan.gameRecentTileHeight
 
-                x: recentView.width / 2 - width / 2 + slot * Bulan.gameRecentSpread
-                y: recentView.focusCenterY - height / 2
+                x: launchMotionFrozen ? frozenLaunchX
+                                      : recentView.width / 2 - width / 2
+                                        + slot * Bulan.gameRecentSpread
+                y: launchMotionFrozen ? frozenLaunchY
+                                      : recentView.focusCenterY - height / 2
 
                 z: distance === 0 ? 2 : 0
                 // Every non-focused VISIBLE tile stays at the same dimmed
@@ -1448,8 +2108,9 @@ FocusScope {
                 // gradient, which is a visual decision nobody has taken.
                 // "Visible" now means "within recentVisibleRadius" rather
                 // than the old fixed distance === 1.
-                opacity: distance === 0 ? 1.0
-                       : (distance <= recentView.recentVisibleRadius ? 0.5 : 0.0)
+                opacity: launchMotionFrozen ? frozenLaunchOpacity
+                       : (distance === 0 ? 1.0
+                       : (distance <= recentView.recentVisibleRadius ? 0.5 : 0.0))
                 visible: opacity > 0.01
 
                 // One clock for the whole move, copying HostCarousel.qml's
@@ -1462,28 +2123,28 @@ FocusScope {
                 // here chases that, so this is not the "animating an
                 // animation" fault. See the stage 4 report.)
                 Behavior on x {
-                    enabled: recentSlot.settled
+                    enabled: recentSlot.settled && !recentSlot.launchMotionFrozen
                     NumberAnimation {
                         duration: Bulan.motionFocusMs
                         easing.type: Easing.InOutQuad
                     }
                 }
                 Behavior on y {
-                    enabled: recentSlot.settled
+                    enabled: recentSlot.settled && !recentSlot.launchMotionFrozen
                     NumberAnimation {
                         duration: Bulan.motionFocusMs
                         easing.type: Easing.InOutQuad
                     }
                 }
                 Behavior on tileScale {
-                    enabled: recentSlot.settled
+                    enabled: recentSlot.settled && !recentSlot.launchMotionFrozen
                     NumberAnimation {
                         duration: Bulan.motionFocusMs
                         easing.type: Easing.InOutQuad
                     }
                 }
                 Behavior on opacity {
-                    enabled: recentSlot.settled
+                    enabled: recentSlot.settled && !recentSlot.launchMotionFrozen
                     NumberAnimation {
                         duration: Bulan.motionFocusMs
                         easing.type: Easing.InOutQuad
@@ -1509,7 +2170,12 @@ FocusScope {
                 // this flips the tile is already where it belongs. Copied
                 // from HostCarousel.qml's HostTile delegate.
                 property bool settled: false
-                Component.onCompleted: settled = true
+                Component.onCompleted: {
+                    settled = true
+                    if (launchMotionFreezeRequested) {
+                        freezeLaunchMotion()
+                    }
+                }
 
                 // Clips away GameTile's own built-in label row (title +
                 // Running), which is not used for the Recent presentation --
@@ -1527,8 +2193,14 @@ FocusScope {
                     transformOrigin: Item.Center
 
                     GameTile {
+                        id: recentGameTile
                         x: Bulan.spaceXs
                         y: Bulan.spaceXs
+                        appId: model.appid
+                        launchSourceHidden:
+                            root.sameAppId(model.appid, root.hiddenLaunchAppId)
+                        launchMotionFreezeRequested:
+                            root.sameAppId(model.appid, root.frozenLaunchAppId)
                         gameName: model.name
                         boxart: model.boxart
                         running: false
@@ -1686,7 +2358,7 @@ FocusScope {
     // onDraggingChanged stops it outright the instant a drag begins, so a
     // manual drag always wins over a focus-follow scroll still in flight.
     function ensureLibraryFocusVisible() {
-        if (root.gameCount === 0) {
+        if (root.launchBusy || root.gameCount === 0) {
             return
         }
         // Only while the Library is the tab on screen.
@@ -1850,6 +2522,7 @@ FocusScope {
         }
 
         Repeater {
+            id: libraryRepeater
             model: root.gameModel
 
             // GameTile.qml, stage 2: artwork, crop, fallback, loading
@@ -1865,6 +2538,11 @@ FocusScope {
                 x: root.libraryFocusInset + column * root.libraryCellWidth
                 y: root.libraryFocusInset + row * root.libraryCellHeight
 
+                appId: model.appid
+                launchSourceHidden:
+                    root.sameAppId(model.appid, root.hiddenLaunchAppId)
+                launchMotionFreezeRequested:
+                    root.sameAppId(model.appid, root.frozenLaunchAppId)
                 gameName: model.name
                 boxart: model.boxart
                 running: model.running
@@ -1942,36 +2620,61 @@ FocusScope {
 
     // --- input ---------------------------------------------------------------
     // Following SPEC-host-carousel.md's table and HostCarousel.qml's handlers.
+    function consumeLaunchInput() {
+        if (!root.launchBusy) {
+            return false
+        }
+        if (launchTransition.running && launchTransition.visible) {
+            launchTransition.completeImmediately()
+        }
+        return true
+    }
+
+    // During capture this prevents a repeated confirm from starting another
+    // launch. Once the proxy is visible, any input resolves the motion to its
+    // destination instead of cancelling it.
+    Keys.onPressed: function(event) {
+        if (root.consumeLaunchInput()) {
+            event.accepted = true
+        }
+    }
+
     //
     // Left/Right: Library moves through the flat index (see moveLibraryStep's
     // own comment for the row-wrap judgement call); Recent moves by rank,
     // clamping at both ends.
-    Keys.onLeftPressed: {
-        if (root.activeTab === "recent") {
-            root.moveRecentBy(-1)
-        } else {
-            root.moveLibraryStep(-1)
+    Keys.onLeftPressed: function(event) {
+        if (!root.consumeLaunchInput()) {
+            if (root.activeTab === "recent") {
+                root.moveRecentBy(-1)
+            } else {
+                root.moveLibraryStep(-1)
+            }
         }
+        event.accepted = true
     }
-    Keys.onRightPressed: {
-        if (root.activeTab === "recent") {
-            root.moveRecentBy(1)
-        } else {
-            root.moveLibraryStep(1)
+    Keys.onRightPressed: function(event) {
+        if (!root.consumeLaunchInput()) {
+            if (root.activeTab === "recent") {
+                root.moveRecentBy(1)
+            } else {
+                root.moveLibraryStep(1)
+            }
         }
+        event.accepted = true
     }
 
     // Up/Down: Library moves by row, clamping. Recent is inert and swallowed,
     // exactly as on the carousel -- accepted so it does not bubble to the
     // StackView and drag focus into chrome this screen hides.
-    Keys.onUpPressed: {
-        if (root.activeTab === "library") {
+    Keys.onUpPressed: function(event) {
+        if (!root.consumeLaunchInput() && root.activeTab === "library") {
             root.moveLibraryRow(-1)
         }
         event.accepted = true
     }
-    Keys.onDownPressed: {
-        if (root.activeTab === "library") {
+    Keys.onDownPressed: function(event) {
+        if (!root.consumeLaunchInput() && root.activeTab === "library") {
             root.moveLibraryRow(1)
         }
         event.accepted = true
@@ -1981,32 +2684,61 @@ FocusScope {
     // Return and Enter are the same press on different keyboards, and Space is
     // what A becomes while the settings page's tab chain is armed elsewhere in
     // the app.
-    Keys.onReturnPressed: root.actConfirm()
-    Keys.onEnterPressed: root.actConfirm()
-    Keys.onSpacePressed: {
-        root.actConfirm()
+    Keys.onReturnPressed: function(event) {
+        if (!root.consumeLaunchInput()) {
+            root.actConfirm()
+        }
+        event.accepted = true
+    }
+    Keys.onEnterPressed: function(event) {
+        if (!root.consumeLaunchInput()) {
+            root.actConfirm()
+        }
+        event.accepted = true
+    }
+    Keys.onSpacePressed: function(event) {
+        if (!root.consumeLaunchInput()) {
+            root.actConfirm()
+        }
         event.accepted = true
     }
 
     // X. Names the focused game's options; the popup itself is built and
     // wired up elsewhere.
-    Keys.onMenuPressed: {
-        var srcIndex = root.currentSourceIndex()
-        if (srcIndex >= 0) {
-            root.optionsRequested(srcIndex)
+    Keys.onMenuPressed: function(event) {
+        if (!root.consumeLaunchInput()) {
+            var srcIndex = root.currentSourceIndex()
+            if (srcIndex >= 0) {
+                root.optionsRequested(root.appIdAtSourceIndex(srcIndex), root.activeTab)
+            }
         }
         event.accepted = true
     }
 
-    // B (Key_Escape) is deliberately NOT handled here. main.qml's StackView
-    // owns Keys.onEscapePressed at the root: with stackView.depth > 1 it pops
-    // back to the host carousel; this file leaves the event unaccepted so it
-    // bubbles there. Confirmed by reading main.qml -- see the stage 3 report.
+    // B still bubbles to main.qml normally, but cannot pop this AppView out
+    // from under an in-flight capture or proxy.
+    Keys.onEscapePressed: function(event) {
+        event.accepted = root.consumeLaunchInput()
+    }
+    Keys.onBackPressed: function(event) {
+        event.accepted = root.consumeLaunchInput()
+    }
 
     // START.
-    Keys.onHangupPressed: {
-        navigateTo("qrc:/gui/SettingsView.qml", SettingsView)
+    Keys.onHangupPressed: function(event) {
+        if (!root.consumeLaunchInput()) {
+            navigateTo("qrc:/gui/SettingsView.qml", SettingsView)
+        }
         event.accepted = true
+    }
+
+    // Y and SELECT keep their existing window-level/unused behavior outside a
+    // launch, while still obeying the launch interruption rule.
+    Keys.onCallPressed: function(event) {
+        event.accepted = root.consumeLaunchInput()
+    }
+    Keys.onContext1Pressed: function(event) {
+        event.accepted = root.consumeLaunchInput()
     }
 
     // SELECT (Key_Context1) is deliberately NOT bound. This screen has no
@@ -2024,12 +2756,16 @@ FocusScope {
     // no-op because that tab is already active. Letting an unaccepted shoulder
     // press bubble to the StackView is how a screen ends up with focus dragged
     // into chrome it does not have.
-    Keys.onContext2Pressed: {
-        root.switchTab("recent")
+    Keys.onContext2Pressed: function(event) {
+        if (!root.consumeLaunchInput()) {
+            root.switchTab("recent")
+        }
         event.accepted = true
     }
-    Keys.onContext3Pressed: {
-        root.switchTab("library")
+    Keys.onContext3Pressed: function(event) {
+        if (!root.consumeLaunchInput()) {
+            root.switchTab("library")
+        }
         event.accepted = true
     }
 
@@ -2044,5 +2780,13 @@ FocusScope {
             root.handleGameAction(actionId)
         }
         onDismissed: Qt.callLater(root.reclaimFocus)
+    }
+
+    // Mouse/touch equivalent of the launch key barrier. The top-level proxy
+    // receives presses during motion; this catches the brief capture interval.
+    MouseArea {
+        anchors.fill: parent
+        enabled: root.launchBusy
+        onPressed: root.consumeLaunchInput()
     }
 }
