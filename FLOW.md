@@ -261,6 +261,16 @@ their resolution is not lost.
   diagram above are unchanged; this only updates what `WakingPC` looks like
   when reached. Full design and reasoning in `SPEC-host-carousel.md`'s "v1
   decision — host tile busy state".
+- **`Library --> |X on tile| GameDetail` is not what X does yet.** Client's
+  decision, 1 August 2026, taken while scoping the game grid: X opens a
+  **per-game options popup** — Play/Resume, Quit Game, Hide Game, Direct Launch
+  — and Game Detail takes the same button over when it is built (`ROADMAP.md`
+  Phase B item 3). The edge above is the destination, not the current
+  behaviour. It was decided this way because Game Detail was out of that task's
+  scope and quitting a running game would otherwise have had no controller
+  route at all on the screen where you need it. The diagram is left unchanged
+  deliberately: the intent it draws is still the intent. Full reasoning in
+  `SPEC-game-grid.md`.
 - **Libraries remain separate by host for v1.** A merged multi-host library is
   deferred unless the separate model proves awkward after use.
 - **The Bulan stream overlay is deferred pending input validation.**
@@ -272,4 +282,6 @@ their resolution is not lost.
 
 **The library empty state is not drawn.** A paired host can have no games
 detected, so this is a reachable state and needs a designed route before Phase
-D can exit.
+D can exit. The game grid ships a **single line of placeholder copy** there —
+`"No games here yet."` — so the screen is not blank. That is a holding
+treatment, not the designed state, and it does not close this item.

@@ -107,7 +107,18 @@ Remaining work, in order:
    tile-level busy state shared with waking (Phase D's *Waking PC waiting
    overlay*, pulled forward — see below). Durable design and the limits of that
    review are in `SPEC-host-carousel.md`. No Deck validation yet.
-2. **Game grid** — Recent and Library views.
+2. ~~**Game grid** — Recent and Library views.~~ **Done 1 August 2026**, after a
+   client review on the Windows review station that produced four changes and
+   then the merge. Durable design in `SPEC-game-grid.md`. No Deck validation.
+   Three things about it are worth carrying forward:
+   - The app now records **when each game was last played**, per host, so
+     Recent has something real to sort by. That is an additive client-side
+     attribute on `NvApp`, following `hidden` and `directLaunch`.
+   - **The shoulder buttons had no keycode at all**, on any screen, until this
+     task. L1/R1 now reach QML.
+   - **X opens a per-game options popup, not Game Detail.** Client's decision
+     of 1 August 2026, taken because Game Detail is item 3 and quitting a
+     running game needed a route before then. See the `FLOW.md` note.
 3. **Game detail and launch** — follow the navigation authority in `FLOW.md`.
 4. **Screen transitions** — wire the existing 220 ms transition token into the
    completed core route.
@@ -115,7 +126,15 @@ Remaining work, in order:
 **New Phase B gap, raised 31 July 2026 and explicitly deferred by the client
 until after the game grid:** `StreamSegue.qml` remains stock upstream Qt. It was
 out of scope for the connecting/waking tile work above and has not been
-touched. Raise it again once item 2 (game grid) lands.
+touched. **Item 2 has now landed, so this is due.** `QuitSegue.qml` joins it:
+the game grid's Quit Game and quit-and-switch both push it, and it is stock
+upstream too.
+
+**Second Phase B gap, raised 1 August 2026 by the game grid:** the grid has
+**no host-settings surface**, so SELECT does nothing there and its hint is
+withheld. The client's game-grid mockup shows *SELECT Host Settings* on that
+screen. Either the existing `HostSettingsOverlay` is reused from the grid, or
+the mockup's hint is dropped — a client decision, not yet taken.
 
 **Exit:** launch → pick host → pick game → stream → return, with no screen in
 the user journey that still reads as upstream Moonlight.

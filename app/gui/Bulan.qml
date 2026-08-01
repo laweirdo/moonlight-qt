@@ -256,4 +256,77 @@ QtObject {
     // radial glow is 3-6%; a focus halo is the foreground case of the same
     // effect and carries more weight, matching the existing card focus bloom.
     readonly property real focusBloomOpacity: 0.22
+
+    // --- Game grid (PROPOSED -- pending client approval on real hardware) ----
+    // Measured off the client's mockups for the game-grid task, normalised to
+    // 1280x800, following the precedent of hostTileSpread, hostTileLabelGap and
+    // hostTileBusyDotGap: screen-specific measurements, not steps on the
+    // generic spacing scale. None of these is a settled value the way
+    // motionFocusMs's 180 became one after the 28 July review -- these have not
+    // yet been seen on a real screen at all.
+
+    // Library tile width, measured off the client's mockup at 1280x800.
+    readonly property int  gameTileWidth:       216
+
+    // 2:3 portrait against the width. NOT the mockup's proportion, which
+    // measures nearer 3:4 -- but every tile in that mockup was a grey
+    // placeholder, so the shape was estimated with no artwork in it.
+    //
+    // Client's call, 1 August 2026, after seeing both against the real
+    // Steambox library: 2:3 is SteamGridDB's standard vertical size, and it is
+    // what 18 of the 25 box-art files cached on the review station actually
+    // are. At 3:4 the crop takes a band off the top and bottom of most of the
+    // library -- visibly, on posters whose titles sit near an edge. Accepted
+    // evolution from the mockup, not a transcription error.
+    readonly property int  gameTileHeight:      324
+    // Column count, from the mockup.
+    readonly property int  gameGridColumns:     5
+    // Column gap: 2*layoutScreenMarginX + 5*216 + 4*26 = exactly 1280, so five
+    // tiles fit the mockup's grid with no partial column at either edge.
+    readonly property int  gameGridGap:         26
+    // The small host disc in the header, measured off the mockup.
+    readonly property int  gameHeaderAvatarSize: 40
+
+    // --- Recent view -----------------------------------------------------------
+    // The focused tile and its two dimmed neighbours, the same composition as the
+    // host carousel. Measured off design/game-grid-01-recent.png, then constrained
+    // by the height actually available.
+    //
+    // The mockup's focused tile scales to about 320x440. That is neither 2:3 nor
+    // 3:4, and at 2:3 a 320-wide tile would be 480 tall -- which does not fit.
+    // The tile keeps the accepted 2:3 ratio and gives up width instead.
+    //
+    // Sized against what is actually left rather than what was estimated. The
+    // first attempt at 288x432 was measured on screen: the tile starts 223px
+    // down, the focus scale adds 4% to its height, and the title landed exactly
+    // on the hint bar's hairline. Working back from the 489px that genuinely
+    // remain -- minus gameRecentLabelGap, the title line, and the tagline the
+    // running game adds under it -- gives 396, and 264 is that at 2:3.
+    //
+    // Smaller than the mockup drew. The ratio was decided on evidence and the
+    // copy beneath has to be readable, so the width is what gives way.
+    readonly property int  gameRecentTileWidth:      256
+    readonly property int  gameRecentTileHeight:     384
+
+    // Neighbour size relative to the focused tile. The carousel's own
+    // hostTileNeighbourScale is 0.64; this is looser because a rectangular tile
+    // at 0.64 reads as a different object rather than the same one further away.
+    readonly property real gameRecentNeighbourScale: 0.70
+
+    // Focused centre to neighbour centre.
+    //
+    // Tightened from 290 on the client's instruction of 1 August 2026: Recent
+    // was showing three games however wide the screen was, and they asked it to
+    // expose as many as the space and the spacing permit. At 290 a fourth and
+    // fifth tile only fit by hanging over the screen edge; at 250, five sit
+    // whole inside layoutScreenMarginX at 1280 wide, with about 32px of clear
+    // ground between the focused tile and its neighbour.
+    //
+    // Closer than the ~65px this started at, and closer than hostTileSpread's
+    // equivalent on the carousel. That is the trade the instruction asks for --
+    // seeing more of the library beats air around the selected game.
+    readonly property int  gameRecentSpread:         250
+
+    // Clear space under the focused tile before its title block.
+    readonly property int  gameRecentLabelGap:        16
 }

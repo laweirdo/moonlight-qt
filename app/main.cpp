@@ -1094,6 +1094,20 @@ int main(int argc, char *argv[])
         // without pairing or unpairing real machines. Inert unless set.
         engine.rootContext()->setContextProperty("fakeHosts",
                                                  QString::fromUtf8(qgetenv("MOONLIGHT_FAKE_HOSTS")));
+        // Debug hook: MOONLIGHT_FAKE_GAMES=<preset> substitutes a fixed game
+        // list into AppView, the same way MOONLIGHT_FAKE_HOSTS substitutes a
+        // fixed host list into the carousel -- a fake host cannot open a real
+        // game list (see HostCarousel.actConfirm()'s review-mode guard), so
+        // without this the game grid could not be reviewed at all before the
+        // client sees it. Inert unless set.
+        engine.rootContext()->setContextProperty("fakeGames",
+                                                 QString::fromUtf8(qgetenv("MOONLIGHT_FAKE_GAMES")));
+        // Companion to the above: MOONLIGHT_FAKE_GAMES_ART points at a
+        // directory of images (1.jpg, 2.jpg, ...) so fake games can carry real
+        // box art during review instead of always falling back. Empty unless
+        // set, in which case fake art stays empty too.
+        engine.rootContext()->setContextProperty("fakeGamesArtDir",
+                                                 QString::fromUtf8(qgetenv("MOONLIGHT_FAKE_GAMES_ART")));
         // Review hook: opens the host-settings overlay after a fake-host
         // carousel settles, so controller-only UI can be captured without
         // sending synthetic input. Inert unless explicitly enabled.
@@ -1145,6 +1159,37 @@ int main(int argc, char *argv[])
         // choose which half of the wake the grab lands in. Inert unless set.
         engine.rootContext()->setContextProperty("fakeWakeOnStart",
                                                  qEnvironmentVariableIsSet("MOONLIGHT_FAKE_WAKE_ON_START"));
+        // Review hook: MOONLIGHT_OPEN_APPS_FOR_HOST=<name> opens the game grid
+        // for a REAL, paired host once the carousel settles, by name rather than
+        // by row -- discovery decides the row order and it is not stable between
+        // runs.
+        //
+        // This is the opposite of MOONLIGHT_FAKE_GAMES and the two must not be
+        // combined. The fake preset proves the grid's own arithmetic and its
+        // edge cases; only a real host proves the part no substitute can, which
+        // is box art actually arriving from BoxArtManager -- real files, real
+        // aspect ratios, real load timing, and real placeholder art for the
+        // games that have none. Everything up to now has been reviewed against
+        // tiles that were never going to contain a picture.
+        //
+        // It goes through HostCarousel's ordinary openAppView(), so a host that
+        // is offline, unpaired or unsupported is refused exactly as a real press
+        // would refuse it. Inert unless set.
+        engine.rootContext()->setContextProperty("openAppsForHost",
+                                                 QString::fromUtf8(qgetenv("MOONLIGHT_OPEN_APPS_FOR_HOST")));
+        // Review hook: MOONLIGHT_GAME_REVIEW=options|switch opens the per-game
+        // popup on the focused fake game once the grid settles, the same way
+        // MOONLIGHT_OPEN_HOST_SETTINGS opens the host menu. Needed for the same
+        // reason: the screenshot hook grabs the window on a timer and cannot
+        // press X, so without this the popup could be built and shipped having
+        // only ever been reasoned about. Fake games only.
+        engine.rootContext()->setContextProperty("gameReviewAction",
+                                                 QString::fromUtf8(qgetenv("MOONLIGHT_GAME_REVIEW")));
+        // Companion to the screenshot hook: extra milliseconds before the grab.
+        // See the Timer in main.qml -- a screen that has to wait on discovery
+        // is not on screen yet at the default four seconds. Zero unless set.
+        engine.rootContext()->setContextProperty("screenshotDelayMs",
+                                                 qEnvironmentVariableIntValue("MOONLIGHT_SCREENSHOT_DELAY_MS"));
         // Suppress the startup warning dialogs in token proof mode -- they would
         // otherwise open modally on top of the sheet.
         engine.rootContext()->setContextProperty("runConfigChecks",

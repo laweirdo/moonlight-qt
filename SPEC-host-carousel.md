@@ -498,6 +498,22 @@ connection never has anywhere to open into:
 | `MOONLIGHT_FAKE_WAKE_OUTCOME=success\|timeout` | Set to `success` to flip a fake host's `online` true 3 seconds after its wake starts, exercising the real resolution path (`onOnlineChanged` → `resolveWake`) rather than a review-only shortcut. `timeout` or unset leaves the real 30-second give-up untouched, which is the failure half of the review. |
 | `MOONLIGHT_FAKE_WAKE_ON_START=1` | Presses Wake on the focused fake host once the carousel settles, the same way `MOONLIGHT_OPEN_HOST_SETTINGS` opens the host menu — needed because the screenshot hook grabs the window on a timer and cannot press a button itself. Calls `actWake()`, not the wake internals directly, so an unwakeable host still gets refused exactly as a real press would. |
 
+**This screen no longer restores upstream's toolbar when it deactivates.**
+Changed 1 August 2026 after the client saw the toolbar flash across the screen
+on the way into the game grid: this screen set it visible on the way out, the
+grid set it hidden on the way in, and the frames between the two handlers drew
+it. Both are Bulan screens and neither ever wants it. This screen now declares
+`bulanScreen: true`, and `main.qml` takes the toolbar off after any push or pop
+settles — the backstop for upstream screens that hand it back on the assumption
+that whatever is underneath wants it. Full reasoning in `SPEC-game-grid.md`.
+
+One further hook was added to this screen by the game-grid task, because that
+screen is reached *through* this one:
+
+| Variable | What it does |
+|---|---|
+| `MOONLIGHT_OPEN_APPS_FOR_HOST=<name>` | Opens the game grid for a **real, paired** host once the carousel settles, matched by name rather than row — discovery decides the row order and it is not stable between runs. It polls rather than acting once, because a saved host is loaded **offline** and only reports itself reachable when the discovery poll answers; acting on the first frame would route the press to a wake instead. Real hosts only: it goes through the ordinary `openAppView()`, which `actConfirm()`'s review guard blocks for fake hosts. Pair it with `MOONLIGHT_SCREENSHOT_DELAY_MS`. See `SPEC-game-grid.md`. |
+
 **On Windows this runs windowed rather than offscreen**, which renders more
 faithfully than the Mac's offscreen path. See `BUILDING-WINDOWS.md`.
 

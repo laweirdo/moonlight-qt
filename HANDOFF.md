@@ -4,143 +4,151 @@ Current as of **1 August 2026**.
 
 This file records live repository and validation state. `AGENTS.md` owns
 permanent operating rules; `ROADMAP.md` owns sequencing; `BUGS.md` owns
-acknowledged unintended behavior. There is no active task brief.
-Always inspect Git before relying on this snapshot.
+acknowledged unintended behavior. Always inspect Git before relying on this
+snapshot.
 
 ## Repository state when written
 
 | Item | State |
 |---|---|
-| Integration branch | `bulan`, merged and pushed to `origin/bulan` |
-| Task branch | `tile-busy-state`, merged at the client's instruction and deleted |
+| Integration branch | `bulan`, with the game grid merged and pushed to `origin/bulan` |
+| Task branch | `game-grid`, merged at the client's instruction and deleted |
 | Remote | `origin` only, the client's fork. Never pushed to upstream Moonlight |
 | Active task | **None.** `TASK-BRIEF.md` was removed on completion |
 | Open defects | None recorded in `BUGS.md` |
 
-**The client accepted this work on the Windows review station on 1 August 2026,
-driving it with a hardware gamepad, then authorized the merge and the push.** It
-has had no Steam Deck, Game Mode, or real-sleeping-host validation of any kind.
+**The client drove the deployed review build on 1 August 2026** against the real
+`Steambox` library, reported four faults, and all four were fixed and merged in
+the same session — the running-game title block, Recent showing only three
+games, the typeface changing through focus, and upstream's toolbar flashing
+between screens. `SPEC-game-grid.md` carries each fix and its reasoning.
 
-The next objective is `ROADMAP.md`'s Phase B item 2, the game grid.
+**That review was the first time any of this was driven by a person rather than
+photographed.** It was not an item-by-item sign-off, and it happened on the
+Windows review station, not a Deck.
+
+The next objective after acceptance is `ROADMAP.md`'s Phase B item 3, game
+detail and launch — and the two Phase B gaps the grid raised, recorded there.
 
 ## What was built
 
-Phase B item 1, *Connecting state*, with Phase D's *Waking PC* item pulled
-forward into it by client decision on 31 July 2026.
-
-The carousel's two provisional waiting treatments are replaced by one designed
-tile-level busy state: the circular tile dims its disc interior and three amber
-dots bounce over it. No new screen, no overlay, no popup. `SPEC-host-carousel.md`
-owns the durable design and reasoning.
+Phase B item 2, the game grid: `AppView.qml` rebuilt as a Bulan screen with
+Recent and Library views. `SPEC-game-grid.md` owns the durable design and the
+full reasoning.
 
 | Commit | What |
 |---|---|
-| `89e1367a` | Eight busy-state tokens |
-| `6d38a8b3` | The tile treatment, the UUID-keyed state, both wake call sites |
-| `5cff3caf` | `MOONLIGHT_FAKE_WAKE_OUTCOME`, `MOONLIGHT_FAKE_CONNECT_HOLD_MS` |
-| `7ffe1d27` | `MOONLIGHT_FAKE_WAKE_ON_START`, so the state can be photographed |
-| `bf92f5a0` | Dot size raised after seeing it on screen |
-| `7766b4c4` | Documentation, and the corrected Windows build trap |
+| `0e8c8c61` | The shell, the static Library, the `lastPlayed` record, the review hook |
+| `8fd8df94` | `GameTile.qml` — real box art, fallback, focus ring and bloom |
+| `1f36244b` | Controller navigation, Recent, tabs, launching, the options popup |
+| `e3c1a22d` | Motion, and the diagnosis of the Library scroll defect |
 
 ## Current product state
 
 | Area | Current state |
 |---|---|
-| Connecting | Tile disc dims, three amber dots bounce, `"Connecting…"`. |
-| Waking | Same treatment. Resolves when the host's model row reports online, or gives up after 30 seconds and says `"Couldn't wake …"` for 3 seconds before reverting to the ordinary offline copy. |
-| Wake popup | Gone from both call sites — `actWake()` and host settings *Wake PC*, which now closes itself so the tile it made busy is visible. |
-| Input while busy | Left/Right unaffected. A and Y are no-ops on the busy host. The Wake hint and the *Wake PC* entry are withheld while that host wakes. B is unchanged and is deliberately not a cancel. |
-| Stream launch | **Unchanged and still stock upstream Qt.** `StreamSegue.qml` was out of scope by client decision; `ROADMAP.md` records it as a Phase B gap for after the game grid. |
-| Everything else | Discovery, pairing, streaming, the host overlay, the root quit confirmation and the startup toolbar boundary are untouched. |
+| Recent | Horizontal row, focused tile centred, ordered by last played then alphabetically. Focused game carries its title, a `Running` marker, and `"Pick up where you left off."` when it is the running one. Neighbours carry a relative last-played line, or none if never played. |
+| Library | Five-column scrolling grid, 216×324 tiles at 2:3. Scroll follows focus. |
+| Artwork | Cropped to fill, rounded, inset inside the focus ring. Games with none, or with GFE's placeholder, fall back to their title on a plain surface. Upstream's exact-pixel placeholder detection is preserved. |
+| Launching | **Unchanged.** A pushes the existing `StreamSegue`. Quit and quit-and-switch push the existing `QuitSegue`. Both remain stock upstream Qt. |
+| Options (X) | Custom Bulan glass popup: Resume/Play, Quit Game, Hide Game, Direct Launch, with upstream's enable rules preserved and a blocked entry saying why. |
+| Last played | New persisted per-app attribute on `NvApp`, stamped in `AppModel::createSessionForApp()` — i.e. when you press Play, not when the stream succeeds. |
+| L1 / R1 | **Newly mapped.** Both shoulder buttons previously delivered no keycode to QML at all, on any screen. |
+| SELECT on the grid | **Unbound, and its hint withheld.** The grid has no host-settings surface. The client's mockup shows one. Recorded as a Phase B gap. |
+| Empty library | One line, `"No games here yet."` A holding treatment; the designed state is Phase D. |
+| Everything else | Discovery, pairing, streaming, the host carousel, its busy state and the root quit confirmation are untouched. |
 
 ## Implementation notes
 
-- Busy state is keyed on host UUID with separate connecting and waking slots.
-  An index was safe for a one-tick connection and is not safe for a 30-second
-  wake, and a single shared slot would let connecting to a second host silently
-  discard a wake still running on the first.
-- No C++ backend change was needed. `ComputerModel` already emits a per-row
-  `dataChanged` when the monitor thread sees a state flip, so `model.online` was
-  already live. Resolution therefore inherits the discovery poll's cadence:
-  roughly 3 seconds between the host answering and the app noticing.
-- The dots run off one shared looping phase, so this screen still contains no
-  `SequentialAnimation` — the property `SPEC-host-carousel.md` claims about it
-  remains literally true.
-- Three review hooks were added because the review station has no host it can
-  put to sleep and a fake host's `online` never changes on its own. All are
-  inert unless set.
+- Recent's ordering is computed **in QML**, from the model's own roles, using
+  the mirror-`Repeater` pattern the carousel already uses. Not a C++ sort and
+  not a proxy model: the review hook substitutes a plain `ListModel`, and
+  neither could have served it.
+- `lastPlayed` is deliberately **excluded from `NvApp::operator==`**. That
+  operator drives `updateAppList`'s add/remove/replace pass, and a timestamp
+  there would churn the whole list on every launch.
+- The shoulder buttons send `Key_Context2` / `Key_Context3`, following the
+  precedent set when Y and Select had the same problem. They are deliberately
+  **not** switched by the swap-face-buttons preference.
+- The options popup has **no backdrop blur**, unlike the host-settings overlay.
+  Giving it one means wrapping the whole screen in a single layered item, which
+  is a structural change to a file this task had already rewritten twice. The
+  scrim carries it alone. Recorded as an accepted compromise in
+  `SPEC-game-grid.md`.
+- Artwork masking uses `MultiEffect`, which is a shader effect. **It renders as
+  nothing under `QT_QPA_PLATFORM=offscreen`**, so the Mac's offscreen
+  screenshot path cannot review artwork. Windows and the Deck both have a real
+  GPU and are unaffected.
 
 ## Validation record
 
 ### Performed
 
-- `qmllint` exited 0 for `Bulan.qml`, `HostTile.qml`, `HostCarousel.qml` and
-  `HostSettingsOverlay.qml`. Only the categories this project has always seen
-  standalone appeared: `[import]`, `[missing-property]`, `[unqualified]`,
-  `[unresolved-type]`. `Bulan.qml` produced no output at all.
-- The Windows app target built with Qt 6.9.3 and MSVC Build Tools, and
-  `qmlcachegen` compiled every changed QML file — which is a real syntax check,
-  not only a lint pass. The only link warning was the pre-existing `LNK4291`.
-- The review executable was deployed to `build\deploy-x64-release\Moonlight.exe`
-  and launched three times from the checkout path.
-- The waking state was captured on the `mixed` fake-host preset and looked at:
-  dimmed disc, three staggered amber dots, undimmed focus ring, and the copy
-  `"Waking Living-Room. Give it a moment."` The Wake hint was correctly absent
-  from the hint bar while that host was waking.
-- The `offline` preset was captured and confirmed unchanged: its unwakeable
-  first host still shows no Wake hint and no busy state.
-- The dot size was raised from 10 to 18 px **because of** that first capture —
-  10 px read as specks against a 324 px tile.
-- Application logs were read on every launch. The only warning was the known
-  environmental `ToolTip attached property` line from `main.qml`.
-- A run with no review hooks set was checked against the real host list, to
-  confirm the hooks are inert and normal startup is unchanged. `Steambox`
-  appeared online and read `"Ready when you are."` as before.
+- The Windows app target built with Qt 6.9.3 and MSVC Build Tools on every
+  change, and `qmlcachegen` compiled each changed QML file — a real syntax
+  check, not only a lint pass. The only link warning was the pre-existing
+  `LNK4291`.
+- `qmllint` on `AppView.qml`, `GameTile.qml`, `GameOptionsOverlay.qml`,
+  `Bulan.qml`, `HostCarousel.qml` and `main.qml`. Only this project's four
+  long-standing categories appeared: `[import]`, `[missing-property]`,
+  `[unqualified]`, `[unresolved-type]`. `Bulan.qml` produced no output at all.
+- **Reviewed against the real paired host `Steambox`**, on both tabs, with real
+  box art delivered by `BoxArtManager` from its own cache — roughly twenty
+  games at three different source aspect ratios. This is the first Bulan screen
+  in this project to have been checked against real host data rather than a
+  fake preset.
+- Reviewed against every `MOONLIGHT_FAKE_GAMES` preset — `none`, `one`,
+  `partial`, `many`, `mixed` — on both tabs. That covers an empty library, a
+  single game, a partially filled final row, more than one screen of scrolling,
+  a 45-character title, and a running game.
+- The options popup and the quit-and-switch confirmation captured and read.
+- Application logs read on every run. Only two lines ever appear, both
+  environmental: the `ToolTip attached property` warning from `main.qml` that
+  this project has always had, and `mDNS is disabled by user preference`, which
+  is a local preference on the review station.
+- **A model update while the screen was live** was exercised without meaning to
+  be: a host's app list arrives in chunks, and that is what surfaced the scroll
+  defect below.
 
-### Client controller review, 1 August 2026
+### The scroll defect, found and diagnosed
 
-The client drove the deployed review executable on the `mixed` fake-host preset
-with a **hardware gamepad**, with the wake outcome set to succeed and the
-connecting hold enabled, and reported that everything looked right.
+The Library grid was seen **scrolled down one row with no input and no focus
+ring on screen**, once, during stage 2. Two immediate re-runs were correct, so
+it was recorded as unreproduced and explicitly **not** claimed fixed.
 
-They were asked to exercise: waking by Y and by A, the resolution back to
-`"Ready when you are."`, scrolling away from and back to a waking host, the
-dots shrinking with the tile, repeated presses on a busy host doing nothing,
-the Wake hint and the *Wake PC* entry disappearing while busy, the connecting
-dots, and B still reaching the quit confirmation.
+It became reproducible in stage 4, once the Library tab could be opened
+directly against the real host. A host's app list arrives in chunks; each
+arrival recomputed the scroll — while the Library was not the visible tab and
+while the content height was still growing. The viewport test ran against a
+grid a fraction of its eventual size, scrolled there, and nothing recomputed it
+afterwards. It looked intermittent because it depended on how the host happened
+to chunk its list on that run.
 
-**This was one overall judgement, not an item-by-item sign-off.** Treat it as
-acceptance of the surface, not as independent confirmation of each behaviour.
-
-### Build caveat resolved
-
-The previous handoff recorded that the Windows shell could not find the MSVC
-tools through the generated makefiles, and that build-tree makefiles were
-patched with absolute tool paths and `/MANIFEST:NO`. **That diagnosis was wrong
-and the workaround was unnecessary.** The real cause was cmd expanding `%PATH%`
-at parse time, before `vcvarsall.bat` had run, when the three build steps were
-chained on one command line. Putting them in a `.bat` file builds the documented
-recipe unmodified, with the manifest embedding normally.
-`BUILDING-WINDOWS.md` carries the full account. No source or makefile
-workaround is in place on this branch.
+Fixed, and verified across three consecutive runs against the real host. The
+transferable lesson is in `SPEC-game-grid.md`.
 
 ### Not performed
 
 - **No Steam Deck validation, in either Desktop Mode or Game Mode.** Everything
   above happened on the Windows review station, which `BUILDING-WINDOWS.md` is
   explicit is not a product target.
-- **No real sleeping host.** The 30-second timeout was judged against a fake
-  host that returns in three seconds. Whether it suits a machine genuinely
-  leaving sleep, and whether the discovery poll's ~3 second notice latency is
-  perceptible, remain unanswered.
-- **The wake-failure state has never been seen.** The review run was set to
-  resolve successfully, so `"Couldn't wake …"` and its 3-second hold never ran.
-  The copy is built and shares the status-line code that was reviewed, but
-  nobody has read it on screen.
-- The dot size, gap and bounce height were judged on a scaled desktop panel, not
-  on a 7-inch one at 204 ppi. One of the three was already changed once for
-  exactly this reason during the session.
-- No stream, pairing, discovery, or real-host destructive flow was invoked.
+- **No LCD or OLED appearance check.** Tile sizes, the 2:3 ratio and the Recent
+  composition were judged on a scaled desktop panel, not a 7-inch one at
+  204 ppi. The previous task had to change a value for exactly this reason.
+- **No hardware-gamepad review, by anyone.** Every controller path here —
+  the D-pad in both views, A, X, B, L1/R1, START — has been built and reasoned
+  about and checked in code. None of it has been driven with a physical
+  controller. **This is the single largest gap in this record**, and the newly
+  mapped shoulder buttons are the part of it least supported by precedent.
+- **No stream has been started or stopped through this screen.** Launch,
+  resume, Quit Game and quit-and-switch all push existing upstream components,
+  and none of those paths has been exercised end to end against a live game.
+- **The motion has never been watched.** Stills cannot show it. Every animation
+  was built against the brief's rules and read back in the source; that is not
+  the same as seeing whether it feels right.
+- **Hide Game and Direct Launch have never been triggered against a real host.**
+  They are wired to the existing model calls and were only exercised in review
+  mode, which refuses them by design.
 
 ## Required reading before continuation
 
@@ -151,6 +159,6 @@ workaround is in place on this branch.
 5. `ROADMAP.md`
 6. This file
 7. `BUGS.md`
-8. `SPEC-host-carousel.md`
-9. The active task brief, if one has been created
+8. `SPEC-host-carousel.md` and `SPEC-game-grid.md`
+9. The active task brief, `TASK-BRIEF.md`
 10. The applicable `BUILDING-*.md` before a build

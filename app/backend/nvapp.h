@@ -1,6 +1,7 @@
 #pragma once
 
 #include <QSettings>
+#include <QDateTime>
 
 class NvApp
 {
@@ -10,6 +11,10 @@ public:
 
     bool operator==(const NvApp& other) const
     {
+        // lastPlayed is intentionally excluded here. This operator drives
+        // AppModel::updateAppList's add/remove/replace pass, and including
+        // a timestamp that changes on every launch would make the app list
+        // churn (remove/re-add or spurious dataChanged) instead of staying stable.
         return id == other.id &&
                 name == other.name &&
                 hdrSupported == other.hdrSupported &&
@@ -39,6 +44,7 @@ public:
     bool isAppCollectorGame = false;
     bool hidden = false;
     bool directLaunch = false;
+    QDateTime lastPlayed;
 };
 
 Q_DECLARE_METATYPE(NvApp)
