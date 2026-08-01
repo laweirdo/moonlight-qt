@@ -9,12 +9,34 @@ import SystemProperties 1.0
 import Bulan 1.0
 
 Item {
+    id: root
+
     property Session session
     property string appName
     property string stageText : isResume ? qsTr("Resuming %1...").arg(appName) :
                                            qsTr("Starting %1...").arg(appName)
     property bool isResume : false
     property bool quitAfter : false
+
+    // Deterministic QML-only launch review. AppView sets these properties only
+    // for a MOONLIGHT_GAME_REVIEW route. The production path leaves reviewMode
+    // false and continues through the existing Session lifecycle unchanged.
+    property bool reviewMode: false
+    property string reviewOutcome: "start"
+    property var reviewAppId: null
+    property int reviewSourceIndex: -1
+    property string reviewOrigin: "recent"
+    property bool reviewSourceAvailable: true
+    property bool reviewRepeat: false
+    property int reviewCycle: 0
+
+    signal reviewCycleRequested(int cycle)
+
+    function requestReviewCycle()
+    {
+        reviewCycle++
+        reviewCycleRequested(reviewCycle)
+    }
 
     function stageStarting(stage)
     {
@@ -106,13 +128,23 @@ Item {
         // Show the toolbar again when popped off the stack
         toolBar.visible = true
 
-        // Re-enable GUI gamepad usage now
-        SdlGamepadKeyNavigation.enable()
+        if (!reviewMode) {
+            // Re-enable GUI gamepad usage now
+            SdlGamepadKeyNavigation.enable()
+        }
     }
 
     StackView.onActivated: {
         // Hide the toolbar before we start loading
         toolBar.visible = false
+
+        // Review routes must never initialize or start a Session. They expose
+        // deterministic state for the later visual stages and can replay the
+        // launch cycle without restarting the process or waiting on a host.
+        if (reviewMode) {
+            Qt.callLater(requestReviewCycle)
+            return
+        }
 
         // Hook up our signals
         session.stageStarting.connect(stageStarting)
@@ -130,6 +162,13 @@ Item {
         // Kick off the stream
         spinnerTimer.start()
         streamLoader.active = true
+    }
+
+    Timer {
+        interval: Bulan.motionTransitionMs * 4
+        repeat: true
+        running: root.reviewMode && root.reviewRepeat
+        onTriggered: root.requestReviewCycle()
     }
 
     Timer {

@@ -54,6 +54,10 @@ FocusScope {
     // DIFFERENT one is running must not launch -- see actConfirmOn() below.
     signal switchGameRequested(int sourceIndex, string runningName, string nextName)
 
+    // Stage 2 can bind its transient launch visual to this without introducing
+    // another environment variable or a network-timed replay path.
+    signal reviewLaunchCycleRequested(var reviewState, int cycle)
+
     // Debug hook. MOONLIGHT_FAKE_GAMES=none|one|partial|many|mixed substitutes a
     // fixed game list, following MOONLIGHT_FAKE_HOSTS's exact precedent in
     // HostCarousel.qml. Required, not optional: the review station has no
@@ -348,6 +352,7 @@ FocusScope {
                 // second path into the model.
                 readonly property bool isHidden: model.hidden
                 readonly property bool isDirectLaunch: model.directLaunch
+                readonly property var appId: model.appid
                 onIsRunningChanged: root.recomputeRunning()
                 onLastPlayedValueChanged: root.recomputeRecentOrder()
             }
@@ -515,6 +520,275 @@ FocusScope {
         root.recentFocusedIndex = next
     }
 
+    // --- deterministic launch/quit review -----------------------------------
+    // MOONLIGHT_GAME_REVIEW remains a single string supplied by app/main.cpp.
+    // New Stage 1 cases are parsed and dispatched here, against fake games
+    // only, so none of them can address a real AppModel row by accident.
+    readonly property string gameReviewCase:
+        typeof gameReviewAction !== "undefined"
+            ? String(gameReviewAction).trim().toLowerCase() : ""
+
+    function stageOneReviewRoute(action) {
+        var route = {
+            kind: "launch",
+            origin: "recent",
+            lowerRow: false,
+            resume: false,
+            launchOutcome: "start",
+            sourceAvailable: true,
+            repeat: false,
+            switching: false,
+            quitOutcome: "pending",
+            returnTarget: "grid"
+        }
+
+        if (action === "launch-recent" || action === "recent-start") {
+            return route
+        }
+        if (action === "launch-library" || action === "library-start") {
+            route.origin = "library"
+            return route
+        }
+        if (action === "launch-library-scrolled" || action === "library-scroll-start") {
+            route.origin = "library"
+            route.lowerRow = true
+            return route
+        }
+        if (action === "launch-resume" || action === "recent-resume") {
+            route.resume = true
+            return route
+        }
+        if (action === "launch-warning") {
+            route.launchOutcome = "warning"
+            return route
+        }
+        if (action === "launch-failure") {
+            route.launchOutcome = "failure"
+            return route
+        }
+        if (action === "launch-valid-source" || action === "valid-source") {
+            return route
+        }
+        if (action === "launch-no-source" || action === "no-source") {
+            route.sourceAvailable = false
+            return route
+        }
+        if (action === "launch-cycle" || action === "cycle") {
+            route.repeat = true
+            return route
+        }
+        if (action === "quit") {
+            route.kind = "quit"
+            route.returnTarget = "options"
+            return route
+        }
+        if (action === "quit-switch-success" || action === "switch-success") {
+            route.kind = "quit"
+            route.switching = true
+            route.quitOutcome = "success"
+            return route
+        }
+        if (action === "quit-failure") {
+            route.kind = "quit"
+            route.quitOutcome = "failure"
+            route.returnTarget = "options"
+            return route
+        }
+        if (action === "quit-switch-failure-grid" || action === "switch-failure-grid") {
+            route.kind = "quit"
+            route.switching = true
+            route.quitOutcome = "failure"
+            route.returnTarget = "grid"
+            return route
+        }
+        if (action === "quit-switch-failure-options" || action === "switch-failure-options") {
+            route.kind = "quit"
+            route.switching = true
+            route.quitOutcome = "failure"
+            route.returnTarget = "options"
+            return route
+        }
+        return null
+    }
+
+    function setFakeRunningIndex(runningIndex) {
+        for (var i = 0; i < fakeModel.count; i++) {
+            fakeModel.setProperty(i, "running", i === runningIndex)
+        }
+        root.recomputeRunning()
+    }
+
+    function selectReviewSource(sourceIndex, origin) {
+        if (sourceIndex < 0 || sourceIndex >= root.gameCount) {
+            return
+        }
+        root.switchTab(origin)
+        if (origin === "library") {
+            root.libraryFocusedIndex = sourceIndex
+            Qt.callLater(root.ensureLibraryFocusVisible)
+            return
+        }
+        for (var rank = 0; rank < root.recentOrder.length; rank++) {
+            if (root.recentOrder[rank] === sourceIndex) {
+                root.recentFocusedIndex = rank
+                return
+            }
+        }
+    }
+
+    function sourceForReviewRoute(route) {
+        if (root.gameCount === 0) {
+            return -1
+        }
+        if (route.switching) {
+            return root.gameCount > 1 ? 1 : 0
+        }
+        if (route.lowerRow) {
+            return root.gameCount - 1
+        }
+        return 0
+    }
+
+    function ensureReviewGameCount(minimum) {
+        while (fakeModel.count < minimum) {
+            var number = fakeModel.count + 1
+            fakeModel.append({
+                name: qsTr("Review game %1").arg(number),
+                running: false,
+                boxart: "",
+                hidden: false,
+                appid: 900000 + number,
+                directLaunch: false,
+                appCollectorGame: false,
+                lastPlayed: new Date(0)
+            })
+        }
+    }
+
+    function beginStageOneReview(route) {
+        root.pendingGameReviewRoute = route
+        root.gameReviewAttempts = 0
+
+        var minimumGameCount = route.lowerRow
+                ? Bulan.gameGridColumns + 1 : (route.switching ? 2 : 1)
+        root.ensureReviewGameCount(minimumGameCount)
+        Qt.callLater(root.tryStageOneReview)
+    }
+
+    function tryStageOneReview() {
+        var route = root.pendingGameReviewRoute
+        if (route === null) {
+            return
+        }
+        if (root.gameCount < fakeModel.count && root.gameReviewAttempts < 80) {
+            root.gameReviewAttempts++
+            Qt.callLater(root.tryStageOneReview)
+            return
+        }
+
+        var sourceIndex = root.sourceForReviewRoute(route)
+
+        if (route.kind === "quit") {
+            root.setFakeRunningIndex(0)
+        } else {
+            root.setFakeRunningIndex(route.resume ? sourceIndex : -1)
+        }
+        root.selectReviewSource(sourceIndex, route.origin)
+
+        // Library tab opacity and focus-follow scrolling both use
+        // motionFocusMs. Let both settle before exposing the route, otherwise
+        // the lower-row case would be configured but already hidden behind the
+        // segue before its source tile entered the viewport.
+        if (route.origin === "library") {
+            root.pendingGameReviewSourceIndex = sourceIndex
+            gameReviewSettleTimer.restart()
+            return
+        }
+        root.completeStageOneReview(route, sourceIndex)
+    }
+
+    function completeStageOneReview(route, sourceIndex) {
+        root.pendingGameReviewRoute = null
+        root.pendingGameReviewSourceIndex = -1
+        if (route.kind === "quit") {
+            root.pushReviewQuit(route, sourceIndex)
+        } else {
+            root.pushReviewLaunch(route, sourceIndex)
+        }
+    }
+
+    Timer {
+        id: gameReviewSettleTimer
+        interval: Bulan.motionFocusMs * 2
+        onTriggered: root.completeStageOneReview(
+                         root.pendingGameReviewRoute,
+                         root.pendingGameReviewSourceIndex)
+    }
+
+    function pushReviewLaunch(route, sourceIndex) {
+        var game = sourceIndex >= 0 && sourceIndex < fakeModel.count
+                ? fakeModel.get(sourceIndex) : null
+        var reviewState = {
+            appId: game ? game.appid : null,
+            sourceIndex: sourceIndex,
+            origin: route.origin,
+            sourceAvailable: route.sourceAvailable && game !== null,
+            outcome: route.launchOutcome,
+            resume: route.resume
+        }
+        var component = Qt.createComponent("StreamSegue.qml")
+        if (component.status !== Component.Ready) {
+            console.error("Review StreamSegue.qml failed to load:", component.errorString())
+            return
+        }
+        var segue = component.createObject(stackView, {
+            "appName": game ? game.name : qsTr("Review game"),
+            "isResume": route.resume,
+            "reviewMode": true,
+            "reviewOutcome": route.launchOutcome,
+            "reviewAppId": reviewState.appId,
+            "reviewSourceIndex": sourceIndex,
+            "reviewOrigin": route.origin,
+            "reviewSourceAvailable": reviewState.sourceAvailable,
+            "reviewRepeat": route.repeat
+        })
+        if (segue === null) {
+            console.error("Review StreamSegue.qml loaded but could not be created")
+            return
+        }
+        segue.reviewCycleRequested.connect(function(cycle) {
+            root.reviewLaunchCycleRequested(reviewState, cycle)
+        })
+        stackView.push(segue)
+    }
+
+    function pushReviewQuit(route, sourceIndex) {
+        var runningGame = fakeModel.count > 0 ? fakeModel.get(0) : null
+        var nextGame = route.switching && sourceIndex >= 0
+                && sourceIndex < fakeModel.count ? fakeModel.get(sourceIndex) : null
+        var component = Qt.createComponent("QuitSegue.qml")
+        if (component.status !== Component.Ready) {
+            console.error("Review QuitSegue.qml failed to load:", component.errorString())
+            return
+        }
+        var segue = component.createObject(stackView, {
+            "appName": runningGame ? runningGame.name : qsTr("Review game"),
+            "nextAppName": nextGame ? nextGame.name : "",
+            "reviewMode": true,
+            "reviewOutcome": route.quitOutcome,
+            "reviewReturnTarget": route.returnTarget,
+            "reviewNextAppId": nextGame ? nextGame.appid : null,
+            "reviewNextSourceIndex": nextGame ? sourceIndex : -1,
+            "reviewNextOrigin": route.origin,
+            "reviewNextSourceAvailable": route.sourceAvailable && nextGame !== null
+        })
+        if (segue === null) {
+            console.error("Review QuitSegue.qml loaded but could not be created")
+            return
+        }
+        stackView.push(segue)
+    }
+
     // --- launching -------------------------------------------------------------
     // Reproduces upstream's launchOrResumeSelectedApp()/createSessionForApp()
     // path (git show 6712ac83:app/gui/AppView.qml), through the unmodified
@@ -622,8 +896,9 @@ FocusScope {
         root.forceActiveFocus()
         root.attemptDirectLaunch()
 
-        // Review hook: MOONLIGHT_GAME_REVIEW=options|switch. Fake games only,
-        // and once per launch rather than on every return to this screen --
+        // Review hook: existing options/switch/library cases plus Stage 1's
+        // deterministic launch and quit cases. Fake actions run once per launch
+        // rather than on every return to this screen --
         // reopening the popup each time the player backs out of it would make
         // B useless, the same rule MOONLIGHT_OPEN_APPS_FOR_HOST follows.
         // "library" is the one review action that applies to a REAL host too:
@@ -631,20 +906,25 @@ FocusScope {
         // real action on a real machine. It exists because the screenshot hook
         // grabs on a timer and cannot press R1, so without it the Library tab
         // could never be photographed against real box art.
-        if (typeof gameReviewAction !== "undefined" && gameReviewAction === "library") {
+        if (root.gameReviewCase === "library") {
             root.switchTab("library")
         }
 
+        var stageOneRoute = root.stageOneReviewRoute(root.gameReviewCase)
+        if (root.useFakeGames && !root.gameReviewOpened && stageOneRoute !== null) {
+            root.gameReviewOpened = true
+            root.beginStageOneReview(stageOneRoute)
+        }
+
         if (root.useFakeGames && !root.gameReviewOpened &&
-                typeof gameReviewAction !== "undefined" &&
-                (gameReviewAction === "options" || gameReviewAction === "switch")) {
+                (root.gameReviewCase === "options" || root.gameReviewCase === "switch")) {
             root.gameReviewOpened = true
             Qt.callLater(function() {
                 var srcIndex = root.currentSourceIndex()
                 if (srcIndex < 0) {
                     return
                 }
-                if (gameReviewAction === "switch") {
+                if (root.gameReviewCase === "switch") {
                     // The switch confirmation only makes sense on a game that
                     // is NOT the running one -- actConfirmOn() will only ever
                     // raise it in that case. Pointing the hook at the focused
@@ -667,6 +947,9 @@ FocusScope {
     }
 
     property bool gameReviewOpened: false
+    property int gameReviewAttempts: 0
+    property var pendingGameReviewRoute: null
+    property int pendingGameReviewSourceIndex: -1
 
     // Deliberately does NOT restore the toolbar -- see the matching note in
     // HostCarousel.qml. Handing upstream's toolbar back on the way out is what
@@ -674,6 +957,11 @@ FocusScope {
     readonly property bool bulanScreen: true
 
     StackView.onDeactivating: {
+        if (gameReviewSettleTimer.running) {
+            gameReviewSettleTimer.stop()
+            root.pendingGameReviewRoute = null
+            root.pendingGameReviewSourceIndex = -1
+        }
         if (appModel !== null) {
             appModel.computerLost.disconnect(computerLost)
         }

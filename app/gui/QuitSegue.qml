@@ -7,10 +7,23 @@ import Session 1.0
 import Bulan 1.0
 
 Item {
+    id: root
+
     property string appName
     property var quitRunningAppFn
     property Session nextSession : null
     property string nextAppName : ""
+
+    // Deterministic QML-only quit review. AppView supplies an outcome and the
+    // context a failure would return to; no ComputerManager signal or real quit
+    // operation is involved while reviewMode is true.
+    property bool reviewMode: false
+    property string reviewOutcome: "success"
+    property string reviewReturnTarget: "grid"
+    property var reviewNextAppId: null
+    property int reviewNextSourceIndex: -1
+    property string reviewNextOrigin: "recent"
+    property bool reviewNextSourceAvailable: true
 
     property string stageText : qsTr("Quitting %1...").arg(appName)
 
@@ -39,6 +52,10 @@ Item {
         // Hide the toolbar before we start loading
         toolBar.visible = false
 
+        if (reviewMode) {
+            return
+        }
+
         // Connect the quit completion signal
         ComputerManager.quitAppCompleted.connect(quitAppCompleted)
 
@@ -52,8 +69,10 @@ Item {
         // Show the toolbar again
         toolBar.visible = true
 
-        // Disconnect the signal
-        ComputerManager.quitAppCompleted.disconnect(quitAppCompleted)
+        if (!reviewMode) {
+            // Disconnect the signal
+            ComputerManager.quitAppCompleted.disconnect(quitAppCompleted)
+        }
     }
 
     Row {
