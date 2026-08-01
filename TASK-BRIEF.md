@@ -356,17 +356,24 @@ Recorded here during the task and moved to the right home at the end.
   introduced here and not reachable in normal use, but it is why review mode has
   to skip creating the real model outright. Recorded for later consideration; not
   fixed in this task.
-- **The Library grid scrolled itself down one row, once, and has not done it
-  again.** Seen in one stage 2 capture against the real host: the grid was one
-  full row down with no input, no focus ring on screen, and nothing in the log.
-  Two immediate re-runs of the identical binary and configuration came back at
-  the top and correct. **Not reproduced, therefore not diagnosed and not
-  claimed fixed.** The most likely cause is box art arriving asynchronously and
-  changing `contentHeight` while the `Flickable` is settling. Stage 3 gives the
-  Flickable explicit scroll-to-focus logic that writes `contentY` outright,
-  which may well remove it — that will not count as a diagnosis either. **Watch
-  for it during the stage 3 and stage 5 passes; if it survives to validation it
-  goes to `BUGS.md`, not into a "fixed" column.**
+- ~~**The Library grid scrolled itself down one row, once, and has not done it
+  again.**~~ **Diagnosed and fixed in stage 4, 1 August 2026.** It became
+  reproducible once the Library tab could be opened directly against the real
+  host: every run landed a row down with the focused tile off screen above.
+
+  **Cause.** A host's app list arrives in chunks, so the Repeater's
+  `onItemAdded` fires several times as rows land. Each one called
+  `ensureLibraryFocusVisible()` — while the Library was not the visible tab and
+  while `contentHeight` was still growing. The "is the focused row below the
+  viewport" test ran against a viewport that had not reached its final geometry,
+  computed a `contentY` for a grid a fraction of its eventual size, and scrolled
+  there. Nothing recomputed it afterwards. It looked intermittent because it
+  depended on how the host happened to chunk its app list on that run.
+
+  **Fix.** `ensureLibraryFocusVisible()` now declines to run unless the Library
+  is the visible tab and the viewport has a real height, and it is re-run when
+  the tab becomes active and whenever the viewport's height or content height
+  changes. Verified across three consecutive runs against the real host.
 - **The tile's aspect ratio may be wrong for the client's own artwork.**
   Measured on 1 August 2026 from the 25 box-art files this machine has already
   cached from the real host `Steambox`: 18 are **2:3** (600×900), 4 are 3:4

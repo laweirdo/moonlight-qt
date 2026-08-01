@@ -399,6 +399,16 @@ FocusScope {
         root.activeTab = tab
     }
 
+    // Recompute the Library's scroll the moment it becomes the visible tab.
+    // ensureLibraryFocusVisible() declines to run while another tab is showing
+    // -- see its comment for the defect that caused -- so arriving here is the
+    // first honest opportunity to place it.
+    onActiveTabChanged: {
+        if (root.activeTab === "library") {
+            Qt.callLater(root.ensureLibraryFocusVisible)
+        }
+    }
+
     // Which tile is focused, one index per view so a tab change does not lose
     // the other view's place.
     //
@@ -616,6 +626,15 @@ FocusScope {
         // and once per launch rather than on every return to this screen --
         // reopening the popup each time the player backs out of it would make
         // B useless, the same rule MOONLIGHT_OPEN_APPS_FOR_HOST follows.
+        // "library" is the one review action that applies to a REAL host too:
+        // it only changes which tab is showing, and switching tabs is not a
+        // real action on a real machine. It exists because the screenshot hook
+        // grabs on a timer and cannot press R1, so without it the Library tab
+        // could never be photographed against real box art.
+        if (typeof gameReviewAction !== "undefined" && gameReviewAction === "library") {
+            root.switchTab("library")
+        }
+
         if (root.useFakeGames && !root.gameReviewOpened &&
                 typeof gameReviewAction !== "undefined" &&
                 (gameReviewAction === "options" || gameReviewAction === "switch")) {
@@ -1006,7 +1025,22 @@ FocusScope {
         anchors.top: tabStrip.bottom
         anchors.topMargin: Bulan.spaceXl
         anchors.bottom: hintBar.top
-        visible: root.activeTab === "recent" && root.gameCount > 0
+
+        // Cross-fades against the Library view on a tab switch, both on
+        // motionFocusMs -- NOT motionTransitionMs, which Bulan.qml reserves
+        // for a full screen transition (Phase B item 4); a tab is not a
+        // screen. `enabled` is discrete on the tab so a faded-but-not-yet-
+        // invisible view stops taking input immediately rather than at the
+        // end of the fade -- see libraryFlickable's matching split for the
+        // full reasoning. Recent has no Flickable to drag, but the same split
+        // keeps both views' rules identical rather than special-casing the
+        // one that currently has nothing to disable.
+        enabled: root.activeTab === "recent" && root.gameCount > 0
+        opacity: enabled ? 1.0 : 0.0
+        visible: opacity > 0.01
+        Behavior on opacity {
+            NumberAnimation { duration: Bulan.motionFocusMs; easing.type: Easing.InOutQuad }
+        }
 
         // Where the focused tile's centre sits. spaceLg matches the gap the
         // Library's own Flickable uses below the tab strip, so the two views'
@@ -1047,7 +1081,10 @@ FocusScope {
                 }
                 readonly property int distance: slot < 0 ? -slot : slot
                 readonly property bool isFocused: rank === root.recentFocusedIndex
-                readonly property real tileScale:
+                // NOT readonly, matching HostTile's tileScale exactly (see
+                // HostCarousel.qml): a Behavior has to write this to animate
+                // it, and readonly would make the whole tile fail to load.
+                property real tileScale:
                     distance === 0 ? 1.0 : Bulan.gameRecentNeighbourScale
 
                 width: Bulan.gameRecentTileWidth
@@ -1059,6 +1096,53 @@ FocusScope {
                 z: distance === 0 ? 2 : 0
                 opacity: distance === 0 ? 1.0 : (distance === 1 ? 0.5 : 0.0)
                 visible: opacity > 0.01
+
+                // One clock for the whole move, copying HostCarousel.qml's
+                // HostTile delegate block exactly in shape: position, scale
+                // and fade all run for motionFocusMs on the same curve, so a
+                // tile travels, shrinks and dims as one object rather than
+                // three separately-timed ones. (GameTile's own interactionScale
+                // -- focus/press -- is a different property on a different
+                // item, artRect inside GameTile, not this tileScale; nothing
+                // here chases that, so this is not the "animating an
+                // animation" fault. See the stage 4 report.)
+                Behavior on x {
+                    enabled: recentSlot.settled
+                    NumberAnimation {
+                        duration: Bulan.motionFocusMs
+                        easing.type: Easing.InOutQuad
+                    }
+                }
+                Behavior on y {
+                    enabled: recentSlot.settled
+                    NumberAnimation {
+                        duration: Bulan.motionFocusMs
+                        easing.type: Easing.InOutQuad
+                    }
+                }
+                Behavior on tileScale {
+                    enabled: recentSlot.settled
+                    NumberAnimation {
+                        duration: Bulan.motionFocusMs
+                        easing.type: Easing.InOutQuad
+                    }
+                }
+                Behavior on opacity {
+                    enabled: recentSlot.settled
+                    NumberAnimation {
+                        duration: Bulan.motionFocusMs
+                        easing.type: Easing.InOutQuad
+                    }
+                }
+
+                // False until this tile has been placed once, so the first
+                // frame is a position rather than a journey from wherever the
+                // bindings above would otherwise animate from. Bindings are
+                // evaluated before Component.onCompleted runs, so by the time
+                // this flips the tile is already where it belongs. Copied
+                // from HostCarousel.qml's HostTile delegate.
+                property bool settled: false
+                Component.onCompleted: settled = true
 
                 // Clips away GameTile's own built-in label row (title +
                 // Running), which is not used for the Recent presentation --
@@ -1191,8 +1275,43 @@ FocusScope {
     // writing contentY outright on every focus change leaves less room for
     // whatever unexplained write was doing it before -- but that is not the
     // same thing as a diagnosis, and it is not claimed as a fix here.
+    // Animates rather than jumps, but deliberately NOT via `Behavior on
+    // contentY` -- a Behavior retargets on every write to contentY, including
+    // the ones the Flickable itself makes while the player is dragging or
+    // flicking the view with a mouse. That would fight the drag: every pixel
+    // the user drags would kick off its own eased chase back, which reads as
+    // the view fighting the hand on it rather than scrolling smoothly. An
+    // explicit NumberAnimation, started only from here (a focus change), never
+    // runs during a drag at all -- and libraryFlickable's own
+    // onDraggingChanged stops it outright the instant a drag begins, so a
+    // manual drag always wins over a focus-follow scroll still in flight.
     function ensureLibraryFocusVisible() {
         if (root.gameCount === 0) {
+            return
+        }
+        // Only while the Library is the tab on screen.
+        //
+        // THIS IS THE DIAGNOSIS of the grid that was seen scrolled a row on its
+        // own, recorded in TASK-BRIEF.md as unreproduced. It reproduces every
+        // time on the real host: the app list arrives from the machine a few
+        // rows at a time, each arrival fires the Repeater's onItemAdded, and
+        // each of those called this function -- while the Library was not the
+        // active tab, and while contentHeight was still growing row by row. The
+        // "is the focused row below the viewport" test ran against a viewport
+        // that did not have its final geometry yet, computed a contentY for a
+        // grid that was a third of its eventual size, and scrolled there. By
+        // the time the player switched to Library the number was long stale,
+        // and nothing recomputed it, so the grid sat one row down with the
+        // focused tile off screen above.
+        //
+        // It looked intermittent because it depended on how the host's app list
+        // happened to be chunked on that particular run.
+        if (root.activeTab !== "library") {
+            return
+        }
+        // Geometry not settled yet -- a zero-height viewport makes the test
+        // below meaningless. onHeightChanged calls this again once it is real.
+        if (libraryFlickable.height <= 0) {
             return
         }
         var row = Math.floor(root.libraryFocusedIndex / Bulan.gameGridColumns)
@@ -1205,9 +1324,24 @@ FocusScope {
             newY = bottom - libraryFlickable.height
         }
         var maxY = Math.max(0, libraryFlickable.contentHeight - libraryFlickable.height)
-        libraryFlickable.contentY = Math.max(0, Math.min(newY, maxY))
+        newY = Math.max(0, Math.min(newY, maxY))
+        // restart() rather than a fresh start(): a second focus change
+        // arriving while the first scroll is still travelling retargets from
+        // wherever contentY currently sits, rather than queueing a second
+        // settle behind the first -- the same "input always interrupts"
+        // requirement the Behaviors elsewhere satisfy for free.
+        libraryScrollAnimation.to = newY
+        libraryScrollAnimation.restart()
     }
     onLibraryFocusedIndexChanged: ensureLibraryFocusVisible()
+
+    NumberAnimation {
+        id: libraryScrollAnimation
+        target: libraryFlickable
+        property: "contentY"
+        duration: Bulan.motionFocusMs
+        easing.type: Easing.OutCubic
+    }
 
     Flickable {
         id: libraryFlickable
@@ -1224,7 +1358,34 @@ FocusScope {
         contentWidth: width
         contentHeight: root.libraryRowCount * root.libraryCellHeight
                        + 2 * root.libraryFocusInset
-        visible: root.activeTab === "library" && root.gameCount > 0
+
+        // Both of these are still moving while a host's app list arrives -- the
+        // rows come in chunks, so contentHeight grows several times, and the
+        // viewport's own height is not final on the first frame. Any scroll
+        // computed against a half-built grid is wrong, so it is recomputed each
+        // time either changes rather than trusted from whenever it was last
+        // worked out.
+        onHeightChanged: Qt.callLater(root.ensureLibraryFocusVisible)
+        onContentHeightChanged: Qt.callLater(root.ensureLibraryFocusVisible)
+
+        // `enabled` gates input (dragging) on the discrete tab, so it cuts
+        // the instant the tab changes rather than waiting for the cross-fade
+        // below to finish -- rule 3, input always interrupts, applied to
+        // "which view owns the mouse" rather than to a single animated value.
+        // `opacity`/`visible` are the animated, continue-drawing-while-fading
+        // half of the same split; see the tab cross-fade comment below.
+        enabled: root.activeTab === "library" && root.gameCount > 0
+        opacity: enabled ? 1.0 : 0.0
+        visible: opacity > 0.01
+        Behavior on opacity {
+            NumberAnimation { duration: Bulan.motionFocusMs; easing.type: Easing.InOutQuad }
+        }
+
+        // A manual drag always wins over a focus-follow scroll still in
+        // flight -- see ensureLibraryFocusVisible()'s own comment for why
+        // that scroll is a NumberAnimation rather than a Behavior in the
+        // first place.
+        onDraggingChanged: if (dragging) libraryScrollAnimation.stop()
 
         // No ScrollBar attached -- that is a stock QtQuick.Controls control and
         // forbidden here.
@@ -1247,6 +1408,17 @@ FocusScope {
                + Math.floor(root.libraryFocusedIndex / Bulan.gameGridColumns) * root.libraryCellHeight
                + Bulan.gameTileHeight / 2 - height / 2
             visible: root.gameCount > 0
+
+            // The halo glides to the newly focused tile rather than jumping,
+            // same clock and curve as every other focus-follow motion on this
+            // screen. Nothing else writes focusBloom.x/y, so this is not
+            // chasing an already-moving target.
+            Behavior on x {
+                NumberAnimation { duration: Bulan.motionFocusMs; easing.type: Easing.InOutQuad }
+            }
+            Behavior on y {
+                NumberAnimation { duration: Bulan.motionFocusMs; easing.type: Easing.InOutQuad }
+            }
 
             onWidthChanged: requestPaint()
             onHeightChanged: requestPaint()
