@@ -29,6 +29,7 @@
         <file>gui/HostSettingsOverlay.qml</file>
         <file>gui/HostTile.qml</file>
         <file>gui/GameTile.qml</file>
+        <file>gui/GameOptionsOverlay.qml</file>
         <file>gui/HostCarousel.qml</file>
         <file>gui/TokenProof.qml</file>
         <file>gui/BulanTokens.qml</file>

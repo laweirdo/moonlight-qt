@@ -1177,6 +1177,14 @@ int main(int argc, char *argv[])
         // would refuse it. Inert unless set.
         engine.rootContext()->setContextProperty("openAppsForHost",
                                                  QString::fromUtf8(qgetenv("MOONLIGHT_OPEN_APPS_FOR_HOST")));
+        // Review hook: MOONLIGHT_GAME_REVIEW=options|switch opens the per-game
+        // popup on the focused fake game once the grid settles, the same way
+        // MOONLIGHT_OPEN_HOST_SETTINGS opens the host menu. Needed for the same
+        // reason: the screenshot hook grabs the window on a timer and cannot
+        // press X, so without this the popup could be built and shipped having
+        // only ever been reasoned about. Fake games only.
+        engine.rootContext()->setContextProperty("gameReviewAction",
+                                                 QString::fromUtf8(qgetenv("MOONLIGHT_GAME_REVIEW")));
         // Companion to the screenshot hook: extra milliseconds before the grab.
         // See the Timer in main.qml -- a screen that has to wait on discovery
         // is not on screen yet at the default four seconds. Zero unless set.

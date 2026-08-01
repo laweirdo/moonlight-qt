@@ -286,4 +286,38 @@ QtObject {
     readonly property int  gameGridGap:         26
     // The small host disc in the header, measured off the mockup.
     readonly property int  gameHeaderAvatarSize: 40
+
+    // --- Recent view -----------------------------------------------------------
+    // The focused tile and its two dimmed neighbours, the same composition as the
+    // host carousel. Measured off design/game-grid-01-recent.png, then constrained
+    // by the height actually available.
+    //
+    // The mockup's focused tile scales to about 320x440. That is neither 2:3 nor
+    // 3:4, and at 2:3 a 320-wide tile would be 480 tall -- which does not fit.
+    // The tile keeps the accepted 2:3 ratio and gives up width instead.
+    //
+    // Sized against what is actually left rather than what was estimated. The
+    // first attempt at 288x432 was measured on screen: the tile starts 223px
+    // down, the focus scale adds 4% to its height, and the title landed exactly
+    // on the hint bar's hairline. Working back from the 489px that genuinely
+    // remain -- minus gameRecentLabelGap, the title line, and the tagline the
+    // running game adds under it -- gives 396, and 264 is that at 2:3.
+    //
+    // Smaller than the mockup drew. The ratio was decided on evidence and the
+    // copy beneath has to be readable, so the width is what gives way.
+    readonly property int  gameRecentTileWidth:      256
+    readonly property int  gameRecentTileHeight:     384
+
+    // Neighbour size relative to the focused tile. The carousel's own
+    // hostTileNeighbourScale is 0.64; this is looser because a rectangular tile
+    // at 0.64 reads as a different object rather than the same one further away.
+    readonly property real gameRecentNeighbourScale: 0.70
+
+    // Focused centre to neighbour centre. Leaves roughly 65px of clear ground
+    // between the focused edge and the neighbour edge -- the same breathing room
+    // hostTileSpread was chosen for, scaled to this tile.
+    readonly property int  gameRecentSpread:         290
+
+    // Clear space under the focused tile before its title block.
+    readonly property int  gameRecentLabelGap:        16
 }

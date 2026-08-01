@@ -389,6 +389,26 @@ void SdlGamepadKeyNavigation::onPollingTimerFired()
                 // Keys.onContext1Pressed.
                 sendKey(type, Qt::Key_Context1);
                 break;
+            case SDL_CONTROLLER_BUTTON_LEFTSHOULDER:
+            case SDL_CONTROLLER_BUTTON_RIGHTSHOULDER:
+                // The shoulder buttons were not mapped to anything at all,
+                // which is why the game grid's Recent/Library tabs could not be
+                // bound to them without coming here first. Same reasoning as
+                // Key_Context1 for Select above: Key_Context2 and Key_Context3
+                // are reserved soft keys with no text meaning, so they cannot
+                // collide with typing in a focused field, and QML surfaces them
+                // as Keys.onContext2Pressed and Keys.onContext3Pressed.
+                //
+                // Deliberately NOT switched by the swap-face-buttons
+                // preference. That preference rewrites the four FACE buttons
+                // (see the swap block above); shoulders are not face buttons
+                // and a player who swaps A/B does not expect their bumpers to
+                // trade places. ControllerGlyph makes the same distinction --
+                // its _swappedFaceToken map covers b1..b4 only.
+                sendKey(type,
+                        event.cbutton.button == SDL_CONTROLLER_BUTTON_LEFTSHOULDER
+                            ? Qt::Key_Context2 : Qt::Key_Context3);
+                break;
             default:
                 break;
             }
