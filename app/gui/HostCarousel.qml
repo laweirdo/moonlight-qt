@@ -177,6 +177,7 @@ FocusScope {
     property string wakeResultUuid: ""   // set on failure; "" once the hold ends
     property bool reviewMenuOpened: false
     property bool reviewWakeStarted: false
+    property bool reviewAppsOpened: false
 
     // Starts (or restarts) a connection wait. One tick long in practice, but not
     // timed -- it ends when openAppView() either pushes AppView or hits one of
@@ -295,6 +296,58 @@ FocusScope {
         id: fakeConnectHoldTimer
         interval: typeof fakeConnectHoldMs !== "undefined" ? fakeConnectHoldMs : 0
         onTriggered: root.clearConnecting()
+    }
+
+    // Review hook: MOONLIGHT_OPEN_APPS_FOR_HOST=<name>. Opens the game grid for
+    // a real, paired host so box art can actually be looked at -- the one thing
+    // no fake preset can stand in for, because BoxArtManager only has files for
+    // machines the app has really talked to.
+    //
+    // It polls rather than acting once, because a saved host starts OFFLINE:
+    // ComputerManager loads it from settings immediately but does not know it is
+    // reachable until the discovery poll answers, which is roughly 3 seconds
+    // after launch on this network. Acting on the first frame would find the
+    // host, find it offline, and route the press to a WAKE instead of the game
+    // grid -- the hook would silently review the wrong thing.
+    //
+    // Matched on name rather than row: discovery decides the row order and it is
+    // not stable between runs, which is the same identity problem the busy
+    // state's UUID keying exists to solve.
+    //
+    // Gives up after openAppsReviewTimer's own budget rather than polling
+    // forever, so a typo in the name says so in the log instead of hanging.
+    property int reviewAppsAttempts: 0
+
+    Timer {
+        id: openAppsReviewTimer
+        interval: 250
+        repeat: true
+        onTriggered: {
+            root.reviewAppsAttempts++
+            for (var i = 0; i < hostRepeater.count; i++) {
+                var tile = hostRepeater.itemAt(i)
+                if (!tile || tile.hostName !== openAppsForHost) {
+                    continue
+                }
+                if (!tile.online || !tile.paired) {
+                    // Found, but not usable yet. Keep waiting -- this is the
+                    // ordinary state for the first few seconds after launch.
+                    break
+                }
+                stop()
+                root.reviewAppsOpened = true
+                root.selectIndex(i)
+                root.openAppView(i, tile.uuid, tile.hostName, false)
+                return
+            }
+            // 80 tries at 250ms is 20 seconds, comfortably past the discovery
+            // poll's own cadence.
+            if (root.reviewAppsAttempts >= 80) {
+                stop()
+                console.warn("MOONLIGHT_OPEN_APPS_FOR_HOST: no reachable paired host named",
+                             openAppsForHost, "after", root.reviewAppsAttempts, "tries")
+            }
+        }
     }
 
     // The selection. This is the whole of the carousel's state: every tile's
@@ -739,6 +792,18 @@ FocusScope {
         // unwakeable host still gets "Can't wake this one" here, exactly as it
         // should, rather than the hook forcing dots onto a tile that would
         // never show them in use.
+        // Review hook: MOONLIGHT_OPEN_APPS_FOR_HOST. Real hosts only -- a fake
+        // row's index names a real machine at the same position, which is the
+        // crash actConfirm()'s review guard exists to prevent, and openAppView()
+        // is exactly the call that guard blocks. Runs once per app launch, not
+        // once per return to this screen: reopening the grid every time the
+        // player backs out of it would make B useless.
+        if (!root.useFakeHosts && !reviewAppsOpened &&
+                typeof openAppsForHost !== "undefined" && openAppsForHost !== "") {
+            reviewAppsAttempts = 0
+            openAppsReviewTimer.restart()
+        }
+
         if (root.useFakeHosts && !reviewWakeStarted &&
                 typeof fakeWakeOnStart !== "undefined" && fakeWakeOnStart) {
             reviewWakeStarted = true

@@ -270,6 +270,11 @@ FocusScope {
     // stage 3. Declared now so both tab states are expressible and drawable.
     property string activeTab: "library"
 
+    // Which tile is focused. Stage 3 replaces this with real controller
+    // navigation; a plain property is what lets GameTile's focus ring, scale
+    // and bloom be reviewed via MOONLIGHT_FAKE_GAMES before any input exists.
+    property int focusedIndex: 0
+
     // --- lifecycle -----------------------------------------------------------
     StackView.onActivated: {
         // This is a Bulan screen now; the stock toolbar upstream's AppView kept
@@ -478,65 +483,111 @@ FocusScope {
                                               + Bulan.lineHeightLabel + Bulan.gameGridGap
     readonly property int libraryRowCount: Math.ceil(root.gameCount / Bulan.gameGridColumns)
 
+    // Breathing room inside the Flickable's clip rectangle.
+    //
+    // The Flickable has to clip, or a scrolled row draws over the tab strip.
+    // But the focused tile scales by motionFocusScale about its own centre, so
+    // it grows about 6px past its cell on every side -- and the tiles on the
+    // grid's edges have their cell flush against the clip. The focus ring on
+    // the first tile was drawn with its top and left edges missing: not a
+    // border bug, the clip cutting the growth off.
+    //
+    // So the content is inset and the clip rectangle grown by the same amount,
+    // which leaves the grid sitting exactly where layoutScreenMarginX puts it
+    // while giving the scale somewhere to go. spaceXs is comfortably more than
+    // the 5.8px the tallest tile actually needs.
+    readonly property int libraryFocusInset: Bulan.spaceXs
+
     Flickable {
         id: libraryFlickable
         anchors.left: parent.left
-        anchors.leftMargin: Bulan.layoutScreenMarginX
+        anchors.leftMargin: Bulan.layoutScreenMarginX - root.libraryFocusInset
         anchors.top: tabStrip.bottom
-        anchors.topMargin: Bulan.spaceLg
+        anchors.topMargin: Bulan.spaceLg - root.libraryFocusInset
         anchors.bottom: hintBar.top
         width: Bulan.gameGridColumns * Bulan.gameTileWidth
                + (Bulan.gameGridColumns - 1) * Bulan.gameGridGap
+               + 2 * root.libraryFocusInset
         clip: true
         boundsBehavior: Flickable.StopAtBounds
         contentWidth: width
         contentHeight: root.libraryRowCount * root.libraryCellHeight
+                       + 2 * root.libraryFocusInset
         visible: root.gameCount > 0
 
         // No ScrollBar attached -- that is a stock QtQuick.Controls control and
         // forbidden here. Stage 1 has no input treatment at all yet, so there
         // is nothing to bind one to besides.
 
+        // --- warm halo behind the focused tile ---------------------------------
+        // One instance, moved to the focused tile rather than one per delegate,
+        // following HostCarousel.qml's focusBloom Canvas closely. Placed as a
+        // plain child of the Flickable, ahead of the Repeater below, so it is
+        // both behind every tile in paint order and scrolled by the Flickable's
+        // own content offset exactly as the tiles are -- nothing here reads
+        // contentX/contentY directly.
+        Canvas {
+            id: focusBloom
+            width: Bulan.gameTileWidth * 2.2
+            height: Bulan.gameTileHeight * 2.2
+            x: root.libraryFocusInset
+               + (root.focusedIndex % Bulan.gameGridColumns) * root.libraryCellWidth
+               + Bulan.gameTileWidth / 2 - width / 2
+            y: root.libraryFocusInset
+               + Math.floor(root.focusedIndex / Bulan.gameGridColumns) * root.libraryCellHeight
+               + Bulan.gameTileHeight / 2 - height / 2
+            visible: root.gameCount > 0
+
+            onWidthChanged: requestPaint()
+            onHeightChanged: requestPaint()
+            onPaint: {
+                var ctx = getContext("2d")
+                ctx.clearRect(0, 0, width, height)
+                var rx = width / 2
+                var ry = height / 2
+                // The tile is portrait, not square, so the halo is stretched to
+                // match rather than drawn as a circle: scale the canvas, draw a
+                // circle, unscale. Same stops and colour as
+                // HostCarousel.qml's focusBloom.
+                ctx.save()
+                ctx.translate(rx, ry)
+                ctx.scale(1, ry / rx)
+                var g = ctx.createRadialGradient(0, 0, 0, 0, 0, rx)
+                var a = Bulan.focusBloomOpacity
+                g.addColorStop(0.00, Qt.rgba(1, 0.85, 0.63, a))
+                g.addColorStop(0.30, Qt.rgba(1, 0.85, 0.63, a * 0.45))
+                g.addColorStop(0.55, Qt.rgba(1, 0.85, 0.63, a * 0.16))
+                g.addColorStop(0.78, Qt.rgba(1, 0.85, 0.63, a * 0.04))
+                g.addColorStop(1.00, Qt.rgba(1, 0.85, 0.63, 0.0))
+                ctx.fillStyle = g
+                ctx.beginPath()
+                ctx.arc(0, 0, rx, 0, Math.PI * 2)
+                ctx.fill()
+                ctx.restore()
+            }
+        }
+
         Repeater {
             model: root.gameModel
 
-            // Stage 1 placeholder tile: a plain surface, a hairline border and
-            // a name underneath. No artwork, no crop, no fallback treatment, no
-            // focus ring or bloom, no running marker -- all of that is
-            // GameTile.qml, stage 2. A delegate's position here is a pure
-            // function of its own index, following HostCarousel.qml's
-            // principle for the same reason: nothing else should be able to
-            // reorder or misplace a tile.
-            delegate: Item {
-                id: cell
+            // GameTile.qml, stage 2: artwork, crop, fallback, loading
+            // cross-fade, focus ring, title and running marker. A delegate's
+            // position here is still a pure function of its own index,
+            // following HostCarousel.qml's principle: nothing else should be
+            // able to reorder or misplace a tile.
+            delegate: GameTile {
+                id: tile
                 readonly property int column: index % Bulan.gameGridColumns
                 readonly property int row: Math.floor(index / Bulan.gameGridColumns)
 
-                x: column * root.libraryCellWidth
-                y: row * root.libraryCellHeight
-                width: Bulan.gameTileWidth
-                height: Bulan.gameTileHeight + Bulan.spaceMd + Bulan.lineHeightLabel
+                x: root.libraryFocusInset + column * root.libraryCellWidth
+                y: root.libraryFocusInset + row * root.libraryCellHeight
 
-                Rectangle {
-                    id: tileRect
-                    width: Bulan.gameTileWidth
-                    height: Bulan.gameTileHeight
-                    radius: Bulan.radiusMd
-                    color: Bulan.bgSurface
-                    border.width: 1
-                    border.color: Bulan.hairline
-                }
-
-                Text {
-                    anchors.top: tileRect.bottom
-                    anchors.topMargin: Bulan.spaceMd
-                    width: Bulan.gameTileWidth
-                    text: model.name
-                    color: Bulan.textSecondary
-                    font.family: Bulan.familyUi
-                    font.pixelSize: Bulan.sizeLabel
-                    elide: Text.ElideRight
-                }
+                gameName: model.name
+                boxart: model.boxart
+                running: model.running
+                appCollectorGame: model.appCollectorGame
+                isCurrent: index === root.focusedIndex
             }
         }
     }

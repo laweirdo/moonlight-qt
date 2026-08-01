@@ -1159,6 +1159,29 @@ int main(int argc, char *argv[])
         // choose which half of the wake the grab lands in. Inert unless set.
         engine.rootContext()->setContextProperty("fakeWakeOnStart",
                                                  qEnvironmentVariableIsSet("MOONLIGHT_FAKE_WAKE_ON_START"));
+        // Review hook: MOONLIGHT_OPEN_APPS_FOR_HOST=<name> opens the game grid
+        // for a REAL, paired host once the carousel settles, by name rather than
+        // by row -- discovery decides the row order and it is not stable between
+        // runs.
+        //
+        // This is the opposite of MOONLIGHT_FAKE_GAMES and the two must not be
+        // combined. The fake preset proves the grid's own arithmetic and its
+        // edge cases; only a real host proves the part no substitute can, which
+        // is box art actually arriving from BoxArtManager -- real files, real
+        // aspect ratios, real load timing, and real placeholder art for the
+        // games that have none. Everything up to now has been reviewed against
+        // tiles that were never going to contain a picture.
+        //
+        // It goes through HostCarousel's ordinary openAppView(), so a host that
+        // is offline, unpaired or unsupported is refused exactly as a real press
+        // would refuse it. Inert unless set.
+        engine.rootContext()->setContextProperty("openAppsForHost",
+                                                 QString::fromUtf8(qgetenv("MOONLIGHT_OPEN_APPS_FOR_HOST")));
+        // Companion to the screenshot hook: extra milliseconds before the grab.
+        // See the Timer in main.qml -- a screen that has to wait on discovery
+        // is not on screen yet at the default four seconds. Zero unless set.
+        engine.rootContext()->setContextProperty("screenshotDelayMs",
+                                                 qEnvironmentVariableIntValue("MOONLIGHT_SCREENSHOT_DELAY_MS"));
         // Suppress the startup warning dialogs in token proof mode -- they would
         // otherwise open modally on top of the sheet.
         engine.rootContext()->setContextProperty("runConfigChecks",

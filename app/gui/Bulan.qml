@@ -267,8 +267,18 @@ QtObject {
 
     // Library tile width, measured off the client's mockup at 1280x800.
     readonly property int  gameTileWidth:       216
-    // 3:4 portrait against the above; matches real GFE box-art aspect.
-    readonly property int  gameTileHeight:      288
+
+    // 2:3 portrait against the width. NOT the mockup's proportion, which
+    // measures nearer 3:4 -- but every tile in that mockup was a grey
+    // placeholder, so the shape was estimated with no artwork in it.
+    //
+    // Client's call, 1 August 2026, after seeing both against the real
+    // Steambox library: 2:3 is SteamGridDB's standard vertical size, and it is
+    // what 18 of the 25 box-art files cached on the review station actually
+    // are. At 3:4 the crop takes a band off the top and bottom of most of the
+    // library -- visibly, on posters whose titles sit near an edge. Accepted
+    // evolution from the mockup, not a transcription error.
+    readonly property int  gameTileHeight:      324
     // Column count, from the mockup.
     readonly property int  gameGridColumns:     5
     // Column gap: 2*layoutScreenMarginX + 5*216 + 4*26 = exactly 1280, so five

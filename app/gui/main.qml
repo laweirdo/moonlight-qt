@@ -138,7 +138,15 @@ ApplicationWindow {
         // Phase 1: pin the window to the Deck's panel size, so the grab is laid
         // out at the size the design targets rather than whatever the offscreen
         // platform happened to pick.
-        interval: 2500
+        //
+        // MOONLIGHT_SCREENSHOT_DELAY_MS extends the wait. 2500 plus shotTimer's
+        // 1500 is four seconds, which is enough for any screen that draws from
+        // state the app already has. It is not enough for one that has to wait
+        // on the network: a saved host is loaded OFFLINE and only reports itself
+        // reachable when the discovery poll answers, so a grab of the game grid
+        // for a real host lands on the carousel instead. Zero unless set, so
+        // every existing review recipe times exactly as before.
+        interval: 2500 + screenshotDelayMs
         running: screenshotPath !== ""
         onTriggered: {
             window.showNormal()

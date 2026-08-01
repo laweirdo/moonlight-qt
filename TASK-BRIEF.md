@@ -356,5 +356,28 @@ Recorded here during the task and moved to the right home at the end.
   introduced here and not reachable in normal use, but it is why review mode has
   to skip creating the real model outright. Recorded for later consideration; not
   fixed in this task.
+- **The Library grid scrolled itself down one row, once, and has not done it
+  again.** Seen in one stage 2 capture against the real host: the grid was one
+  full row down with no input, no focus ring on screen, and nothing in the log.
+  Two immediate re-runs of the identical binary and configuration came back at
+  the top and correct. **Not reproduced, therefore not diagnosed and not
+  claimed fixed.** The most likely cause is box art arriving asynchronously and
+  changing `contentHeight` while the `Flickable` is settling. Stage 3 gives the
+  Flickable explicit scroll-to-focus logic that writes `contentY` outright,
+  which may well remove it — that will not count as a diagnosis either. **Watch
+  for it during the stage 3 and stage 5 passes; if it survives to validation it
+  goes to `BUGS.md`, not into a "fixed" column.**
+- **The tile's aspect ratio may be wrong for the client's own artwork.**
+  Measured on 1 August 2026 from the 25 box-art files this machine has already
+  cached from the real host `Steambox`: 18 are **2:3** (600×900), 4 are 3:4
+  (528×704) and 3 are 3:4 (600×800). The mockup's tile is roughly 3:4 and the
+  proposed tokens follow it, so with crop-to-fill the majority of the client's
+  real posters lose a band top and bottom. **Client decision, to be put to them
+  at stage 2 review with both versions on screen.** Not settled here.
+- **None of the cached art matches upstream's placeholder dimensions**
+  (130×180, 628×888, 200×266), so the preserved placeholder-detection check has
+  nothing to catch on this host. It stays, because a GFE host would produce
+  those and this one is Sunshine; but it means the *placeholder* half of the
+  artwork fallback still has no real-world evidence behind it.
 - **`mDNS is disabled by user preference`** appears in the review station's log
   on every launch. A local preference on this machine, not a code fault.
