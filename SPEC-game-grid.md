@@ -70,8 +70,9 @@ host carousel.
 | D-pad Up/Down, Library | `Key_Up` / `Key_Down` | Previous/next row, clamped. A partially filled final row clamps to its last real tile, never an empty cell. |
 | D-pad Left/Right, Recent | `Key_Left` / `Key_Right` | Previous/next by rank in the last-played order, clamping at both ends — matching `HostCarousel.moveBy()`. |
 | D-pad Up/Down, Recent | `Key_Up` / `Key_Down` | Inert, and **swallowed** (`event.accepted = true`), exactly as on the carousel, so the press cannot bubble to the StackView and drag focus into chrome this screen hides. |
-| **A** | `Key_Return` / `Key_Enter` / `Key_Space` | Launches or resumes the focused game through `StreamSegue.qml`, unchanged. If a different game is running, raises the quit-and-switch confirmation instead of launching. |
+| **A** | `Key_Return` / `Key_Enter` / `Key_Space` | As built, launches or resumes the focused game through the stock `StreamSegue.qml`. Phase B item 3 will put the selected-game transition in front of that handoff. If a different game is running, raises the quit-and-switch confirmation instead of launching. |
 | **X** | `Key_Menu` | Opens `GameOptionsOverlay` on the focused game. |
+| **B, options popup** | `Key_Escape` / `Key_Back` | Closes `GameOptionsOverlay` and restores focus to the same game; the tab selections and Library scroll belong to the retained `AppView`. |
 | **B** | — | Not handled in `AppView.qml`. `main.qml`'s root `StackView` owns `Keys.onEscapePressed` and pops back to the host carousel when `stackView.depth > 1`; this file leaves the event unaccepted so it bubbles there. |
 | **START** | `Key_Hangup` | Client settings. |
 | **L1** | `Key_Context2` | Switch to Recent. |
@@ -84,9 +85,9 @@ host carousel.
 records SELECT opening `HostSettingsOverlay` on the carousel. The client's own
 game-grid mockup draws the same Host Settings hint on this screen. This screen
 has no host-settings surface of its own, and building a second one is out of
-this task's scope — `TASK-BRIEF.md`'s explicit exclusions list only Game
-Detail, `StreamSegue.qml`, screen transitions, and backend behaviour, but
-building a second host-settings overlay was never in scope to begin with.
+the completed game-grid task's scope. That task explicitly left the launch and
+quit segues, general screen transitions, and backend behaviour alone; building
+a second host-settings overlay was never in its scope either.
 `HintBar.qml`'s own governing rule is that a hint promising an action that
 does nothing is worse than showing fewer hints, so the hint is withheld along
 with the binding. **This is a known gap, not a completed item** — the mockup
@@ -232,14 +233,24 @@ afford. The inset is a constant, not tied to the live border width, because
 tying it to the border would rescale the artwork on every focus change, which
 reads as the picture flinching.
 
-**v1 decision — X opens options, not Game Detail.** `FLOW.md` states
-`Library -->|X on tile| GameDetail`, and Game Detail is not part of this task.
-`GameOptionsOverlay` (Play/Resume, Quit Game, Hide Game, Direct Launch)
-carries the mockup's own *Options* hint label and is, for now, the only route
-by which a running game can be quit from this screen. `TASK-BRIEF.md` records
-that when Game Detail is built, it takes over the same button. `FLOW.md` is
-unedited by this task; whether that edge is reworded is a client decision at
-acceptance, not made here.
+**Superseded history — X was temporary until Game Detail.** The earlier flow
+sent `Library -->|X on tile| GameDetail`, and the game-grid work order described
+`GameOptionsOverlay` as a temporary route until Game Detail took over X. That
+was the plan under which the grid was built, so it remains recorded here as
+history rather than being silently rewritten. The client subsequently replaced
+that direction before the launch-and-quit task began.
+
+**v1 decision — X opens Game Options as its intended destination.** No Game
+Detail screen is planned. A launches or resumes directly from the focused game
+in Recent or Library, with that selected tile entering the launch transition.
+`GameOptionsOverlay` remains the permanent private-v1 home for Play/Resume,
+Quit Game, Hide Game, and Direct Launch. B closes it over the same selected
+game. Popup Play/Resume uses the same selected-tile launch path as A; an
+automatic Direct Launch uses that path too when opening a host. Quit Game uses
+the quit path, and quit-and-switch remains a confirmed operation that waits for
+a successful quit before entering launch. A quit or launch failure returns to
+the retained game-grid context rather than discarding its tab, selection, or
+Library scroll.
 
 **Accepted compromise — no backdrop blur behind the options popup.**
 `HostCarousel.qml` wraps its entire screen content in an `Item` whose
@@ -312,9 +323,7 @@ This table records durable surface gaps, not the current task or branch.
 | **SELECT / Host Settings** | **Provisional** | Deliberately unbound; hint withheld. The mockup shows Host Settings on this screen; no host-settings surface exists for it. Not started as a side effect of this task's scope. |
 | **Backdrop blur behind the options popup** | **Accepted compromise** | Absent. `HostCarousel.qml`'s blurred-backdrop pattern was not extended here; the scrim alone separates the popup from the grid. Would require restructuring this screen's content into a wrapping layered `Item`. |
 | **Designed empty-library state** | **Provisional** | One line, `"No games here yet."`, is the whole treatment. The designed version is Phase D per `ROADMAP.md` and `FLOW.md` records it as unresolved flow design. |
-| **`StreamSegue.qml`** | **Provisional** | Remains stock upstream Qt. `ROADMAP.md` records it as a Phase B gap explicitly deferred by the client until after the game grid lands. |
-| **`QuitSegue.qml`** | **Provisional** | Also remains stock upstream. Reused unchanged from `AppView.qml`'s `quitRunningGame()`; rebuilding it was not in this task's scope. |
-| **Game Detail** | **Provisional** | Not built. `FLOW.md`'s `Library -->|X on tile| GameDetail` edge is unedited; X currently opens `GameOptionsOverlay` instead, by explicit task decision. |
+| **Launch and quit experience (Phase B item 3)** | **Provisional** | `StreamSegue.qml` and `QuitSegue.qml` remain stock upstream. The active work order owns their custom Bulan replacements, the selected-game transition from both tabs, recoverable failure, and the successful-quit-before-launch handoff. |
 | **Screen transitions (Phase B item 4)** | **Provisional** | The tab cross-fade uses `motionFocusMs`, deliberately not `motionTransitionMs` — that token is reserved and unused until this item is built. |
 | **Tile aspect ratio vs. the client's own artwork** | **Provisional** | 18 of 25 cached box-art files on the review station are 2:3, which the build now matches; the remaining 7 are 3:4 and lose a band top and bottom under crop-to-fill. Raised for client decision at stage 2 review, not settled. |
 | **Rename PC, merged multi-host library** | **Deferred** | Out of this task per `TASK-BRIEF.md`'s explicit exclusions; unrelated to the surfaces this task changed. |

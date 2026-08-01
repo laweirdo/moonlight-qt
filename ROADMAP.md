@@ -6,8 +6,10 @@
 
 **Current phase:** Phase B — Close the core loop
 
-**Next milestone:** Game grid. The previous milestone, the host tile's
-connecting/waking busy state, was completed 31 July 2026 — see Phase B below.
+**Next milestone:** Launch and quit experience. The host tile's
+connecting/waking busy state and the game grid are complete; Phase B item 3 now
+owns the route from a selected game into a stream, the quit route, and recovery
+from either route — see Phase B below.
 
 This file governs v1 scope, phase order, exit conditions, and the next
 milestone. It does not govern live repository state (`HANDOFF.md`), the active
@@ -116,19 +118,24 @@ Remaining work, in order:
      attribute on `NvApp`, following `hidden` and `directLaunch`.
    - **The shoulder buttons had no keycode at all**, on any screen, until this
      task. L1/R1 now reach QML.
-   - **X opens a per-game options popup, not Game Detail.** Client's decision
-     of 1 August 2026, taken because Game Detail is item 3 and quitting a
-     running game needed a route before then. See the `FLOW.md` note.
-3. **Game detail and launch** — follow the navigation authority in `FLOW.md`.
-4. **Screen transitions** — wire the existing 220 ms transition token into the
-   completed core route.
+   - **X opens a per-game options popup as its intended private-v1
+     destination.** It is not a temporary stand-in. No Game Detail screen is
+     planned. See `FLOW.md` and `SPEC-game-grid.md` for the corrected decision.
+3. **Launch and quit experience** — replace the stock launch and quit surfaces
+   along the core route. A launches or resumes directly; the selected game's
+   visible tile moves toward the centre from either Recent or Library before
+   the launch surface takes over. The options popup's Play/Resume uses that
+   same route. Quit Game remains recoverable, and quit-and-switch waits for a
+   successful quit before entering the launch route.
+4. **General screen transitions** — wire the existing 220 ms transition token
+   into the rest of the completed core route. The selected-game transition in
+   item 3 belongs to the launch experience, not to this general pass.
 
-**New Phase B gap, raised 31 July 2026 and explicitly deferred by the client
-until after the game grid:** `StreamSegue.qml` remains stock upstream Qt. It was
-out of scope for the connecting/waking tile work above and has not been
-touched. **Item 2 has now landed, so this is due.** `QuitSegue.qml` joins it:
-the game grid's Quit Game and quit-and-switch both push it, and it is stock
-upstream too.
+**Phase B item 3 owns the two inherited segue gaps.** `StreamSegue.qml` and
+`QuitSegue.qml` remain stock upstream Qt. The game grid's A press and popup
+Play/Resume push the former; Quit Game and quit-and-switch push the latter.
+They were deliberately left until the grid landed and are now the active
+milestone, not separate unsequenced follow-ups.
 
 **Second Phase B gap, raised 1 August 2026 by the game grid:** the grid has
 **no host-settings surface**, so SELECT does nothing there and its hint is
