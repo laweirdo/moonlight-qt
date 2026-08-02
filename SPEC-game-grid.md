@@ -426,6 +426,13 @@ Existing carousel hooks (`MOONLIGHT_FAKE_HOSTS`, `MOONLIGHT_INITIAL_VIEW`,
   Items, per-frame JavaScript dot motion, a replay-pop race, Session cleanup
   ownership, and repeated failure dismissal risks. The fixes were re-audited,
   rebuilt, and the affected deterministic routes rerun successfully.
+- A live Windows Computer Use pass sent controller-equivalent keys through the
+  rendered fake-game route: B recovered from launch failure, Right visibly
+  moved Recent focus, X opened the selected game's options, and B closed the
+  popup with that game still selected. The first pass exposed Qt's deprecated
+  implicit `event` injection warning; commit `285ff231` declares all nine
+  options key-handler parameters. After rebuild and rerun, the log contained
+  only the known `main.qml` ToolTip warning.
 
 ### Not performed
 
@@ -439,10 +446,10 @@ Existing carousel hooks (`MOONLIGHT_FAKE_HOSTS`, `MOONLIGHT_INITIAL_VIEW`,
   or stopped through this screen; `launchOrResumeApp()`, `quitRunningGame()`,
   and the quit-and-switch dispatch have been read and reasoned about, not
   exercised end to end against a live stream.
-- Any physical-controller or live visual judgement of the launch motion in
-  flight. Automated UI control was attempted on Windows, but local-app approval
-  timed out before interaction; deterministic stills, timing traces, and source
-  inspection do not establish how the motion feels under a player's thumb.
+- Any physical-controller or live human judgement of the launch motion in
+  flight. The Windows automation proves key delivery and recovery on the
+  rendered fake route; it does not establish how the motion feels under a
+  player's thumb.
 
 ---
 

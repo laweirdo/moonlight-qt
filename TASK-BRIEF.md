@@ -308,6 +308,7 @@ that file is touched. In particular, Stage 1 does not authorize
 | 3 | `74a20505` | Replaced the visible launch, warning, and failure treatment with custom Bulan QML. |
 | 4 | `b01a408e` | Replaced the quit surface and added success-gated quit-and-switch using one prepared Session. |
 | 5 | `30f7cad4` | Hardened cross-surface return routing, repeated-cycle cleanup, Session lifetime, dismissal idempotence, and progress animation cost. |
+| Completion audit | `285ff231` | Declared all options key-event parameters after live B recovery exposed Qt's deprecated implicit injection warning. |
 | 6 | This documentation stage | Records final evidence and repository state; the brief remains until client acceptance. |
 
 ---
@@ -367,7 +368,7 @@ that file is touched. In particular, Stage 1 does not authorize
   `[unresolved-type]`, and `[use-proper-function]` around registered runtime
   types, dynamic properties/callbacks, and existing delegate patterns.
 - Repeated Qt 6.9.3 / MSVC Release builds on the Windows review station. The
-  final build ran `qmlcachegen` over the revised lifecycle source and linked
+  final builds ran `qmlcachegen` over each revised QML source and linked
   successfully with only the pre-existing `LNK4291` warning.
 - The full deterministic review matrix rendered at 1280×800 composition:
   launch from Recent/Library/scrolled Library, resume, warning, launch failure,
@@ -388,6 +389,13 @@ that file is touched. In particular, Stage 1 does not authorize
   fixed and re-audited: manually created route cleanup, per-frame JavaScript
   dot motion, replay-pop state, production Session cleanup ownership, and
   repeated failure dismissal.
+- Live Windows Computer Use exercised controller-equivalent keys on the fake
+  rendered route: B returned from launch failure to the retained grid, Right
+  moved Recent focus from Portal 2 to Celeste, X opened Celeste's options, and
+  B closed it with Celeste still selected. The first pass exposed a deprecated
+  implicit `event` warning in `GameOptionsOverlay`; all nine handlers now
+  declare their parameter, the Release target rebuilt, the interaction reran,
+  and its log contained only the known `main.qml` ToolTip warning.
 
 ### Not performed
 
@@ -395,9 +403,6 @@ that file is touched. In particular, Stage 1 does not authorize
 - OLED/LCD appearance and target-device frame timing.
 - Real-stream launch, resume, warning, failure, quit, and quit-and-switch.
 - Physical-controller review of every affected path.
-- Live Windows controller-style interaction: the in-app automation attempt
-  could not obtain approval to control the local Moonlight window before its
-  timeout. No input result is inferred from static key handlers or screenshots.
 
 None of those outstanding checks may be reported as passed from Windows,
 screenshots, source inspection, or fake data.

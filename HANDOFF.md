@@ -12,7 +12,7 @@ snapshot.
 | Item | State |
 |---|---|
 | Integration branch | `bulan` at `f54d3648`, tracking `origin/bulan` |
-| Task branch | `launch-quit-experience`; implementation ends at `30f7cad4`; no tracking branch |
+| Task branch | `launch-quit-experience`; implementation ends at `285ff231`; no tracking branch |
 | Remote | `origin` only, the client's fork. Nothing from this task has been pushed |
 | Active task | `TASK-BRIEF.md` — Stage 6 complete, awaiting final client acceptance |
 | Open defects | None recorded in `BUGS.md` |
@@ -37,6 +37,7 @@ preserving the existing Session, streaming, persistence, and quit backends.
 | `74a20505` | Built the custom launch/resume, warning, and failure experience |
 | `b01a408e` | Built custom quit, quit failure, and success-gated quit-and-switch |
 | `30f7cad4` | Hardened cross-surface routing, route lifetime, replay, and animation cost |
+| `285ff231` | Declared options key-event parameters after live input exposed Qt's implicit-injection warning |
 
 ## Current product state
 
@@ -61,9 +62,9 @@ preserving the existing Session, streaming, persistence, and quit backends.
   `[import]`, `[index]`, `[missing-property]`, `[unqualified]`,
   `[unresolved-type]`, and `[use-proper-function]` around registered runtime
   types, dynamic properties/callbacks, and existing delegate patterns.
-- Qt 6.9.3 / MSVC Release builds throughout implementation. The final rebuild
-  ran `qmlcachegen` over the revised `StreamSegue.qml` and linked successfully.
-  Its only link warning was the pre-existing `LNK4291`.
+- Qt 6.9.3 / MSVC Release builds throughout implementation. The final rebuilds
+  ran `qmlcachegen` over each revised QML source and linked successfully. Their
+  only link warning was the pre-existing `LNK4291`.
 - The full deterministic review matrix rendered successfully: launch from
   Recent, Library, and a scrolled lower Library row; resume; warning; failure;
   valid and no-source fallback; repeated cycles; quit progress/failure;
@@ -90,6 +91,14 @@ preserving the existing Session, streaming, persistence, and quit backends.
   remaining stale grid-era claims: conditional B handling during busy work and
   the launch transition's legitimate use of `motionTransitionMs`. No other
   documentation contradiction or validation overclaim was found.
+- A live Windows Computer Use pass exercised controller-equivalent keys on the
+  rendered fake-game route. B returned from launch failure to the same grid;
+  Right moved Recent focus from Portal 2 to Celeste; X opened Celeste's options;
+  and B closed them with Celeste still selected. The first pass exposed Qt's
+  deprecated implicit `event` injection warning in `GameOptionsOverlay`; all
+  nine key handlers were corrected, linted, rebuilt, and rerun. The final log
+  contained no critical runtime error and only the known `main.qml` ToolTip
+  warning.
 
 ### Not performed
 
@@ -100,10 +109,9 @@ preserving the existing Session, streaming, persistence, and quit backends.
 - **No real stream was launched, resumed, failed, or quit** through this task's
   paths. The real Session and quit backend contracts were preserved and audited,
   but fake QML outcomes cannot prove network or host behavior.
-- **No physical-controller review** of the affected paths. A live Windows
-  controller-style automation attempt used the prescribed Computer Use workflow,
-  but approval to control the local Moonlight window timed out before input.
-  Static handlers and screenshots are not reported as controller validation.
+- **No physical-controller review** of the affected paths. Computer Use proves
+  controller-equivalent key delivery and visible focus recovery on Windows,
+  but it is not a gamepad, Steam Input, or target-device result.
 - **No live human judgement of the transition in flight.** Timing traces and
   settled captures establish cost and end states, not feel.
 
