@@ -11,10 +11,10 @@ snapshot.
 
 | Item | State |
 |---|---|
-| Integration branch | `bulan` at `7da2ce60`, unchanged; tracking `origin/bulan` and locally ahead |
-| Task branch | `general-screen-transitions`, cut from `bulan` at `7da2ce60`, HEAD `78c05eee`. Local only, never pushed, not merged |
-| Remote | `origin` only, the client's fork. Nothing has been pushed |
-| Active task | Phase B item 4, general screen transitions. `TASK-BRIEF.md` is live and stays until the client accepts |
+| Integration branch | `bulan`, carrying the accepted screen transition work, pushed to `origin/bulan` |
+| Task branch | `general-screen-transitions` still exists locally. Its deletion was **not** authorised and it has not been deleted |
+| Remote | `origin` only, the client's fork. `bulan` has been pushed with the client's explicit authorisation |
+| Active task | **None.** `TASK-BRIEF.md` was retired on client acceptance |
 | Open defects | **Two**, both pre-existing, both recorded in `BUGS.md` on 2 August 2026 |
 | Working tree | Clean |
 
@@ -22,9 +22,9 @@ The previous task, the launch and quit experience, was accepted on 2 August 2026
 and merged locally as `c0e79970`; its branch is deleted. This entry supersedes
 that snapshot.
 
-The current branch adds the general screen transition. It is implemented and
-locally validated but **not accepted, not merged, and not pushed.** The client
-has not yet seen the motion.
+Phase B item 4 was reviewed live by the client in two rounds on 2 August 2026
+and accepted. The client authorised the merge and the push in the same message.
+Branch deletion was not mentioned and so has not been done.
 
 ## Phase B item 4 — what is on the branch
 
@@ -34,6 +34,11 @@ has not yet seen the motion.
 | `09f9d576` | Opened the work order: route inventory, accepted motion direction, ownership |
 | `0670b48e` | Added the push/pop transition and the launch/quit opt-out |
 | `78c05eee` | Corrected the interruption comment on the mechanism |
+| `435bf2f0` | Recorded state and opened two pre-existing defects in `BUGS.md` |
+| `36e5e7f9` | Added real blur to the transition, on the client's override |
+| `b93a8bb0` | Replaced the tiles' sideways slide with a staggered rise from below |
+| `1e37e223` | Lifted the hint bar out of the screens into the window |
+| `7c23b804` | Made a launch end the tile entrance rather than refuse the artwork capture |
 
 Ordinary screen changes now move vertically. Forward, the arriving screen rises
 into place from below while the one it replaces continues upward; back is the
@@ -53,6 +58,40 @@ screen at startup does not animate either — there is nothing to move from.
 
 The travel distance reuses the accepted `space3xl` (64 px) through a named
 token rather than introducing a new visual value.
+
+### Second round, after the client's 2 August review
+
+The client saw the transition live, kept the 220 ms and the 64 px rise, and
+asked for three changes. All three were built and reviewed live by the client in
+a second session the same day, and accepted.
+
+**A real blur now runs during the transition.** The client overrode the
+inexpensive opacity-only reading and accepted the performance cost explicitly,
+to be measured on the Deck after private v1. It is gated to the stack's own
+`busy` window, so a settled screen carries no layer and no effect. It shares one
+layer with the quit-dialog backdrop rather than competing for it. Note that it
+blurs the whole stack including the atmosphere behind the screens, not only the
+moving content — that is a visual consequence the client has not yet judged.
+
+**The game tiles rise from below instead of sliding in from the side.** The old
+horizontal slide into ranked position was what the client saw as "swiping in
+from the side, way too quickly". Tiles now rise and fade in on a short cascade
+that starts once the screen has arrived. Recent radiates outward from the
+focused tile; the Library reads left to right, top to bottom. The cascade is
+capped at six steps so a full library does not take seconds to finish arriving.
+
+**The hint bar no longer moves with the screen.** Both screen-level bars were
+lifted into the window beside the stack, where `LaunchTransition` already lives,
+because a child cannot opt out of its parent's animated opacity. The carousel
+and the grid now publish their hints and one window-level bar reads whichever
+screen is current. Hint content, filtering, and appearance are unchanged, and
+the overlay bars were not touched.
+
+**A launch that interrupts the entrance ends it rather than degrading.** Pressing
+A while tiles are still rising finishes the entrance immediately and then
+captures the settled artwork, so the accepted launch treatment is preserved. The
+plain title card stays reserved for a genuinely missing source, which is what it
+was built for.
 
 ## What was built — Phase B item 3, launch and quit
 
@@ -189,9 +228,18 @@ These are honest validation gaps, not acknowledged product defects.
 ### Not performed
 
 - **No Steam Deck validation**, in Desktop Mode or Game Mode.
-- **No live human judgement of the transition in flight.** This is the check
-  that matters most for this task and it has not been done. Nothing here
-  establishes how the motion feels.
+- The client judged both rounds live on Windows and accepted them. That is a
+  design acceptance on a desktop GPU, **not** a target-device result.
+- **No performance measurement of the blur.** The client accepted the cost
+  knowingly and deferred the Deck measurement until after private v1. Nothing
+  here establishes what it costs.
+- **The entrance skipped on a background tab is unobserved.** A launch completes
+  both grids' entrances at once, so a tab that was not visible at the time
+  arrives already settled rather than playing its cascade. Deliberate, but
+  nobody has looked at it.
+- **Recent↔Library tab switching by real input was never exercised** in either
+  round: L1/R1 come only from a gamepad and none was attached to the review
+  station.
 - **No frame-timing trace of the transition itself.** The earlier
   `QSG_RENDER_TIMING` figures belong to the launch work, not to this.
 - **No physical-controller review.** Rapid input was synthetic keys on Windows.
@@ -218,17 +266,22 @@ These are honest validation gaps, not acknowledged product defects.
 
 ## Next action
 
-Show the client the screen transition on `general-screen-transitions` and get a
-judgement on how it feels — that is the one check no automated evidence here can
-substitute for. Two questions go with it: whether opacity falloff is an
-acceptable reading of the brief's "slight motion blur", and whether the 64 px
-rise is the right distance. Both are in `TASK-BRIEF.md` under "Open for the
-client".
+Phase B is complete on paper. Before treating it as closed, note what is owed:
 
-Do not merge, delete the branch, or push. Phase B item 4 stays open in
-`ROADMAP.md` until the client accepts it.
+1. **The two defects in `BUGS.md` need triage.** The first is partly a product
+   question — what the grid should remember per host, and for how long. The
+   second, memory growing on every grid entry, matters more on a Deck than it
+   did on the review station.
+2. **The blur's cost on the Deck is unmeasured**, by the client's deliberate
+   deferral. It is the first thing to measure when Deck hardware is next
+   available.
+3. **Carry the standing validation debt forward** rather than claiming it:
+   no Steam Deck session, no physical controller, no real stream through the
+   launch and quit paths, no OLED or LCD appearance review of the new motion.
 
-Separately, the two pre-existing defects now in `BUGS.md` need triage before v1.
-The first is partly a product question — what the grid should remember per host.
-Carry the outstanding Steam Deck, physical-controller, and real-stream launch
-and quit checks forward as validation debt rather than claiming them complete.
+The client mentioned possibly revisiting the screen transition later to push it
+further toward the brief's "whimsical" character. That is a future task, not an
+open item on this one.
+
+`general-screen-transitions` still exists locally and was not deleted, because
+deletion was not authorised.
