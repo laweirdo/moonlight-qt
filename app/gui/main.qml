@@ -199,6 +199,93 @@ ApplicationWindow {
             blurMax: Bulan.popupBackdropBlurRadius
         }
 
+        // Ordinary screen navigation, brief §6 "Screen transition": content
+        // surfaces vertically over Bulan.motionTransitionMs, ease-out with no
+        // overshoot (Easing.OutCubic; motionOvershoot belongs to focus motion,
+        // not this), and the "slight motion blur" note is read as opacity
+        // falling off during travel rather than an actual blur effect. Push
+        // and pop are exact mirrors of each other so forward and back read as
+        // one reversible movement. Declared once here per the accepted
+        // decision that no per-screen route may attach its own animation.
+        // replaceEnter/replaceExit are deliberately left at their implicit
+        // immediate default so StreamSegue.qml's existing replace is
+        // unaffected.
+        //
+        // Only y and opacity are animated, and both always animate to their
+        // resting values (0 and 1) on enter and away from them on exit. Qt
+        // queues an operation that arrives while a transition is already
+        // running rather than interrupting it in place, so a settled item
+        // reached via any number of queued pushes/pops always lands back on
+        // this same resting state -- there is no in-between value for rapid
+        // input to strand a screen at.
+        pushEnter: Transition {
+            NumberAnimation {
+                property: "y"
+                from: Bulan.motionTransitionRise
+                to: 0
+                duration: Bulan.motionTransitionMs
+                easing.type: Easing.OutCubic
+            }
+            NumberAnimation {
+                property: "opacity"
+                from: 0
+                to: 1
+                duration: Bulan.motionTransitionMs
+                easing.type: Easing.OutCubic
+            }
+        }
+
+        pushExit: Transition {
+            NumberAnimation {
+                property: "y"
+                from: 0
+                to: -Bulan.motionTransitionRise
+                duration: Bulan.motionTransitionMs
+                easing.type: Easing.OutCubic
+            }
+            NumberAnimation {
+                property: "opacity"
+                from: 1
+                to: 0
+                duration: Bulan.motionTransitionMs
+                easing.type: Easing.OutCubic
+            }
+        }
+
+        popEnter: Transition {
+            NumberAnimation {
+                property: "y"
+                from: -Bulan.motionTransitionRise
+                to: 0
+                duration: Bulan.motionTransitionMs
+                easing.type: Easing.OutCubic
+            }
+            NumberAnimation {
+                property: "opacity"
+                from: 0
+                to: 1
+                duration: Bulan.motionTransitionMs
+                easing.type: Easing.OutCubic
+            }
+        }
+
+        popExit: Transition {
+            NumberAnimation {
+                property: "y"
+                from: 0
+                to: Bulan.motionTransitionRise
+                duration: Bulan.motionTransitionMs
+                easing.type: Easing.OutCubic
+            }
+            NumberAnimation {
+                property: "opacity"
+                from: 1
+                to: 0
+                duration: Bulan.motionTransitionMs
+                easing.type: Easing.OutCubic
+            }
+        }
+
         // The shared atmosphere layer — gradient, vignette and grain — behind
         // every page. See Atmosphere.qml; each effect is individually
         // switchable there.
@@ -233,7 +320,9 @@ ApplicationWindow {
             // Perform our early initialization before constructing
             // the initial view and pushing it to the StackView
             doEarlyInit()
-            push(initialView)
+            // There is nothing on screen to transition from yet, so this
+            // first push must not animate (accepted decision 8).
+            push(initialView, StackView.Immediate)
         }
 
         onCurrentItemChanged: {

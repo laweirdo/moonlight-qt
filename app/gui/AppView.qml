@@ -1078,7 +1078,10 @@ FocusScope {
         root.launchSeguePushCommitted = true
         var pushed = null
         try {
-            pushed = stackView.push(segue)
+            // Launch keeps its own LaunchTransition proxy motion; the stack
+            // operation underneath must not gain competing motion (brief
+            // decision 7, precedent StreamSegue.qml:102).
+            pushed = stackView.push(segue, StackView.Immediate)
         } catch (error) {
             console.error(label + " push failed:", error)
         }
@@ -1450,7 +1453,9 @@ FocusScope {
             reviewSegue.reviewRepeat = false
         }
         root.launchSeguePushCommitted = false
-        var poppedSegue = stackView.pop()
+        // Review replay pop, out of scope for the stack transition (brief
+        // out-of-scope table); keep it free of competing motion.
+        var poppedSegue = stackView.pop(StackView.Immediate)
         if (poppedSegue === null || poppedSegue === undefined) {
             root.reviewReplayActive = false
             root.rollbackLaunch("The review launch screen could not be popped for replay.")
@@ -2124,7 +2129,9 @@ FocusScope {
         root.quitSeguePushCommitted = true
         var pushed = null
         try {
-            pushed = stackView.push(segue)
+            // Quit keeps the accepted quit experience free of competing
+            // stack motion (brief decision 7).
+            pushed = stackView.push(segue, StackView.Immediate)
         } catch (error) {
             console.error("QuitSegue.qml push failed:", error)
         }

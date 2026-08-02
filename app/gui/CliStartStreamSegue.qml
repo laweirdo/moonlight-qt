@@ -21,7 +21,9 @@ Item {
             "session": session,
             "quitAfter": true
         })
-        stackView.push(segue)
+        // CLI entry routes stay free of competing stack motion (brief
+        // decision 7, out-of-scope table).
+        stackView.push(segue, StackView.Immediate)
     }
 
     function onLaunchFailed(message) {
@@ -84,7 +86,9 @@ Item {
         function quitApp() {
             var component = Qt.createComponent("QuitSegue.qml")
             var params = {"appName": appName, "quitRunningAppFn": function() { launcher.quitRunningApp() }}
-            stackView.push(component.createObject(stackView, params))
+            // CLI entry routes stay free of competing stack motion (brief
+            // decision 7, out-of-scope table).
+            stackView.push(component.createObject(stackView, params), StackView.Immediate)
         }
 
         onAccepted: quitApp()

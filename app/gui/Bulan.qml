@@ -164,9 +164,14 @@ QtObject {
     // one motion value here that is interpretation rather than transcription.
     readonly property real motionOvershoot:  0.7
 
-    // Screen transition, brief §6. Unused as yet -- no screen transition has been
-    // built -- but stated here so the value does not get invented twice.
+    // Screen transition, brief §6. Drives LaunchTransition.qml and the
+    // stackView push/pop transitions in main.qml.
     readonly property int  motionTransitionMs: 220
+
+    // Screen transition travel distance, brief §6. Reuses the accepted
+    // space3xl (64) rather than inventing a new raw number for how far a
+    // screen rises or descends during a stack transition.
+    readonly property int  motionTransitionRise: space3xl
 
     // Waiting motion: the three bouncing dots drawn over a busy host tile.
     //
