@@ -12,16 +12,17 @@ snapshot.
 | Item | State |
 |---|---|
 | Integration branch | `bulan` at `f54d3648`, tracking `origin/bulan` |
-| Task branch | `launch-quit-experience`; implementation ends at `285ff231`; no tracking branch |
+| Task branch | `launch-quit-experience`; accepted, with its acceptance-cleanup commit at the current branch head; no tracking branch |
 | Remote | `origin` only, the client's fork. Nothing from this task has been pushed |
-| Active task | `TASK-BRIEF.md` — Stage 6 complete, awaiting final client acceptance |
+| Active task | **None.** `TASK-BRIEF.md` was removed after final client acceptance |
 | Open defects | None recorded in `BUGS.md` |
 
 The task branch was cut from the accepted game-grid merge. The client accepted
 Stage 1, then authorized the remaining stages to proceed without intermediate
-stops and requested one approval after all work was complete. That final
-approval has not yet been given. Do not merge, delete the brief or task branch,
-or push in anticipation of it.
+stops and requested one approval after all work was complete. The client gave
+that final approval on 2 August 2026 and authorized local acceptance cleanup,
+merge into `bulan`, and task-branch deletion. The cleanup is complete; the
+local merge is next. Push remains unauthorized.
 
 ## What was built
 
@@ -126,15 +127,12 @@ therefore remains empty.
 4. `FLOW.md`
 5. `ROADMAP.md`
 6. This file
-7. `TASK-BRIEF.md`
-8. `BUGS.md`
-9. `SPEC-host-carousel.md` and `SPEC-game-grid.md`
-10. `BUILDING-WINDOWS.md` or the applicable target build guide before a build
+7. `BUGS.md`
+8. `SPEC-host-carousel.md` and `SPEC-game-grid.md`
+9. `BUILDING-WINDOWS.md` or the applicable target build guide before a build
 
 ## Next action
 
-Present the completed task branch and the validation limits for final client
-acceptance. If accepted, remove `TASK-BRIEF.md` only after its remaining durable
-state is confirmed here and in the specification, commit that acceptance
-cleanup, merge the task branch into `bulan`, then delete the task branch.
+Merge `launch-quit-experience` into `bulan`, delete the accepted local task
+branch, then update this repository-state file again after those operations.
 Nothing may be pushed unless the client separately authorizes the push.

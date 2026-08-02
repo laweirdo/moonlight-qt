@@ -3,8 +3,8 @@
 This is the durable authority for the Recent and Library surface: component
 inventory, navigation, state model, design decisions, compromises, known
 unfinished work, and validation evidence. Application source is the objective
-authority for what currently runs. Live branch, task, and build state belong in
-`HANDOFF.md` and `TASK-BRIEF.md`.
+authority for what currently runs. Live branch and build state belong in
+`HANDOFF.md`; a temporary `TASK-BRIEF.md` exists only while a task is active.
 
 Decision labels in this file carry the same weight `SPEC-host-carousel.md`
 defined:
@@ -19,7 +19,7 @@ defined:
 
 Screen targets **1280×800**, the Steam Deck panel.
 
-Four commits carry the implementation record, `TASK-BRIEF.md`'s stages 1–4:
+Four commits carry the original game-grid work order's stages 1–4:
 
 | Commit | Stage | What |
 |---|---|---|
@@ -32,8 +32,8 @@ The grid's Stage 5 validation and documentation originally produced this file.
 The client reviewed the surface on 1 August 2026, requested the four changes
 recorded below, accepted them, and merged the task into `bulan`. Phase B item 3
 later extended this specification with the selected-game launch and quit
-integration; that separate task is implementation-complete and awaiting final
-acceptance.
+integration; the client accepted that separate task on 2 August 2026 and its
+local merge is next.
 
 ---
 
@@ -116,7 +116,7 @@ showing — for the same reason Up/Down are swallowed on Recent.
 | **Artwork missing** | `boxart` is an empty string; `art.status` never reaches `Ready`; the fallback stays shown permanently. |
 | **Artwork detected as a GFE placeholder** | `art.status === Ready` but `sourceSize` exactly matches one of the three known GFE/Sunshine placeholder dimensions (130×180, 628×888, 200×266), gated off for `appCollectorGame` (Overcooked's real art matches one of these sizes by coincidence). `showArt` stays false and the fallback is shown even though the image loaded. |
 | **Long title** | The fallback wraps up to 4 lines and elides; the label-row title elides against whatever width the "Running" label leaves it. |
-| **Empty library** | One line, `"No games here yet."`, in the app's voice — the minimal placeholder `TASK-BRIEF.md` scoped for this task. The designed treatment is Phase D, deferred. |
+| **Empty library** | One line, `"No games here yet."`, in the app's voice — the minimal placeholder scoped by the completed game-grid work order. The designed treatment is Phase D, deferred. |
 | **Partial final row** | The Library `Repeater` draws exactly `gameCount` tiles; a short final row simply has fewer items at the row's end, and `moveLibraryRow()`'s clamp keeps Down from landing on a cell that does not exist. |
 | **Single game** | Both views render one tile; on Recent, `slot`'s clamp still resolves to a single tile at distance 0 with no neighbours to draw. |
 
@@ -135,8 +135,8 @@ the single point both the A-press and direct-launch paths pass through — reads
 the current time once and writes it to both the computer's own `appList` entry
 and the model's visible-apps copy, then emits `dataChanged` for
 `LastPlayedRole`. This is *you pressed Play*, not *the stream succeeded*; that
-is the reading `TASK-BRIEF.md` recorded as the honest and simpler one, and it
-is what is built.
+is the reading the completed game-grid work order recorded as the honest and
+simpler one, and it is what is built.
 
 **Never played.** A game that has never launched has an invalid
 (default-constructed) `QDateTime`, which QML sees as a `Date` with a `NaN`
@@ -255,7 +255,7 @@ Library scroll.
 
 ### Selected-game launch and quit integration
 
-**Implementation complete on the task branch; client acceptance pending.**
+**Accepted 2 August 2026; awaiting local merge.**
 Every launch request is keyed by the existing stable `appid`, not a delegate or
 row that can move when `lastPlayed` changes. `AppView` resolves the currently
 rendered artwork, grabs its exact on-screen crop and mask before Session
@@ -303,9 +303,9 @@ alone carries the separation for now.
 
 ## The scroll defect, diagnosed
 
-`TASK-BRIEF.md` recorded, after stage 2, a Library grid seen scrolled down one
-row with no input — captured once, two immediate re-runs were correct, and it
-was recorded explicitly as *not reproduced, not diagnosed, not claimed fixed*.
+The former game-grid work order recorded, after stage 2, a Library grid seen
+scrolled down one row with no input — captured once, two immediate re-runs were
+correct, and explicitly *not reproduced, not diagnosed, not claimed fixed*.
 
 It became reproducible in stage 4, once the Library tab could be opened
 directly against the real host: every run landed a row down with the focused
@@ -349,18 +349,16 @@ to have caught the final state.
 
 ## Known unfinished work and v1 compromises
 
-This table records durable surface gaps, not the current task or branch.
-`TASK-BRIEF.md` owns active implementation scope while this branch is open.
+This table records durable surface gaps, not a current task or branch.
 
 | Thing | Label | Durable state |
 |---|---|---|
 | **SELECT / Host Settings** | **Provisional** | Deliberately unbound; hint withheld. The mockup shows Host Settings on this screen; no host-settings surface exists for it. Not started as a side effect of this task's scope. |
 | **Backdrop blur behind the options popup** | **Accepted compromise** | Absent. `HostCarousel.qml`'s blurred-backdrop pattern was not extended here; the scrim alone separates the popup from the grid. Would require restructuring this screen's content into a wrapping layered `Item`. |
 | **Designed empty-library state** | **Provisional** | One line, `"No games here yet."`, is the whole treatment. The designed version is Phase D per `ROADMAP.md` and `FLOW.md` records it as unresolved flow design. |
-| **Launch and quit experience (Phase B item 3)** | **Implemented; acceptance pending** | Custom Bulan launch and quit surfaces, selected-game transition from both tabs, recoverable failure, and the successful-quit-before-launch handoff are complete on `launch-quit-experience`. Target-device and real-stream validation remain outstanding. |
 | **Screen transitions (Phase B item 4)** | **Provisional** | The tab cross-fade uses `motionFocusMs`, deliberately not `motionTransitionMs`. Item 3 now uses the 220 ms token for its selected-game launch handoff; wiring it into the rest of the core route remains item 4. |
 | **Tile aspect ratio vs. the client's own artwork** | **Provisional** | 18 of 25 cached box-art files on the review station are 2:3, which the build now matches; the remaining 7 are 3:4 and lose a band top and bottom under crop-to-fill. Raised for client decision at stage 2 review, not settled. |
-| **Rename PC, merged multi-host library** | **Deferred** | Out of this task per `TASK-BRIEF.md`'s explicit exclusions; unrelated to the surfaces this task changed. |
+| **Rename PC, merged multi-host library** | **Deferred** | Explicitly excluded from the completed game-grid and launch/quit work orders; unrelated to these surfaces. |
 
 ---
 
@@ -404,7 +402,7 @@ Existing carousel hooks (`MOONLIGHT_FAKE_HOSTS`, `MOONLIGHT_INITIAL_VIEW`,
   via the `MOONLIGHT_GAME_REVIEW` hook.
 - Application logs read on every run. Only two known-environmental lines
   appear: `mDNS is disabled by user preference` (a local machine preference,
-  not a code fault, per `TASK-BRIEF.md`) and the `ToolTip attached property`
+  not a code fault) and the `ToolTip attached property`
   line from `main.qml` (the same pre-existing environmental warning
   `HANDOFF.md` records for the prior task).
 - The Library scroll defect: reproduced against the real host, diagnosed, and
@@ -511,6 +509,6 @@ on it.
 
 Held on 1 August 2026. The client drove the deployed grid against the real
 `Steambox` library, requested the four changes recorded above, accepted the
-result, and instructed the merge into `bulan`. The separate launch-and-quit
-work order is now implementation-complete on its task branch and awaits its own
-final client acceptance; `TASK-BRIEF.md` remains active until that happens.
+result, and instructed the merge into `bulan`. The client accepted the separate
+launch-and-quit work order on 2 August 2026 after its final completion audit;
+its local integration is next and its temporary task brief has been retired.
