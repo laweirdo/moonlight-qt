@@ -1184,53 +1184,55 @@ FocusScope {
             }
         }
     }
+    } // screenContent
 
     // --- hint bar ------------------------------------------------------------
-        HintBar {
-            id: hintBar
-        anchors.left: parent.left
-        anchors.right: parent.right
-        anchors.bottom: parent.bottom
+    // Lifted out of this screen and into main.qml as a sibling of stackView
+    // (client decision, 2 August 2026 review): nothing about this bar
+    // changes between the carousel and the grid except its labels, so
+    // animating it along with the rest of the screen read as unrefined. A
+    // child cannot opt out of its parent's stack-transition opacity, so the
+    // single window-level HintBar reads these three properties off
+    // whichever screen is current instead of this screen drawing its own.
+    readonly property bool hintBarVisible: true
 
-        leftHints: root.hasHosts
-            ? [
-                  { action: "confirm",   label: qsTr("Connect"), emphasis: true },
-                  // Wake only where waking means something. Two ways it can
-                  // mean nothing, and both have now been seen:
-                  //
-                  //   The host is already awake. actWake() returns immediately,
-                  //   so advertising it offered a button that did nothing.
-                  //   That was defect 2 from the July hardware session.
-                  //
-                  //   The host cannot be woken at all, because it never told us
-                  //   its hardware address. Pressing Wake there only ever
-                  //   produces "it didn't tell us how to wake it", which is a
-                  //   refusal the hint bar should not have promised. Shoebox is
-                  //   this case permanently.
-                  //
-                  //   The wake is already running. Advertising Wake while
-                  //   hostIsBusy would offer a third button that does nothing --
-                  //   actWake() no-ops on a host that is already connecting or
-                  //   waking, per the guard added there -- so it is withheld for
-                  //   exactly the same reason as the two cases above.
-                  { action: "alternate", label: qsTr("Wake"),
-                    visible: !root.hostOnline && root.hostWakeable && !root.hostIsBusy },
-                  { action: "options",   label: qsTr("Add a PC") }
-              ]
-            : [
-                  { action: "options", label: qsTr("Add a PC"), emphasis: true }
-              ]
+    readonly property var hintLeftHints: root.hasHosts
+        ? [
+              { action: "confirm",   label: qsTr("Connect"), emphasis: true },
+              // Wake only where waking means something. Two ways it can
+              // mean nothing, and both have now been seen:
+              //
+              //   The host is already awake. actWake() returns immediately,
+              //   so advertising it offered a button that did nothing.
+              //   That was defect 2 from the July hardware session.
+              //
+              //   The host cannot be woken at all, because it never told us
+              //   its hardware address. Pressing Wake there only ever
+              //   produces "it didn't tell us how to wake it", which is a
+              //   refusal the hint bar should not have promised. Shoebox is
+              //   this case permanently.
+              //
+              //   The wake is already running. Advertising Wake while
+              //   hostIsBusy would offer a third button that does nothing --
+              //   actWake() no-ops on a host that is already connecting or
+              //   waking, per the guard added there -- so it is withheld for
+              //   exactly the same reason as the two cases above.
+              { action: "alternate", label: qsTr("Wake"),
+                visible: !root.hostOnline && root.hostWakeable && !root.hostIsBusy },
+              { action: "options",   label: qsTr("Add a PC") }
+          ]
+        : [
+              { action: "options", label: qsTr("Add a PC"), emphasis: true }
+          ]
 
-        rightHints: root.hasHosts
-            ? [
-                  { action: "start",  label: qsTr("Client Settings") },
-                  { action: "select", label: qsTr("Host Settings") }
-              ]
-            : [
-                  { action: "start", label: qsTr("Client Settings") }
-              ]
-        }
-    }
+    readonly property var hintRightHints: root.hasHosts
+        ? [
+              { action: "start",  label: qsTr("Client Settings") },
+              { action: "select", label: qsTr("Host Settings") }
+          ]
+        : [
+              { action: "start", label: qsTr("Client Settings") }
+          ]
 
     // --- input ---------------------------------------------------------------
     // Movement clamps rather than wrapping, which is why it is done here instead

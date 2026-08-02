@@ -191,12 +191,116 @@ ApplicationWindow {
             anchors.fill: parent
         focus: true
         enabled: !quitConfirmationDialog.visible
-        layer.enabled: quitConfirmationDialog.visible
+        // One layer, one effect, claimed by whichever of the two blur
+        // callers is actually active -- they never overlap in practice
+        // (the quit dialog opens over a settled screen, never mid
+        // transition), and this OR keeps them from being able to fight
+        // over the layer even if that ever changed. `busy` is StackView's
+        // own signal that a push/pop transition is currently animating, so
+        // this leaves nothing enabled -- no layer, no effect, no cost --
+        // the instant a screen settles (client override, 2 August 2026
+        // review: real blur during the transition, on top of the existing
+        // opacity falloff, accepting the Deck performance cost).
+        layer.enabled: quitConfirmationDialog.visible || stackView.busy
         layer.effect: MultiEffect {
             autoPaddingEnabled: false
             blurEnabled: true
-            blur: Bulan.popupBackdropBlurStrength
-            blurMax: Bulan.popupBackdropBlurRadius
+            blur: quitConfirmationDialog.visible
+                  ? Bulan.popupBackdropBlurStrength
+                  : Bulan.motionTransitionBlurStrength
+            blurMax: quitConfirmationDialog.visible
+                     ? Bulan.popupBackdropBlurRadius
+                     : Bulan.motionTransitionBlurRadius
+        }
+
+        // Ordinary screen navigation, brief §6 "Screen transition": content
+        // surfaces vertically over Bulan.motionTransitionMs, ease-out with no
+        // overshoot (Easing.OutCubic; motionOvershoot belongs to focus motion,
+        // not this). The opacity falloff below was originally the whole of
+        // the "slight motion blur" reading; the layer.enabled/layer.effect
+        // pair above now adds genuine blur on top of it, gated to the
+        // transition's own `busy` window (client override, 2 August 2026).
+        // Push and pop are exact mirrors of each other so forward and back
+        // read as one reversible movement. Declared once here per the
+        // accepted decision that no per-screen route may attach its own
+        // animation.
+        // replaceEnter/replaceExit are deliberately left at their implicit
+        // immediate default so StreamSegue.qml's existing replace is
+        // unaffected.
+        //
+        // Only y and opacity are animated, and every enter transition drives
+        // both to their resting values (0 and 1) with an explicit `from`, so
+        // it never inherits whatever mid-flight value the item happened to
+        // hold. StackView finishes an in-flight transition immediately when a
+        // new operation arrives rather than abandoning it part-way, which is
+        // what keeps rapid B/A input from stranding a screen at an
+        // in-between offset or a partial opacity.
+        pushEnter: Transition {
+            NumberAnimation {
+                property: "y"
+                from: Bulan.motionTransitionRise
+                to: 0
+                duration: Bulan.motionTransitionMs
+                easing.type: Easing.OutCubic
+            }
+            NumberAnimation {
+                property: "opacity"
+                from: 0
+                to: 1
+                duration: Bulan.motionTransitionMs
+                easing.type: Easing.OutCubic
+            }
+        }
+
+        pushExit: Transition {
+            NumberAnimation {
+                property: "y"
+                from: 0
+                to: -Bulan.motionTransitionRise
+                duration: Bulan.motionTransitionMs
+                easing.type: Easing.OutCubic
+            }
+            NumberAnimation {
+                property: "opacity"
+                from: 1
+                to: 0
+                duration: Bulan.motionTransitionMs
+                easing.type: Easing.OutCubic
+            }
+        }
+
+        popEnter: Transition {
+            NumberAnimation {
+                property: "y"
+                from: -Bulan.motionTransitionRise
+                to: 0
+                duration: Bulan.motionTransitionMs
+                easing.type: Easing.OutCubic
+            }
+            NumberAnimation {
+                property: "opacity"
+                from: 0
+                to: 1
+                duration: Bulan.motionTransitionMs
+                easing.type: Easing.OutCubic
+            }
+        }
+
+        popExit: Transition {
+            NumberAnimation {
+                property: "y"
+                from: 0
+                to: Bulan.motionTransitionRise
+                duration: Bulan.motionTransitionMs
+                easing.type: Easing.OutCubic
+            }
+            NumberAnimation {
+                property: "opacity"
+                from: 1
+                to: 0
+                duration: Bulan.motionTransitionMs
+                easing.type: Easing.OutCubic
+            }
         }
 
         // The shared atmosphere layer — gradient, vignette and grain — behind
@@ -233,7 +337,9 @@ ApplicationWindow {
             // Perform our early initialization before constructing
             // the initial view and pushing it to the StackView
             doEarlyInit()
-            push(initialView)
+            // There is nothing on screen to transition from yet, so this
+            // first push must not animate (accepted decision 8).
+            push(initialView, StackView.Immediate)
         }
 
         onCurrentItemChanged: {
@@ -291,6 +397,34 @@ ApplicationWindow {
             onProxyReady: if (owner) owner.launchTransitionProxyReady()
             onFinished: if (owner) owner.launchTransitionFinished()
             onFailed: if (owner) owner.launchTransitionFailed()
+        }
+
+        // Window-level hint bar, sibling of stackView for exactly the reason
+        // LaunchTransition above is: a child cannot opt out of its parent's
+        // stack-transition opacity, and nothing about this bar should move
+        // or fade with the screen (client decision, 2 August 2026 review --
+        // "nothing about it changes between the carousel and the grid except
+        // its labels"). HostCarousel.qml and AppView.qml no longer draw
+        // their own; they expose hintBarVisible/hintLeftHints/hintRightHints
+        // instead, and this single bar reads whichever one is current.
+        //
+        // Screens that never had a hint bar -- settings, the segues, CLI
+        // routes, the token/glyph proofs -- simply don't define these
+        // properties, so `currentItem.hintBarVisible === true` is false
+        // (undefined) for all of them and this bar stays hidden there,
+        // exactly as before.
+        HintBar {
+            id: sharedHintBar
+            anchors.left: parent.left
+            anchors.right: parent.right
+            anchors.bottom: parent.bottom
+
+            visible: stackView.currentItem !== null
+                     && stackView.currentItem !== undefined
+                     && stackView.currentItem.hintBarVisible === true
+
+            leftHints: visible ? stackView.currentItem.hintLeftHints : []
+            rightHints: visible ? stackView.currentItem.hintRightHints : []
         }
     }
 

@@ -44,6 +44,62 @@ FocusScope {
     property int computerIndex
     property bool showHiddenGames
 
+    // Grid entrance: Recent and Library tiles rise from below in a short
+    // stagger once this screen has visually arrived, replacing the old
+    // horizontal slide-into-rank motion (client decision, 2 August 2026
+    // review -- see the Recent/Library delegates below and the tokens in
+    // Bulan.qml). False for exactly motionGridEntranceDelayMs after this
+    // screen is created -- which is also exactly when it is pushed, so this
+    // waits out the screen transition itself before any tile moves. A fresh
+    // AppView instance is created on every push (HostCarousel.openAppView()),
+    // so re-entering the grid always replays this from scratch.
+    property bool gridEntranceStarted: false
+
+    Timer {
+        id: gridEntranceTimer
+        interval: Bulan.motionGridEntranceDelayMs
+        running: true
+        onTriggered: root.gridEntranceStarted = true
+    }
+
+    // Belt-and-braces against a settled tile re-entering. Ordinary Recent
+    // re-ranking (a launch updates lastPlayed, recomputeRecentOrder() below
+    // reorders) never recreates a delegate -- rank/slot/x are plain
+    // property bindings recomputed on the SAME Item, and Repeater only
+    // destroys/creates delegates on an actual model row insert, remove, or
+    // reset, none of which this screen's own code triggers for reordering.
+    // These two sets exist for the cases that are less certain -- a host's
+    // app list arriving in chunks after this screen is already open (see
+    // libraryFlickable's "rows come in chunks" comment), or any future
+    // change that does cause a delegate to be recreated for a game already
+    // shown once. Recent and Library are tracked separately: the same game
+    // legitimately gets its own first entrance in each grid.
+    property var recentEntranceSeenAppIds: ({})
+    property var libraryEntranceSeenAppIds: ({})
+
+    // Returns true if this appId already played its entrance in this grid
+    // during this screen instance, marking it seen as a side effect either
+    // way -- so a delegate's own Component.onCompleted can call this once
+    // and know, from the single return value, whether to animate in or
+    // simply appear settled.
+    function markRecentEntranceSeen(appId) {
+        var key = String(appId)
+        if (root.recentEntranceSeenAppIds[key] === true) {
+            return true
+        }
+        root.recentEntranceSeenAppIds[key] = true
+        return false
+    }
+
+    function markLibraryEntranceSeen(appId) {
+        var key = String(appId)
+        if (root.libraryEntranceSeenAppIds[key] === true) {
+            return true
+        }
+        root.libraryEntranceSeenAppIds[key] = true
+        return false
+    }
+
     property AppModel appModel: createModel()
 
     // Emitted instead of building the popup. X on a tile means "show its
@@ -642,9 +698,42 @@ FocusScope {
         }
     }
 
+    // Ends the grid entrance (Recent and Library both) immediately: every
+    // tile still mid-rise snaps straight to its resting position and
+    // opacity, same "finish it now rather than fight it" shape as
+    // launchTransition.completeImmediately() below. Called the moment a
+    // launch is committed to, so nothing is ever captured mid-flight and
+    // nothing is left stranded part-risen if the launch later rolls back
+    // and returns the player to this same screen.
+    function completeGridEntrance() {
+        var i, item
+        for (i = 0; i < recentRepeater.count; i++) {
+            item = recentRepeater.itemAt(i)
+            if (item && !item.entranceSettled) {
+                item.completeEntrance()
+            }
+        }
+        for (i = 0; i < libraryRepeater.count; i++) {
+            item = libraryRepeater.itemAt(i)
+            if (item && !item.entranceSettled) {
+                item.completeEntrance()
+            }
+        }
+    }
+
     function freezeLaunchSourceMotion(appId, origin) {
         libraryScrollAnimation.stop()
         libraryFlickable.cancelFlick()
+        // A launch pressed while the source tile is still mid-rise (grid
+        // entrance) must never freeze and capture that in-flight geometry --
+        // the frozen proxy would zoom from a position and opacity the
+        // player never actually saw settle. Rather than withholding the
+        // capture (which would silently degrade the accepted launch
+        // experience for the whole entrance window), the entrance is simply
+        // over now: finish it immediately, for every tile, then capture the
+        // now-settled geometry exactly as if the entrance had already
+        // finished on its own.
+        root.completeGridEntrance()
         root.frozenLaunchAppId = appId
         var tile = root.sourceTileForAppId(appId, origin)
         var slot = root.sourceSlotForAppId(appId, origin)
@@ -1078,7 +1167,10 @@ FocusScope {
         root.launchSeguePushCommitted = true
         var pushed = null
         try {
-            pushed = stackView.push(segue)
+            // Launch keeps its own LaunchTransition proxy motion; the stack
+            // operation underneath must not gain competing motion (brief
+            // decision 7, precedent StreamSegue.qml:102).
+            pushed = stackView.push(segue, StackView.Immediate)
         } catch (error) {
             console.error(label + " push failed:", error)
         }
@@ -1450,7 +1542,9 @@ FocusScope {
             reviewSegue.reviewRepeat = false
         }
         root.launchSeguePushCommitted = false
-        var poppedSegue = stackView.pop()
+        // Review replay pop, out of scope for the stack transition (brief
+        // out-of-scope table); keep it free of competing motion.
+        var poppedSegue = stackView.pop(StackView.Immediate)
         if (poppedSegue === null || poppedSegue === undefined) {
             root.reviewReplayActive = false
             root.rollbackLaunch("The review launch screen could not be popped for replay.")
@@ -2124,7 +2218,9 @@ FocusScope {
         root.quitSeguePushCommitted = true
         var pushed = null
         try {
-            pushed = stackView.push(segue)
+            // Quit keeps the accepted quit experience free of competing
+            // stack motion (brief decision 7).
+            pushed = stackView.push(segue, StackView.Immediate)
         } catch (error) {
             console.error("QuitSegue.qml push failed:", error)
         }
@@ -2390,7 +2486,15 @@ FocusScope {
         anchors.right: parent.right
         anchors.top: tabStrip.bottom
         anchors.topMargin: Bulan.spaceXl
-        anchors.bottom: hintBar.top
+        // The hint bar itself now lives in main.qml (see the "hint bar"
+        // section below), so it can no longer be referenced by id here.
+        // Bulan.targetRowHeight is not a stand-in reproducing its height --
+        // it is the literal same token HintBar.qml binds its own
+        // implicitHeight to (HintBar.qml:90), so this margin cannot drift
+        // out of sync with the bar's actual footprint; if that token ever
+        // changes, both follow it together.
+        anchors.bottom: parent.bottom
+        anchors.bottomMargin: Bulan.targetRowHeight
 
         // Cross-fades against the Library view on a tab switch, both on
         // motionFocusMs -- NOT motionTransitionMs, which Bulan.qml reserves
@@ -2516,6 +2620,59 @@ FocusScope {
                 }
                 readonly property int distance: slot < 0 ? -slot : slot
                 readonly property bool isFocused: rank === root.recentFocusedIndex
+
+                // Grid entrance (Bulan.qml "Grid entrance" tokens). Ordered
+                // outward from the focused tile -- distance 0 rises first --
+                // so the cascade radiates from the centre of the row, capped
+                // at motionGridEntranceMaxSteps so a wide row does not take
+                // longer to arrive than a narrow one. 0 while below/hidden,
+                // 1 once settled; y and opacity below read this directly, in
+                // the same "no Behavior on the animated-on value" shape as
+                // focusAmount above.
+                readonly property int entranceOrder:
+                    Math.min(distance, Bulan.motionGridEntranceMaxSteps)
+                property real entranceProgress: 0
+                // True once this tile's own rise has finished (either by
+                // playing out, or by root.completeGridEntrance() below
+                // ending it early for a launch). Gates the x/y/opacity
+                // Behaviors below, so the entrance itself is never
+                // double-animated.
+                property bool entranceSettled: false
+
+                // Snaps straight to the resting position/opacity and stops
+                // the animation below, rather than fighting it. Called from
+                // root.completeGridEntrance() -- see freezeLaunchSourceMotion()
+                // -- the moment a launch on ANY tile is committed to, so a
+                // capture never reads in-flight geometry and no tile is ever
+                // left stranded part-risen.
+                function completeEntrance() {
+                    recentSlot.entranceProgress = 1
+                    recentSlot.entranceSettled = true
+                }
+
+                SequentialAnimation {
+                    id: recentEntranceAnimation
+                    running: root.gridEntranceStarted && !recentSlot.entranceSettled
+                    // Animation.finished() needs a newer QtQuick minor version
+                    // than this file imports; onStopped is available since
+                    // QtQuick 2.0 and, since nothing here ever sets
+                    // `running` false except entranceSettled becoming true
+                    // (naturally, or via completeEntrance() above), is
+                    // equivalent for this animation's whole lifetime.
+                    onStopped: recentSlot.entranceSettled = true
+
+                    PauseAnimation {
+                        duration: recentSlot.entranceOrder
+                                  * Bulan.motionGridEntranceStaggerMs
+                    }
+                    NumberAnimation {
+                        target: recentSlot
+                        property: "entranceProgress"
+                        to: 1
+                        duration: Bulan.motionGridEntranceRiseMs
+                        easing.type: Easing.OutCubic
+                    }
+                }
                 // NOT readonly, matching HostTile's tileScale exactly (see
                 // HostCarousel.qml): a Behavior has to write this to animate
                 // it, and readonly would make the whole tile fail to load.
@@ -2550,18 +2707,27 @@ FocusScope {
                 x: launchMotionFrozen ? frozenLaunchX
                                       : recentView.width / 2 - width / 2
                                         + slot * Bulan.gameRecentSpread
+                // Rises from Bulan.motionGridEntranceRise px below its
+                // resting position while entranceProgress travels 0 -> 1;
+                // settled (entranceProgress === 1) this is exactly the old
+                // expression. Frozen takes over entirely, same as x.
                 y: launchMotionFrozen ? frozenLaunchY
                                       : recentView.focusCenterY - height / 2
+                                        + (1 - entranceProgress)
+                                          * Bulan.motionGridEntranceRise
 
                 z: distance === 0 ? 2 : 0
                 // Every non-focused VISIBLE tile stays at the same dimmed
                 // opacity the design already used (0.5) -- no per-distance
                 // gradient, which is a visual decision nobody has taken.
                 // "Visible" now means "within recentVisibleRadius" rather
-                // than the old fixed distance === 1.
+                // than the old fixed distance === 1. Multiplied by
+                // entranceProgress so the tile fades in as it rises rather
+                // than appearing at full/dimmed opacity mid-flight.
                 opacity: launchMotionFrozen ? frozenLaunchOpacity
                        : (distance === 0 ? 1.0
                        : (distance <= recentView.recentVisibleRadius ? 0.5 : 0.0))
+                         * entranceProgress
                 visible: opacity > 0.01
 
                 // One clock for the whole move, copying HostCarousel.qml's
@@ -2573,15 +2739,26 @@ FocusScope {
                 // item, artRect inside GameTile, not this tileScale; nothing
                 // here chases that, so this is not the "animating an
                 // animation" fault. See the stage 4 report.)
+                //
+                // x/y/opacity additionally wait on entranceSettled: while
+                // the tile is still rising, entranceAnimation above is
+                // already driving y and opacity on its own curve, and x's
+                // rank-driven slide is the exact motion the client asked to
+                // suppress on entry (brief item 3, "swiping in from the
+                // side"). Both stay suppressed only until this tile's own
+                // rise finishes; ordinary re-ranking afterwards is
+                // unchanged.
                 Behavior on x {
-                    enabled: recentSlot.settled && !recentSlot.launchMotionFrozen
+                    enabled: recentSlot.settled && recentSlot.entranceSettled
+                             && !recentSlot.launchMotionFrozen
                     NumberAnimation {
                         duration: Bulan.motionFocusMs
                         easing.type: Easing.InOutQuad
                     }
                 }
                 Behavior on y {
-                    enabled: recentSlot.settled && !recentSlot.launchMotionFrozen
+                    enabled: recentSlot.settled && recentSlot.entranceSettled
+                             && !recentSlot.launchMotionFrozen
                     NumberAnimation {
                         duration: Bulan.motionFocusMs
                         easing.type: Easing.InOutQuad
@@ -2595,7 +2772,8 @@ FocusScope {
                     }
                 }
                 Behavior on opacity {
-                    enabled: recentSlot.settled && !recentSlot.launchMotionFrozen
+                    enabled: recentSlot.settled && recentSlot.entranceSettled
+                             && !recentSlot.launchMotionFrozen
                     NumberAnimation {
                         duration: Bulan.motionFocusMs
                         easing.type: Easing.InOutQuad
@@ -2623,6 +2801,16 @@ FocusScope {
                 property bool settled: false
                 Component.onCompleted: {
                     settled = true
+                    // See root.markRecentEntranceSeen()'s comment: if this
+                    // game's entrance already played once in Recent during
+                    // this screen instance (only possible if a delegate got
+                    // recreated for it, which ordinary re-ranking never
+                    // does), skip straight to settled rather than rising
+                    // again.
+                    if (root.markRecentEntranceSeen(model.appid)) {
+                        recentSlot.entranceProgress = 1
+                        recentSlot.entranceSettled = true
+                    }
                     if (launchMotionFreezeRequested) {
                         freezeLaunchMotion()
                     }
@@ -2872,7 +3060,12 @@ FocusScope {
         anchors.leftMargin: Bulan.layoutScreenMarginX - root.libraryFocusInset
         anchors.top: tabStrip.bottom
         anchors.topMargin: Bulan.spaceLg - root.libraryFocusInset
-        anchors.bottom: hintBar.top
+        // See recentView's matching comment: the hint bar now lives in
+        // main.qml, so it can no longer be referenced by id, and
+        // Bulan.targetRowHeight is the same token driving its actual height
+        // (HintBar.qml:90), not an independent number that happens to match.
+        anchors.bottom: parent.bottom
+        anchors.bottomMargin: Bulan.targetRowHeight
         width: Bulan.gameGridColumns * Bulan.gameTileWidth
                + (Bulan.gameGridColumns - 1) * Bulan.gameGridGap
                + 2 * root.libraryFocusInset
@@ -2986,8 +3179,56 @@ FocusScope {
                 readonly property int column: index % Bulan.gameGridColumns
                 readonly property int row: Math.floor(index / Bulan.gameGridColumns)
 
+                // Grid entrance -- see the matching block on the Recent
+                // delegate above for the full reasoning; this is the same
+                // mechanism keyed on the Library's row-major index instead
+                // of Recent's distance-from-focus, so the cascade reads
+                // left-to-right, top-to-bottom.
+                readonly property int entranceOrder:
+                    Math.min(index, Bulan.motionGridEntranceMaxSteps)
+                // GameTile.qml already declares its own Component.onCompleted
+                // (freeze setup), so root.markLibraryEntranceSeen() cannot be
+                // called from a second onCompleted here without silently
+                // overriding that one -- QML does not merge two onCompleted
+                // declarations for the same object. A one-shot property
+                // binding runs exactly once instead: model.appid never
+                // changes after creation, so this expression has nothing
+                // left to react to once it has run.
+                readonly property bool entranceAlreadySeen:
+                    root.markLibraryEntranceSeen(model.appid)
+                property real entranceProgress: entranceAlreadySeen ? 1 : 0
+                property bool entranceSettled: entranceAlreadySeen
+
+                // See recentSlot.completeEntrance()'s matching comment.
+                function completeEntrance() {
+                    tile.entranceProgress = 1
+                    tile.entranceSettled = true
+                }
+
+                SequentialAnimation {
+                    id: libraryEntranceAnimation
+                    running: root.gridEntranceStarted && !tile.entranceSettled
+                    // See recentEntranceAnimation's matching comment: onStopped
+                    // instead of onFinished for QtQuick 2.9 compatibility.
+                    onStopped: tile.entranceSettled = true
+
+                    PauseAnimation {
+                        duration: tile.entranceOrder
+                                  * Bulan.motionGridEntranceStaggerMs
+                    }
+                    NumberAnimation {
+                        target: tile
+                        property: "entranceProgress"
+                        to: 1
+                        duration: Bulan.motionGridEntranceRiseMs
+                        easing.type: Easing.OutCubic
+                    }
+                }
+
                 x: root.libraryFocusInset + column * root.libraryCellWidth
                 y: root.libraryFocusInset + row * root.libraryCellHeight
+                   + (1 - entranceProgress) * Bulan.motionGridEntranceRise
+                opacity: entranceProgress
 
                 appId: model.appid
                 launchSourceHidden:
@@ -3018,9 +3259,18 @@ FocusScope {
     }
 
     // --- hint bar ------------------------------------------------------------
-    // Withholds Play/Options entirely when the library is empty (nothing to
-    // act on, and X would open options on nothing), reads Resume instead of
-    // Play for the running game, and withholds two of the mockup's promised
+    // Lifted out of this screen and into main.qml as a sibling of stackView
+    // (client decision, 2 August 2026 review): nothing about this bar
+    // changes between the carousel and the grid except its labels, so
+    // animating it along with the rest of the screen read as unrefined. A
+    // child cannot opt out of its parent's stack-transition opacity, so the
+    // single window-level HintBar reads these three properties off
+    // whichever screen is current instead of this screen drawing its own.
+    //
+    // Content unchanged from the previous local instance: withholds
+    // Play/Options entirely when the library is empty (nothing to act on,
+    // and X would open options on nothing), reads Resume instead of Play for
+    // the running game, and withholds two of the mockup's promised
     // right-hand hints because they cannot currently do anything -- see the
     // stage 3 report:
     //
@@ -3029,45 +3279,39 @@ FocusScope {
     //
     // HintBar.qml's own comment is explicit that a hint promising an action
     // that does nothing is worse than showing fewer hints.
-    HintBar {
-        id: hintBar
-        anchors.left: parent.left
-        anchors.right: parent.right
-        anchors.bottom: parent.bottom
 
-        // Hidden while the options popup is up, because the popup brings its
-        // own bar and the two land in exactly the same place. The scrim is
-        // translucent by design, so this screen's bar was reading straight
-        // through it and the two sets of hints drew over each other -- "Select"
-        // on top of "Play", "Close" on top of "Client Settings". Two bars also
-        // contradict each other: only one of them describes what the buttons
-        // do while a popup owns the input.
-        visible: !gameOptions.visible
+    // Hidden while the options popup is up, because the popup brings its own
+    // bar and the two land in exactly the same place. The scrim is
+    // translucent by design, so this screen's bar was reading straight
+    // through it and the two sets of hints drew over each other -- "Select"
+    // on top of "Play", "Close" on top of "Client Settings". Two bars also
+    // contradict each other: only one of them describes what the buttons do
+    // while a popup owns the input.
+    readonly property bool hintBarVisible: !gameOptions.visible
 
-        leftHints: root.gameCount > 0
-            ? [
-                  { action: "confirm", label: root.currentIsRunning ? qsTr("Resume") : qsTr("Play"), emphasis: true },
-                  { action: "options", label: qsTr("Options") },
-                  { action: "back",    label: qsTr("Back") }
-              ]
-            : [
-                  { action: "back", label: qsTr("Back") }
-              ]
+    readonly property var hintLeftHints: root.gameCount > 0
+        ? [
+              { action: "confirm", label: root.currentIsRunning ? qsTr("Resume") : qsTr("Play"), emphasis: true },
+              { action: "options", label: qsTr("Options") },
+              { action: "back",    label: qsTr("Back") }
+          ]
+        : [
+              { action: "back", label: qsTr("Back") }
+          ]
 
-        // Switch tab is back: L1/R1 now carry a keycode (Key_Context2 /
-        // Key_Context3, added to sdlgamepadkeynavigation.cpp in this task), so
-        // the hint is no longer promising a button that does nothing.
-        //
-        // Host Settings is still absent, and deliberately. The client's mockup
-        // shows it on this screen, but this screen has no host-settings surface
-        // and building a second one is not in this task. Advertising it would
-        // be exactly the failure HintBar.qml exists to prevent. Recorded as a
-        // gap in TASK-BRIEF.md rather than papered over with a dead hint.
-        rightHints: [
-            { action: "l1",    label: qsTr("Switch tab") },
-            { action: "start", label: qsTr("Client Settings") }
-        ]
-    }
+    // Switch tab is back: L1/R1 now carry a keycode (Key_Context2 /
+    // Key_Context3, added to sdlgamepadkeynavigation.cpp in this task), so
+    // the hint is no longer promising a button that does nothing.
+    //
+    // Host Settings is still absent, and deliberately. The client's mockup
+    // shows it on this screen, but this screen has no host-settings surface
+    // and building a second one is not in this task. Advertising it would be
+    // exactly the failure HintBar.qml exists to prevent. Recorded as a gap
+    // in TASK-BRIEF.md rather than papered over with a dead hint.
+    readonly property var hintRightHints: [
+        { action: "l1",    label: qsTr("Switch tab") },
+        { action: "start", label: qsTr("Client Settings") }
+    ]
 
     // --- input ---------------------------------------------------------------
     // Following SPEC-host-carousel.md's table and HostCarousel.qml's handlers.

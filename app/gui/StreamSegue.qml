@@ -136,7 +136,8 @@ FocusScope {
             return
         }
 
-        stackView.pop()
+        // Segue pops stay free of competing stack motion (brief decision 7).
+        stackView.pop(StackView.Immediate)
         window.visible = true
     }
 
@@ -162,7 +163,8 @@ FocusScope {
             if (failureReturnFn) {
                 failureReturnFn()
             }
-            stackView.pop()
+            // Segue pops stay free of competing stack motion (brief decision 7).
+            stackView.pop(StackView.Immediate)
         }
     }
 

@@ -164,9 +164,62 @@ QtObject {
     // one motion value here that is interpretation rather than transcription.
     readonly property real motionOvershoot:  0.7
 
-    // Screen transition, brief §6. Unused as yet -- no screen transition has been
-    // built -- but stated here so the value does not get invented twice.
+    // Screen transition, brief §6. Drives LaunchTransition.qml and the
+    // stackView push/pop transitions in main.qml.
     readonly property int  motionTransitionMs: 220
+
+    // Screen transition travel distance, brief §6. Reuses the accepted
+    // space3xl (64) rather than inventing a new raw number for how far a
+    // screen rises or descends during a stack transition.
+    readonly property int  motionTransitionRise: space3xl
+
+    // Screen transition blur. Client override, 2 August 2026 review: the
+    // opacity falloff alone was not enough, and real runtime blur is
+    // accepted with the Deck performance cost to be measured after private
+    // v1. Deliberately its own pair of tokens rather than reusing
+    // popupBackdropBlurStrength/Radius -- the popup glass sits still at a
+    // fixed strength behind a stationary menu, while this exists only for
+    // the ~220ms a screen is actually travelling and has to read as motion
+    // blur, not glass. Half the popup's own numbers: strong enough to read
+    // as blur on a moving screen, restrained enough not to look like the
+    // popup treatment when there is no popup involved.
+    readonly property real motionTransitionBlurStrength: popupBackdropBlurStrength / 2
+    readonly property int  motionTransitionBlurRadius:   popupBackdropBlurRadius / 2
+
+    // Grid entrance: Recent and Library tiles rising from below in a short
+    // cascade, replacing the old horizontal slide-into-rank motion the
+    // client saw as "swiping in from the side, way too quickly" (2 August
+    // 2026 review). Timed off the screen transition itself so the grid
+    // reads as coming to life once the screen has arrived, not during it.
+
+    // How long the screen transition takes to visually settle before the
+    // first tile starts rising. Reuses motionTransitionMs itself rather
+    // than a new number -- the wait IS "let the screen finish arriving".
+    readonly property int  motionGridEntranceDelayMs: motionTransitionMs
+
+    // How long one tile takes to rise into place. motionFocusMs, the same
+    // clock the grid's own reactive motion already runs on, so the
+    // entrance does not introduce a fourth timing feel next to focus,
+    // press and screen motion.
+    readonly property int  motionGridEntranceRiseMs: motionFocusMs
+
+    // Delay between one tile's rise starting and the next's. A fifth of
+    // motionFocusMs: close enough together to read as one cascade, far
+    // enough apart that consecutive tiles are visibly sequential rather
+    // than simultaneous.
+    readonly property int  motionGridEntranceStaggerMs: motionFocusMs / 5
+
+    // How many stagger steps the cascade counts before the remainder of
+    // the grid rises together as one wave. Without a cap, a full Library
+    // screen (20+ tiles) would take seconds to finish arriving; six reads
+    // as a deliberate cascade and keeps the whole entrance short.
+    readonly property int  motionGridEntranceMaxSteps: 6
+
+    // How far a tile rises from, in pixels. Half of motionTransitionRise
+    // (space3xl/64) -- felt at tile scale rather than screen scale, so it
+    // reads as a smaller motion nested inside the screen's own arrival
+    // rather than a second copy of it.
+    readonly property int  motionGridEntranceRise: space3xl / 2
 
     // Waiting motion: the three bouncing dots drawn over a busy host tile.
     //

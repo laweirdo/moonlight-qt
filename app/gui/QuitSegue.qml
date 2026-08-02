@@ -1,6 +1,6 @@
 import QtQuick 2.9
-// Imported only for StackView attached lifecycle. No stock control is
-// instantiated on this Bulan screen.
+// Imported for StackView attached lifecycle and StackView.Immediate. No
+// stock control is instantiated on this Bulan screen.
 import QtQuick.Controls 2.2
 
 import ComputerManager 1.0
@@ -72,7 +72,8 @@ FocusScope {
         if (successFn) {
             successFn()
         }
-        stackView.pop()
+        // Quit pops stay free of competing stack motion (brief decision 7).
+        stackView.pop(StackView.Immediate)
     }
 
     function returnFromFailure()
@@ -84,7 +85,8 @@ FocusScope {
         if (failureReturnFn) {
             failureReturnFn()
         }
-        stackView.pop()
+        // Quit pops stay free of competing stack motion (brief decision 7).
+        stackView.pop(StackView.Immediate)
     }
 
     StackView.onActivated: {

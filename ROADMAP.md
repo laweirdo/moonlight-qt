@@ -6,9 +6,11 @@
 
 **Current phase:** Phase B — Close the core loop
 
-**Next milestone:** Phase B item 4 — general screen transitions. The accepted
-launch and quit experience is now integrated into `bulan`. Steam Deck and
-real-stream validation remain outstanding — see Phase B and `HANDOFF.md`.
+**Next milestone:** triage of the two defects in `BUGS.md` and a Steam Deck
+session. Phase B item 4 is accepted and merged, which closes the last built item
+in Phase B, but Steam Deck, real-stream, and physical-controller validation
+remain outstanding across the phase, and the accepted transition blur's cost on
+the Deck is deliberately unmeasured. See Phase B, `BUGS.md`, and `HANDOFF.md`.
 
 This file governs v1 scope, phase order, exit conditions, and the next
 milestone. It does not govern live repository state (`HANDOFF.md`), an active
@@ -132,6 +134,14 @@ Remaining work, in order:
 4. **General screen transitions** — wire the existing 220 ms transition token
    into the rest of the completed core route. The selected-game transition in
    item 3 belongs to the launch experience, not to this general pass.
+   **Done and accepted 2 August 2026; merged into `bulan`.** One vertical
+   push/pop transition declared once on the navigation stack, with the launch
+   and quit routes deliberately opted out. The client's live review added three
+   accepted changes: a real blur during the transition, game tiles rising from
+   below in a stagger instead of sliding in from the side, and a hint bar that
+   holds still while the screen moves. Evidence and the honest gaps are in
+   `HANDOFF.md`; no target-device or real-stream check is claimed, and the
+   blur's Deck cost is deliberately deferred.
 
 **Phase B item 3 closed the two inherited segue gaps.** They were deliberately
 left until the grid landed. The accepted implementation replaces the visible
