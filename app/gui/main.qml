@@ -211,13 +211,13 @@ ApplicationWindow {
         // immediate default so StreamSegue.qml's existing replace is
         // unaffected.
         //
-        // Only y and opacity are animated, and both always animate to their
-        // resting values (0 and 1) on enter and away from them on exit. Qt
-        // queues an operation that arrives while a transition is already
-        // running rather than interrupting it in place, so a settled item
-        // reached via any number of queued pushes/pops always lands back on
-        // this same resting state -- there is no in-between value for rapid
-        // input to strand a screen at.
+        // Only y and opacity are animated, and every enter transition drives
+        // both to their resting values (0 and 1) with an explicit `from`, so
+        // it never inherits whatever mid-flight value the item happened to
+        // hold. StackView finishes an in-flight transition immediately when a
+        // new operation arrives rather than abandoning it part-way, which is
+        // what keeps rapid B/A input from stranding a screen at an
+        // in-between offset or a partial opacity.
         pushEnter: Transition {
             NumberAnimation {
                 property: "y"
