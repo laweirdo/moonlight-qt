@@ -1,18 +1,20 @@
 # Bulan — roadmap
 
-**Current as of:** 31 July 2026
+**Current as of:** 2 August 2026
 
 **Owner:** Lao
 
 **Current phase:** Phase B — Close the core loop
 
-**Next milestone:** Game grid. The previous milestone, the host tile's
-connecting/waking busy state, was completed 31 July 2026 — see Phase B below.
+**Next milestone:** Integrate the accepted launch and quit experience into
+`bulan`. After that local merge, item 4's general screen transitions are next.
+Steam Deck and real-stream validation remain outstanding — see Phase B and
+`HANDOFF.md`.
 
 This file governs v1 scope, phase order, exit conditions, and the next
-milestone. It does not govern live repository state (`HANDOFF.md`), the active
-work order (`TASK-BRIEF.md`), navigation edges (`FLOW.md`), or screen-level
-implementation decisions (`SPEC-*.md`).
+milestone. It does not govern live repository state (`HANDOFF.md`), an active
+work order (`TASK-BRIEF.md`, when one exists), navigation edges (`FLOW.md`), or
+screen-level implementation decisions (`SPEC-*.md`).
 
 ## Definition of v1
 
@@ -116,19 +118,27 @@ Remaining work, in order:
      attribute on `NvApp`, following `hidden` and `directLaunch`.
    - **The shoulder buttons had no keycode at all**, on any screen, until this
      task. L1/R1 now reach QML.
-   - **X opens a per-game options popup, not Game Detail.** Client's decision
-     of 1 August 2026, taken because Game Detail is item 3 and quitting a
-     running game needed a route before then. See the `FLOW.md` note.
-3. **Game detail and launch** — follow the navigation authority in `FLOW.md`.
-4. **Screen transitions** — wire the existing 220 ms transition token into the
-   completed core route.
+   - **X opens a per-game options popup as its intended private-v1
+     destination.** It is not a temporary stand-in. No Game Detail screen is
+     planned. See `FLOW.md` and `SPEC-game-grid.md` for the corrected decision.
+3. **Launch and quit experience** — **accepted 2 August 2026; awaiting local
+   merge.** The task branch replaces both stock
+   surfaces, moves the selected game's exact visible artwork from Recent or
+   Library into the custom launch surface, and shares that route with popup
+   Play/Resume and automatic Direct Launch. Quit Game is recoverable, and
+   quit-and-switch waits for a successful quit before entering the same launch
+   route. Windows build, deterministic-state, lifecycle, frame-timing, and
+   repeated-cycle evidence is recorded in `HANDOFF.md`; target-device and
+   real-stream checks are not claimed.
+4. **General screen transitions** — wire the existing 220 ms transition token
+   into the rest of the completed core route. The selected-game transition in
+   item 3 belongs to the launch experience, not to this general pass.
 
-**New Phase B gap, raised 31 July 2026 and explicitly deferred by the client
-until after the game grid:** `StreamSegue.qml` remains stock upstream Qt. It was
-out of scope for the connecting/waking tile work above and has not been
-touched. **Item 2 has now landed, so this is due.** `QuitSegue.qml` joins it:
-the game grid's Quit Game and quit-and-switch both push it, and it is stock
-upstream too.
+**Phase B item 3 owns the two inherited segue gaps.** They were deliberately
+left until the grid landed. The accepted task branch replaces the visible
+stock `StreamSegue.qml` and `QuitSegue.qml` treatments while preserving their
+Session and quit contracts; its local integration is the next repository
+operation.
 
 **Second Phase B gap, raised 1 August 2026 by the game grid:** the grid has
 **no host-settings surface**, so SELECT does nothing there and its hint is

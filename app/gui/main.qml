@@ -163,7 +163,7 @@ ApplicationWindow {
             // The window root is a QQuickRootItem with no QML engine, so it
             // cannot be grabbed. Capture the content and the toolbar as two
             // images instead.
-            var ok = stackView.grabToImage(function(res) {
+            var ok = contentCapture.grabToImage(function(res) {
                 res.saveToFile(screenshotPath)
                 toolBar.grabToImage(function(res2) {
                     res2.saveToFile(screenshotPath.replace(".png", "-toolbar.png"))
@@ -179,9 +179,16 @@ ApplicationWindow {
         }
     }
 
-    StackView {
-        id: stackView
+    // Screenshot surface includes the retained navigation stack and the
+    // top-level launch proxy. The toolbar remains a separate capture because
+    // ApplicationWindow lays its header outside the content item.
+    Item {
+        id: contentCapture
         anchors.fill: parent
+
+        StackView {
+            id: stackView
+            anchors.fill: parent
         focus: true
         enabled: !quitConfirmationDialog.visible
         layer.enabled: quitConfirmationDialog.visible
@@ -271,6 +278,19 @@ ApplicationWindow {
         // the host carousel claims it for Wake.
         Keys.onCallPressed: {
             settingsButton.clicked()
+        }
+        }
+
+        // Frozen selected-game artwork above the retained AppView and every
+        // pushed segue. It is a sibling of StackView so source mapping includes
+        // all nested transforms while the proxy itself inherits none of them.
+        LaunchTransition {
+            id: launchTransition
+            anchors.fill: parent
+
+            onProxyReady: if (owner) owner.launchTransitionProxyReady()
+            onFinished: if (owner) owner.launchTransitionFinished()
+            onFailed: if (owner) owner.launchTransitionFailed()
         }
     }
 
@@ -651,29 +671,6 @@ ApplicationWindow {
             }
         }
         onQuitRequested: Qt.quit()
-    }
-
-    // HACK: This belongs in StreamSegue but keeping a dialog around after the parent
-    // dies can trigger bugs in Qt 5.12 that cause the app to crash. For now, we will
-    // host this dialog in a QML component that is never destroyed.
-    //
-    // To repro: Start a stream, cut the network connection to trigger the "Connection
-    // terminated" dialog, wait until the app grid times out back to the PC grid, then
-    // try to dismiss the dialog.
-    ErrorMessageDialog {
-        id: streamSegueErrorDialog
-
-        property bool quitAfter: false
-
-        onClosed: {
-            if (quitAfter) {
-                Qt.quit()
-            }
-
-            // StreamSegue assumes its dialog will be re-created each time we
-            // start streaming, so fake it by wiping out the text each time.
-            text = ""
-        }
     }
 
     NavigableDialog {

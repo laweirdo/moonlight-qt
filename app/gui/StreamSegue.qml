@@ -1,4 +1,6 @@
-import QtQuick 2.0
+import QtQuick 2.9
+// Imported only for StackView attached lifecycle/status and StackView.Immediate.
+// No stock Qt Quick Control is instantiated on this Bulan screen.
 import QtQuick.Controls 2.2
 import QtQuick.Window 2.2
 
@@ -8,237 +10,543 @@ import SystemProperties 1.0
 
 import Bulan 1.0
 
-Item {
+// The selected game's launch route. The frozen artwork handed over by
+// AppView remains the visual anchor while the existing Session lifecycle runs.
+FocusScope {
+    id: root
+    focus: true
+
     property Session session
-    property string appName
-    property string stageText : isResume ? qsTr("Resuming %1...").arg(appName) :
-                                           qsTr("Starting %1...").arg(appName)
-    property bool isResume : false
-    property bool quitAfter : false
+    property string appName: ""
+    property bool isResume: false
+    property bool quitAfter: false
+    property var failureReturnFn: null
+    property string failureReturnTarget: "grid"
+    // AppView owns the QQuickItemGrabResult for the lifetime of this route so
+    // its memory URL stays valid. CLI launches have no captured source and use
+    // the same honest title-card fallback as Stage 2's no-source path.
+    property url launchArtworkUrl: ""
+    property bool launchArtworkFallback: true
+    property string launchArtworkTitle: appName
+
+    // "progress", "warning", or "failure". Raw Session warning/error strings
+    // are logged for diagnosis but never become front-facing copy.
+    property string surfaceState: "progress"
+    property bool launchContentVisible: true
+    property bool launchFailed: false
+    property bool connectionBegan: false
+    property bool sessionSignalsConnected: false
+    property bool guiGamepadDisabled: false
+    property bool removedFromStack: false
+    property bool failureReturnHandled: false
+
+    // Deterministic QML-only launch review. Production leaves reviewMode false
+    // and follows initialize/start/finish exactly as before.
+    property bool reviewMode: false
+    property string reviewOutcome: "start"
+    property var reviewAppId: null
+    property int reviewSourceIndex: -1
+    property string reviewOrigin: "recent"
+    property bool reviewSourceAvailable: true
+    property bool reviewRepeat: false
+    property int reviewCycle: 0
+
+    readonly property bool showingProgress: surfaceState === "progress"
+    readonly property bool showingWarning: surfaceState === "warning"
+    readonly property bool showingFailure: surfaceState === "failure"
+    readonly property bool bulanScreen: true
+
+    signal reviewCycleRequested(int cycle)
+
+    function requestReviewCycle()
+    {
+        reviewCycle++
+        reviewCycleRequested(reviewCycle)
+    }
 
     function stageStarting(stage)
     {
-        // Update the spinner text
-        stageText = qsTr("Starting %1...").arg(stage)
+        // Stage names are useful in the log, but they are transport detail and
+        // do not replace the human Starting/Resuming title.
+        console.log("Launch stage:", stage)
+        surfaceState = "progress"
     }
 
     function stageFailed(stage, errorCode, failingPorts)
     {
-        // Display the error dialog after Session::exec() returns
-        streamSegueErrorDialog.text = qsTr("Starting %1 failed: Error %2").arg(stage).arg(errorCode)
-
-        if (failingPorts) {
-            streamSegueErrorDialog.text += "\n\n" + qsTr("Check your firewall and port forwarding rules for port(s): %1").arg(failingPorts)
-        }
+        console.error("Launch stage failed:", stage,
+                      "error", errorCode, "ports", failingPorts)
+        launchFailed = true
     }
 
     function connectionStarted()
     {
-        // Hide the UI contents so the user doesn't
-        // see them briefly when we pop off the StackView
-        stageSpinner.visible = false
-        stageLabel.visible = false
-        hintText.visible = false
-
-        // Hide the window now that streaming has begun
+        // Preserve the established window handoff once streaming begins.
+        connectionBegan = true
+        launchContentVisible = false
         window.visible = false
     }
 
     function displayLaunchError(text)
     {
-        // Display the error dialog after Session::exec() returns
-        streamSegueErrorDialog.text = text
-        console.error(text)
+        console.error("Launch failed:", text)
+        launchFailed = true
     }
 
     function quitStarting()
     {
-        // Avoid the push transition animation
+        // Preserve the immediate replacement used when Session turns a launch
+        // into a quit operation.
         var component = Qt.createComponent("QuitSegue.qml")
-        stackView.replace(stackView.currentItem, component.createObject(stackView, {"appName": appName}), StackView.Immediate)
-
-        // Show the Qt window again to show quit segue
+        var segue = component.createObject(stackView, {"appName": appName})
+        stackView.replace(stackView.currentItem, segue, StackView.Immediate)
         window.visible = true
+    }
+
+    function showFailure()
+    {
+        warningContinueTimer.stop()
+        surfaceState = "failure"
+        launchContentVisible = true
+        window.visible = true
+        forceActiveFocus()
+        Qt.callLater(forceActiveFocus)
     }
 
     function sessionFinished(portTestResult)
     {
-        if (portTestResult !== 0 && portTestResult !== -1 && streamSegueErrorDialog.text) {
-            streamSegueErrorDialog.text += "\n\n" + qsTr("This PC's Internet connection is blocking Moonlight. Streaming over the Internet may not work while connected to this network.")
+        warningContinueTimer.stop()
+        if (portTestResult !== 0 && portTestResult !== -1 && launchFailed) {
+            console.error("Launch port test result:", portTestResult)
         }
 
-        // Re-enable GUI gamepad usage now
+        // Preserve GUI gamepad restoration on every Session exit.
         SdlGamepadKeyNavigation.enable()
+        guiGamepadDisabled = false
 
-        // Pop the StreamSegue off the stack if this is a GUI-based app launch
-        if (!quitAfter) {
-            stackView.pop()
+        if (launchFailed) {
+            // Unlike the inherited global dialog path, failure stays on this
+            // route until A or B returns to the retained AppView.
+            showFailure()
+            return
         }
 
-        if (quitAfter && !streamSegueErrorDialog.text) {
-            // If this was a CLI launch without errors, exit now
+        if (quitAfter) {
             Qt.quit()
+            return
         }
-        else {
-            // Show the Qt window again after streaming
-            window.visible = true
 
-            // Display any launch errors. We do this after
-            // the Qt UI is visible again to prevent losing
-            // focus on the dialog which would impact gamepad
-            // users.
-            if (streamSegueErrorDialog.text) {
-                streamSegueErrorDialog.quitAfter = quitAfter
-                streamSegueErrorDialog.open()
-            }
-        }
+        stackView.pop()
+        window.visible = true
     }
 
     function sessionReadyForDeletion()
     {
-        // Garbage collect the Session object since it's pretty heavyweight
-        // and keeps other libraries (like SDL_TTF) around until it is deleted.
+        // Preserve the heavyweight Session cleanup contract.
         session = null
         gc()
+        if (removedFromStack) {
+            destroy()
+        }
+    }
+
+    function returnFromFailure()
+    {
+        if (!showingFailure || failureReturnHandled) {
+            return
+        }
+        failureReturnHandled = true
+        if (quitAfter) {
+            Qt.quit()
+        } else {
+            if (failureReturnFn) {
+                failureReturnFn()
+            }
+            stackView.pop()
+        }
+    }
+
+    function beginSession()
+    {
+        if (reviewMode || session === null || launchFailed) {
+            return
+        }
+        surfaceState = "progress"
+        gc()
+        session.start()
+    }
+
+    function initializeSession()
+    {
+        if (reviewMode || session === null) {
+            return
+        }
+
+        SdlGamepadKeyNavigation.disable()
+        guiGamepadDisabled = true
+
+        if (!session.initialize(window)) {
+            if (!launchFailed) {
+                console.error("Session initialization failed without detail")
+                launchFailed = true
+            }
+            sessionFinished(0)
+            sessionReadyForDeletion()
+            return
+        }
+
+        var warnings = session.launchWarnings
+        if (warnings && warnings.length > 0) {
+            for (var i = 0; i < warnings.length; i++) {
+                console.warn("Launch warning:", warnings[i])
+            }
+            surfaceState = "warning"
+            warningContinueTimer.restart()
+        } else {
+            Qt.callLater(beginSession)
+        }
     }
 
     StackView.onDeactivating: {
-        // Show the toolbar again when popped off the stack
-        toolBar.visible = true
+        warningContinueTimer.stop()
+        reviewCycleTimer.stop()
 
-        // Re-enable GUI gamepad usage now
-        SdlGamepadKeyNavigation.enable()
+        // Preserve the inherited toolbar/gamepad cleanup. main.qml's Bulan
+        // backstop hides the toolbar again when the retained AppView returns.
+        toolBar.visible = true
+        if (!reviewMode && guiGamepadDisabled) {
+            SdlGamepadKeyNavigation.enable()
+            guiGamepadDisabled = false
+        }
+    }
+
+    // This route is pushed as a pre-created Item. StackView does not own it,
+    // but the Session can outlive a pop/replace while deferred cleanup emits
+    // sessionFinished and readyForDeletion. Release review/session-free routes
+    // immediately; otherwise wait for the Session's explicit cleanup signal.
+    StackView.onRemoved: {
+        removedFromStack = true
+        if (reviewMode || session === null) {
+            destroy()
+        }
     }
 
     StackView.onActivated: {
-        // Hide the toolbar before we start loading
         toolBar.visible = false
+        launchContentVisible = true
+        forceActiveFocus()
+        Qt.callLater(forceActiveFocus)
 
-        // Hook up our signals
-        session.stageStarting.connect(stageStarting)
-        session.stageFailed.connect(stageFailed)
-        session.connectionStarted.connect(connectionStarted)
-        session.displayLaunchError.connect(displayLaunchError)
-        session.quitStarting.connect(quitStarting)
-        session.sessionFinished.connect(sessionFinished)
-        session.readyForDeletion.connect(sessionReadyForDeletion)
+        if (reviewMode) {
+            if (reviewOutcome === "failure") {
+                surfaceState = "failure"
+            } else if (reviewOutcome === "warning") {
+                // Review holds this state; production alone continues after the
+                // approved warning duration.
+                surfaceState = "warning"
+            } else {
+                surfaceState = "progress"
+            }
+            Qt.callLater(requestReviewCycle)
+            return
+        }
 
-        // Ensure the SystemProperties async thread is finished,
-        // since it may currently be using the SDL video subsystem
+        if (!sessionSignalsConnected) {
+            sessionSignalsConnected = true
+            session.stageStarting.connect(stageStarting)
+            session.stageFailed.connect(stageFailed)
+            session.connectionStarted.connect(connectionStarted)
+            session.displayLaunchError.connect(displayLaunchError)
+            session.quitStarting.connect(quitStarting)
+            session.sessionFinished.connect(sessionFinished)
+            session.readyForDeletion.connect(sessionReadyForDeletion)
+        }
+
         SystemProperties.waitForAsyncLoad()
-
-        // Kick off the stream
-        spinnerTimer.start()
         streamLoader.active = true
     }
 
     Timer {
-        id: spinnerTimer
-
-        // Display the spinner appearance a bit to allow us to reach
-        // the code in Session.exec() that pumps the event loop.
-        // If we display it immediately, it will briefly hang in the
-        // middle of the animation on Windows, which looks very
-        // obviously broken.
-        interval: 100
-        onTriggered: stageSpinner.visible = true
+        id: warningContinueTimer
+        interval: Bulan.launchWarningDurationMs
+        onTriggered: root.beginSession()
     }
 
     Timer {
-        id: startSessionTimer
-        onTriggered: {
-            // Garbage collect QML stuff before we start streaming,
-            // since we'll probably be streaming for a while and we
-            // won't be able to GC during the stream.
-            gc()
-
-            // Run the streaming session to completion
-            session.start()
-        }
+        id: reviewCycleTimer
+        interval: Bulan.launchReviewCycleMs
+        repeat: true
+        running: root.reviewMode && root.reviewRepeat
+        onTriggered: root.requestReviewCycle()
     }
 
     Loader {
         id: streamLoader
         active: false
         asynchronous: true
-
-        onLoaded: {
-            // Set the hint text. We do this here rather than
-            // in the hintText control itself to synchronize
-            // with Session.exec() which requires no concurrent
-            // gamepad usage.
-            hintText.text = qsTr("Tip:") + " " + qsTr("Press %1 to disconnect your session").arg(SdlGamepadKeyNavigation.getConnectedGamepads() > 0 ?
-                                                  qsTr("Start+Select+L1+R1") : qsTr("Ctrl+Alt+Shift+Q"))
-
-            // Stop GUI gamepad usage now
-            SdlGamepadKeyNavigation.disable()
-
-            // Initialize the session and probe for host/client capabilities
-            if (!session.initialize(window)) {
-                sessionFinished(0);
-                sessionReadyForDeletion();
-                return;
-            }
-
-            // Don't wait unless we have toasts to display
-            startSessionTimer.interval = 0
-
-            // Display the toasts together in a vertical centered arrangement
-            var yOffset = 0
-            for (var i = 0; i < session.launchWarnings.length; i++) {
-                var text = session.launchWarnings[i]
-                console.warn(text)
-
-                // Show the tooltip for 3 seconds
-                var toast = Qt.createQmlObject('import QtQuick.Controls 2.2; ToolTip {}', parent, '')
-                toast.timeout = 3000
-                toast.text = text
-                toast.y += yOffset
-                toast.visible = true
-
-                // Offset the next toast below the previous one
-                yOffset = toast.y + toast.padding + toast.height
-
-                // Allow an extra 500 ms for the tooltip's fade-out animation to finish
-                startSessionTimer.interval = toast.timeout + 500;
-            }
-
-            // Start the timer to wait for toasts (or start the session immediately)
-            startSessionTimer.start()
-        }
-
+        onLoaded: root.initializeSession()
         sourceComponent: Item {}
     }
 
-    Row {
-        anchors.centerIn: parent
-        spacing: 5
+    Atmosphere {
+        anchors.fill: parent
+    }
 
-        BusyIndicator {
-            id: stageSpinner
-            running: visible
-            visible: false
+    Item {
+        id: launchContent
+        anchors.fill: parent
+        visible: root.launchContentVisible
+
+        Item {
+            id: artworkFrame
+            x: Bulan.launchDestinationCenterX - width / 2
+            y: Bulan.launchDestinationCenterY - height / 2
+            width: Bulan.launchDestinationWidth
+            height: Bulan.launchDestinationHeight
+
+            Rectangle {
+                anchors.fill: parent
+                visible: !capturedArtwork.visible
+                radius: Bulan.radiusMd
+                color: Bulan.bgSurface
+
+                Text {
+                    anchors.fill: parent
+                    anchors.margins: Bulan.spaceMd
+                    text: root.launchArtworkTitle || root.appName
+                    color: Bulan.textPrimary
+                    font.family: Bulan.familyDisplay
+                    font.pixelSize: Bulan.sizeBody
+                    horizontalAlignment: Text.AlignHCenter
+                    verticalAlignment: Text.AlignVCenter
+                    wrapMode: Text.WordWrap
+                    elide: Text.ElideRight
+                    maximumLineCount: 4
+                }
+            }
+
+            Image {
+                id: capturedArtwork
+                anchors.fill: parent
+                source: root.launchArtworkUrl
+                visible: !root.launchArtworkFallback
+                         && source !== "" && status === Image.Ready
+                asynchronous: false
+                cache: false
+                fillMode: Image.Stretch
+            }
         }
 
-        Label {
-            id: stageLabel
-            height: stageSpinner.height
-            text: stageText
-            font.pixelSize: Bulan.sizeBodyLg
-            verticalAlignment: Text.AlignVCenter
+        Item {
+            id: progressContent
+            visible: root.showingProgress
+            anchors.left: parent.left
+            anchors.right: parent.right
+            anchors.top: artworkFrame.bottom
+            anchors.topMargin: Bulan.spaceXl
+            height: busyDots.height + Bulan.spaceXl + progressTitle.height
 
-            wrapMode: Text.Wrap
+            Item {
+                id: busyDots
+                anchors.top: parent.top
+                anchors.horizontalCenter: parent.horizontalCenter
+                width: Bulan.spaceSm * 3 + Bulan.space2xs * 2
+                height: Bulan.spaceSm + Bulan.motionBusyBounceHeight
+
+                Repeater {
+                    model: 3
+                    Rectangle {
+                        id: busyDot
+                        width: Bulan.spaceSm
+                        height: width
+                        radius: width / 2
+                        color: Bulan.accentPrimary
+                        x: index * (Bulan.spaceSm + Bulan.space2xs)
+                        y: busyDots.height - height
+
+                        readonly property int travelMs:
+                            (Bulan.motionBusyBounceMs
+                             - Bulan.motionBusyStaggerMs * 2) / 2
+
+                        SequentialAnimation on y {
+                            running: progressContent.visible
+                            loops: Animation.Infinite
+                            PauseAnimation {
+                                duration: index * Bulan.motionBusyStaggerMs
+                            }
+                            NumberAnimation {
+                                from: busyDots.height - busyDot.height
+                                to: busyDots.height - busyDot.height
+                                    - Bulan.motionBusyBounceHeight
+                                duration: busyDot.travelMs
+                                easing.type: Easing.InOutQuad
+                            }
+                            NumberAnimation {
+                                from: busyDots.height - busyDot.height
+                                    - Bulan.motionBusyBounceHeight
+                                to: busyDots.height - busyDot.height
+                                duration: busyDot.travelMs
+                                easing.type: Easing.InOutQuad
+                            }
+                            PauseAnimation {
+                                duration: (2 - index)
+                                          * Bulan.motionBusyStaggerMs
+                            }
+                        }
+                    }
+                }
+            }
+
+            Text {
+                id: progressTitle
+                anchors.top: busyDots.bottom
+                anchors.topMargin: Bulan.spaceXl
+                anchors.left: parent.left
+                anchors.right: parent.right
+                anchors.leftMargin: Bulan.layoutScreenMarginX
+                anchors.rightMargin: Bulan.layoutScreenMarginX
+                height: Bulan.lineHeightTitleLg
+                text: root.isResume
+                      ? qsTr("Resuming %1").arg(root.appName)
+                      : qsTr("Starting %1").arg(root.appName)
+                color: Bulan.textPrimary
+                font.family: Bulan.familyDisplay
+                font.pixelSize: Bulan.sizeTitleLg
+                font.letterSpacing: Bulan.trackingTitle
+                horizontalAlignment: Text.AlignHCenter
+                verticalAlignment: Text.AlignVCenter
+                elide: Text.ElideRight
+            }
+        }
+
+        Column {
+            id: messageContent
+            visible: root.showingWarning || root.showingFailure
+            anchors.top: artworkFrame.bottom
+            anchors.topMargin: Bulan.spaceXl
+            anchors.horizontalCenter: parent.horizontalCenter
+            width: Math.min(parent.width - Bulan.layoutScreenMarginX * 2,
+                            Bulan.hostTileSize * 2)
+            spacing: Bulan.spaceMd
+
+            Text {
+                width: parent.width
+                height: Bulan.lineHeightTitleLg
+                text: root.showingFailure
+                      ? (root.connectionBegan
+                         ? qsTr("Couldn't continue %1").arg(root.appName)
+                         : qsTr("Couldn't start %1").arg(root.appName))
+                      : qsTr("Just a moment")
+                color: root.showingFailure ? Bulan.statusError
+                                           : Bulan.textPrimary
+                font.family: Bulan.familyDisplay
+                font.pixelSize: Bulan.sizeTitleLg
+                font.letterSpacing: Bulan.trackingTitle
+                horizontalAlignment: Text.AlignHCenter
+                verticalAlignment: Text.AlignVCenter
+                elide: Text.ElideRight
+            }
+
+            Text {
+                width: parent.width
+                text: root.showingFailure
+                      ? (root.connectionBegan
+                         ? qsTr("Your session ended. You're back where you started.")
+                         : qsTr("You're still right where you were. Try again from your games."))
+                      : qsTr("Your PC shared a quick heads-up. We'll keep going.")
+                color: Bulan.textSecondary
+                font.family: Bulan.familyUi
+                font.pixelSize: Bulan.sizeBody
+                horizontalAlignment: Text.AlignHCenter
+                wrapMode: Text.WordWrap
+            }
+
+            Rectangle {
+                id: failureButton
+                visible: root.showingFailure
+                anchors.horizontalCenter: parent.horizontalCenter
+                width: Bulan.hostTileSize
+                height: Bulan.targetMin
+                radius: Bulan.radiusMd
+                color: Bulan.surfaceHover
+                border.width: Bulan.space2xs / 2
+                border.color: Bulan.accentPrimary
+
+                Text {
+                    anchors.centerIn: parent
+                    text: root.quitAfter ? qsTr("Close")
+                         : (root.failureReturnTarget === "options"
+                            ? qsTr("Back to options")
+                            : qsTr("Back to games"))
+                    color: Bulan.textPrimary
+                    font.family: Bulan.familyUi
+                    font.pixelSize: Bulan.sizeBody
+                    font.bold: true
+                }
+
+                MouseArea {
+                    anchors.fill: parent
+                    enabled: root.showingFailure
+                             && !root.failureReturnHandled
+                    onClicked: root.returnFromFailure()
+                }
+            }
+        }
+
+        Text {
+            anchors.left: parent.left
+            anchors.right: parent.right
+            anchors.leftMargin: Bulan.layoutScreenMarginX
+            anchors.rightMargin: Bulan.layoutScreenMarginX
+            anchors.bottom: parent.bottom
+            anchors.bottomMargin: Bulan.space2xl + Bulan.spaceXs
+            text: root.showingFailure
+                  ? qsTr("Press A or B when you're ready.")
+                  : (root.showingWarning
+                     ? qsTr("We'll continue automatically.")
+                     : (root.isResume
+                        ? qsTr("Picking up where you left off.")
+                        : qsTr("Getting things ready.")))
+            color: Bulan.textSecondary
+            font.family: Bulan.familyUi
+            font.pixelSize: Bulan.sizeCaption
+            font.letterSpacing: Bulan.trackingCaption
+            horizontalAlignment: Text.AlignHCenter
         }
     }
 
-    Label {
-        id: hintText
-        anchors.bottom: parent.bottom
-        anchors.bottomMargin: 50
-        anchors.horizontalCenter: parent.horizontalCenter
-        font.pixelSize: Bulan.sizeBody
-        verticalAlignment: Text.AlignVCenter
-
-        wrapMode: Text.Wrap
+    // Progress and warning are deliberately non-cancellable. Failure is the
+    // only interactive state; its single target is visibly focused and both A
+    // and B return through the same safe route.
+    Keys.onReturnPressed: function(event) {
+        if (root.showingFailure) root.returnFromFailure()
+        event.accepted = true
     }
+    Keys.onEnterPressed: function(event) {
+        if (root.showingFailure) root.returnFromFailure()
+        event.accepted = true
+    }
+    Keys.onSpacePressed: function(event) {
+        if (root.showingFailure) root.returnFromFailure()
+        event.accepted = true
+    }
+    Keys.onEscapePressed: function(event) {
+        if (root.showingFailure) root.returnFromFailure()
+        event.accepted = true
+    }
+    Keys.onBackPressed: function(event) {
+        if (root.showingFailure) root.returnFromFailure()
+        event.accepted = true
+    }
+    Keys.onLeftPressed: function(event) { event.accepted = true }
+    Keys.onRightPressed: function(event) { event.accepted = true }
+    Keys.onUpPressed: function(event) { event.accepted = true }
+    Keys.onDownPressed: function(event) { event.accepted = true }
+    Keys.onMenuPressed: function(event) { event.accepted = true }
+    Keys.onHangupPressed: function(event) { event.accepted = true }
+    Keys.onCallPressed: function(event) { event.accepted = true }
+    Keys.onContext1Pressed: function(event) { event.accepted = true }
+    Keys.onContext2Pressed: function(event) { event.accepted = true }
+    Keys.onContext3Pressed: function(event) { event.accepted = true }
+    Keys.onPressed: function(event) { event.accepted = true }
 }

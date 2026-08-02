@@ -172,4 +172,17 @@ QtObject {
             to:   "#3A3050"
         }
     ]
+
+    // --- Selected-game launch ------------------------------------------------
+    // Review copy of the runtime values in Bulan.qml. Measured from the
+    // client's 1867x1153 raster after 1280-wide normalization; Y is approximate
+    // because the supplied attachment is vertically cropped.
+    readonly property int launchDestinationWidth:   202
+    readonly property int launchDestinationHeight:  302
+    readonly property int launchDestinationCenterX: 640
+    readonly property int launchDestinationCenterY: 293
+    // Keep synchronized with the runtime token in Bulan.qml.
+    readonly property int launchCaptureWatchdogMs: 1100
+    readonly property int launchWarningDurationMs: 3500
+    readonly property int launchReviewCycleMs: 880
 }

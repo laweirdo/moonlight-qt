@@ -1,6 +1,6 @@
 # Bulan — navigation flow
 
-**Last reconciled:** 30 July 2026
+**Last reconciled:** 2 August 2026
 
 This file governs intended navigation states, transitions, and flow decisions.
 It does not report which screens are implemented, which task is active, or how
@@ -16,9 +16,14 @@ reproduce the board's left-to-right spatial journey.
 - **For state names, navigation edges, and written flow decisions, this
   Markdown file wins.**
 
-The board has not been re-exported during the documentation reorganization.
-Any future edge change requires a client decision and a later board
-reconciliation.
+The board is now **stale**. It has no reproducible editable source, so the PNG
+is not being painted over by hand. Its obsolete route sends X from Library to
+a separate detail screen and then sends Play onward. On the next genuine
+re-export, remove that screen and both of its edges; add the Game Options modal,
+its B-to-the-same-game return, its Play/Resume launch edge, the Quit Game path,
+and the quit-and-switch path shown in the Mermaid below. Until then, this
+Markdown owns those state and edge corrections and the PNG remains spatial
+reference only.
 
 The board carries two diagrams. The first is Bulan as designed. The second is
 upstream Moonlight as it exists today, which is what the first replaces.
@@ -29,7 +34,9 @@ upstream Moonlight as it exists today, which is what the first replaces.
 
 **B always goes back one level, from every screen.** Those edges are omitted
 deliberately — drawing all of them into the hub turned it into a hairball and
-told you nothing you did not already know from the rule.
+told you nothing you did not already know from the rule. Game Options is the
+one explicit reminder below because its stronger promise is not merely “back”:
+it closes over the same tab, selected game, and Library scroll position.
 
 **Dotted edges are conditional or delayed.** They fire on a network event or a
 timeout, not on a button press. Solid edges are things the player does on
@@ -41,7 +48,7 @@ purpose.
 |---|---|
 | Blue — `hub` | The screen everything returns to |
 | Green — `goal` | The goal state; the thing the app exists to reach |
-| Violet — `modal` | A modal drawn over a live stream |
+| Violet — `modal` | A modal drawn over the current context |
 | Red — `failure` | A recoverable failure |
 | Amber — `decision` | A decision |
 
@@ -70,7 +77,7 @@ flowchart LR
         Unreachable["Couldn't reach PC"]
         YourPCs["Your PCs"]
         Settings["Settings"]
-        GameDetail["Game detail"]
+        GameOptions["Game options"]
     end
 
     subgraph Session["Session"]
@@ -80,6 +87,13 @@ flowchart LR
         Overlay["Overlay"]
         SessionEnded["Session ended"]
         WakingPC["Waking PC"]
+        QuitGame{{"Quit succeeded?"}}
+        TileConflict{{"Different game running?"}}
+        OptionConflict{{"Different game running?"}}
+        TileSwitch{{"Quit and play?"}}
+        OptionSwitch{{"Quit and play?"}}
+        TileQuitForSwitch{{"Quit succeeded?"}}
+        OptionQuitForSwitch{{"Quit succeeded?"}}
     end
 
     Launch --> KnownPC
@@ -98,14 +112,31 @@ flowchart LR
     Library -->|Select| YourPCs
     YourPCs -->|Switch PC| Library
     Library -->|Start| Settings
-    Library -->|X on tile| GameDetail
+    Library -->|X on tile| GameOptions
     YourPCs -->|Add another| FindPC
 
-    GameDetail -->|Play| StreamStarted
-    Library -->|A on tile| StreamStarted
+    Library -->|A| TileConflict
+    TileConflict -->|No| StreamStarted
+    TileConflict -->|Yes| TileSwitch
+    TileSwitch -->|Cancel| Library
+    TileSwitch -->|Quit and Play| TileQuitForSwitch
+    TileQuitForSwitch -->|Yes| StreamStarted
+    TileQuitForSwitch -->|No| Library
+    GameOptions -->|B - same game| Library
+    GameOptions -->|Play / Resume| OptionConflict
+    OptionConflict -->|No| StreamStarted
+    OptionConflict -->|Yes| OptionSwitch
+    OptionSwitch -->|Cancel| GameOptions
+    OptionSwitch -->|Quit and Play| OptionQuitForSwitch
+    OptionQuitForSwitch -->|Yes| StreamStarted
+    OptionQuitForSwitch -->|No| GameOptions
+    GameOptions -->|Quit Game| QuitGame
+    QuitGame -->|Yes| Library
+    QuitGame -->|No| GameOptions
     StreamStarted -->|Yes| Stream
     StreamStarted -->|No| CouldntStart
-    CouldntStart -->|Try again| StreamStarted
+    CouldntStart -->|Back - tile or ordinary launch| Library
+    CouldntStart -->|Back - popup quit-and-switch| GameOptions
 
     Stream -->|Start plus Select| Overlay
     Overlay -->|Resume| Stream
@@ -126,9 +157,9 @@ flowchart LR
 
     class Library hub
     class Stream goal
-    class Overlay modal
+    class GameOptions,Overlay modal
     class Unreachable,CouldntStart failure
-    class KnownPC,Paired,StreamStarted decision
+    class KnownPC,Paired,StreamStarted,QuitGame,TileConflict,OptionConflict,TileSwitch,OptionSwitch,TileQuitForSwitch,OptionQuitForSwitch decision
 ```
 
 ### What the shape is doing
@@ -139,14 +170,28 @@ that ends and a host that goes away. That is the whole argument for the
 carousel replacing upstream's grid: there is one place you are, and everything
 else is a trip out from it.
 
-**The goal state is a stream, and it is two presses from the hub.** `A on tile`
-goes straight there. Game detail exists for the times you want to look first,
-not as a required step.
+**The goal state is a stream, and A goes straight there when no different game
+is running.** From either Recent or Library, A first checks that condition. If
+it is clear, the selected tile moves toward the centre and hands off to the
+launch-or-resume path. If another game is running, the quit-and-switch decision
+comes first. There is no inspection screen in between.
+
+**X opens the intended private-v1 Game Options modal.** B closes it and restores
+the same tab, selected game, and Library scroll position. Play/Resume makes the
+same different-game check and then uses the same selected-tile launch path as
+A. Hide Game and Direct Launch remain menu actions. Quit Game enters the quit
+path. If a different game is already running, quit-and-switch does not enter
+launch until quitting has succeeded. A direct-A quit failure returns to the
+retained grid context; a popup-origin quit failure returns to Game Options.
 
 **Failures are recoverable and they land you back where you were.** Neither red
-state is a dead end: "Couldn't reach PC" retries into the Library, "Couldn't
-start" tries again into the same decision it came from. Nothing in this diagram
-sends you back to Launch.
+state is a dead end: "Couldn't reach PC" retries into the Library, and
+"Couldn't start" returns to the retained grid so the player can try the same
+game again. The narrower popup-origin quit-and-switch case returns to Game
+Options because that is the decision context it left. Quit Game failure also
+returns to Game Options; direct-A quit-and-switch failure returns to the
+retained grid. Nothing sends the player back to Launch or loses the selected
+game merely because an operation failed.
 
 ---
 
@@ -261,16 +306,11 @@ their resolution is not lost.
   diagram above are unchanged; this only updates what `WakingPC` looks like
   when reached. Full design and reasoning in `SPEC-host-carousel.md`'s "v1
   decision — host tile busy state".
-- **`Library --> |X on tile| GameDetail` is not what X does yet.** Client's
-  decision, 1 August 2026, taken while scoping the game grid: X opens a
-  **per-game options popup** — Play/Resume, Quit Game, Hide Game, Direct Launch
-  — and Game Detail takes the same button over when it is built (`ROADMAP.md`
-  Phase B item 3). The edge above is the destination, not the current
-  behaviour. It was decided this way because Game Detail was out of that task's
-  scope and quitting a running game would otherwise have had no controller
-  route at all on the screen where you need it. The diagram is left unchanged
-  deliberately: the intent it draws is still the intent. Full reasoning in
-  `SPEC-game-grid.md`.
+- **X opens Game Options for private v1.** This is the intended destination,
+  not a temporary substitute. Its Play/Resume action shares A's selected-tile
+  launch path; Quit Game and quit-and-switch use the quit paths above; B closes
+  it over the same game. Full durable reasoning, including the superseded
+  earlier plan, is in `SPEC-game-grid.md`.
 - **Libraries remain separate by host for v1.** A merged multi-host library is
   deferred unless the separate model proves awkward after use.
 - **The Bulan stream overlay is deferred pending input validation.**

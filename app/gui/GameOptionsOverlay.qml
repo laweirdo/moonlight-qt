@@ -637,21 +637,21 @@ FocusScope {
             }]
     }
 
-    Keys.onUpPressed: {
+    Keys.onUpPressed: function(event) {
         if (page === "menu") {
             moveSelection(-1)
         }
         event.accepted = true
     }
 
-    Keys.onDownPressed: {
+    Keys.onDownPressed: function(event) {
         if (page === "menu") {
             moveSelection(1)
         }
         event.accepted = true
     }
 
-    Keys.onLeftPressed: {
+    Keys.onLeftPressed: function(event) {
         if (page === "quitConfirm") {
             quitConfirmIndex = Math.max(0, quitConfirmIndex - 1)
         } else if (page === "switchConfirm") {
@@ -660,7 +660,7 @@ FocusScope {
         event.accepted = true
     }
 
-    Keys.onRightPressed: {
+    Keys.onRightPressed: function(event) {
         if (page === "quitConfirm") {
             quitConfirmIndex = Math.min(1, quitConfirmIndex + 1)
         } else if (page === "switchConfirm") {
@@ -669,23 +669,23 @@ FocusScope {
         event.accepted = true
     }
 
-    Keys.onReturnPressed: {
+    Keys.onReturnPressed: function(event) {
         activateCurrent()
         event.accepted = true
     }
-    Keys.onEnterPressed: {
+    Keys.onEnterPressed: function(event) {
         activateCurrent()
         event.accepted = true
     }
-    Keys.onSpacePressed: {
+    Keys.onSpacePressed: function(event) {
         activateCurrent()
         event.accepted = true
     }
-    Keys.onEscapePressed: {
+    Keys.onEscapePressed: function(event) {
         goBack()
         event.accepted = true
     }
-    Keys.onBackPressed: {
+    Keys.onBackPressed: function(event) {
         goBack()
         event.accepted = true
     }

@@ -3,8 +3,8 @@
 This is the durable authority for the Recent and Library surface: component
 inventory, navigation, state model, design decisions, compromises, known
 unfinished work, and validation evidence. Application source is the objective
-authority for what currently runs. Live branch, task, and build state belong in
-`HANDOFF.md` and `TASK-BRIEF.md`.
+authority for what currently runs. Live branch and build state belong in
+`HANDOFF.md`; a temporary `TASK-BRIEF.md` exists only while a task is active.
 
 Decision labels in this file carry the same weight `SPEC-host-carousel.md`
 defined:
@@ -19,7 +19,7 @@ defined:
 
 Screen targets **1280×800**, the Steam Deck panel.
 
-Four commits carry the implementation record, `TASK-BRIEF.md`'s stages 1–4:
+Four commits carry the original game-grid work order's stages 1–4:
 
 | Commit | Stage | What |
 |---|---|---|
@@ -28,11 +28,12 @@ Four commits carry the implementation record, `TASK-BRIEF.md`'s stages 1–4:
 | `1f36244b` | 3 | The Recent view and its ordering, tab switching, full controller navigation, `GameOptionsOverlay.qml`, the quit-and-switch confirmation |
 | `e3c1a22d` | 4 | Motion; the Library scroll defect diagnosed and fixed |
 
-Stage 5, validation and documentation, is this file and what remains open below.
-**No client acceptance of this surface has happened yet** — unlike
-`SPEC-host-carousel.md`, which documents accepted, merged work, this file
-documents work built and reasoned about through stage 4, still on the
-`game-grid` branch.
+The grid's Stage 5 validation and documentation originally produced this file.
+The client reviewed the surface on 1 August 2026, requested the four changes
+recorded below, accepted them, and merged the task into `bulan`. Phase B item 3
+later extended this specification with the selected-game launch and quit
+integration; the client accepted that separate task on 2 August 2026 and its
+local merge is next.
 
 ---
 
@@ -43,7 +44,7 @@ documents work built and reasoned about through stage 4, still on the
 | `app/gui/AppView.qml` | The screen. Owns the model, tabs, the Recent ordering, all input, launching, and focus recovery for one host's Recent and Library views. |
 | `app/gui/GameTile.qml` | One game: artwork cropped to a rounded rectangle, placeholder fallback, focus ring and bloom, title, running marker. |
 | `app/gui/GameOptionsOverlay.qml` | Modal overlay: Play/Resume, Quit Game, Hide Game, Direct Launch, plus the quit-confirm and quit-and-switch-confirm pages it owns internally. |
-| `app/gui/Bulan.qml` | Design tokens. The game-grid tokens are marked `PROPOSED` in the source, pending client review on a real screen — see "Reviewing it without a real host" below for how that review has happened so far. |
+| `app/gui/Bulan.qml` | Design tokens. The game-grid token block retains its historical `PROPOSED` source comment, but the screen was subsequently reviewed against the real `Steambox` library and accepted with the changes recorded below. |
 
 Supporting, not part of this screen but changed for it:
 
@@ -70,9 +71,10 @@ host carousel.
 | D-pad Up/Down, Library | `Key_Up` / `Key_Down` | Previous/next row, clamped. A partially filled final row clamps to its last real tile, never an empty cell. |
 | D-pad Left/Right, Recent | `Key_Left` / `Key_Right` | Previous/next by rank in the last-played order, clamping at both ends — matching `HostCarousel.moveBy()`. |
 | D-pad Up/Down, Recent | `Key_Up` / `Key_Down` | Inert, and **swallowed** (`event.accepted = true`), exactly as on the carousel, so the press cannot bubble to the StackView and drag focus into chrome this screen hides. |
-| **A** | `Key_Return` / `Key_Enter` / `Key_Space` | Launches or resumes the focused game through `StreamSegue.qml`, unchanged. If a different game is running, raises the quit-and-switch confirmation instead of launching. |
+| **A** | `Key_Return` / `Key_Enter` / `Key_Space` | Launches or resumes through the shared selected-game transition and custom `StreamSegue.qml`. If a different game is running, raises the quit-and-switch confirmation; only a successful quit enters that same launch path. |
 | **X** | `Key_Menu` | Opens `GameOptionsOverlay` on the focused game. |
-| **B** | — | Not handled in `AppView.qml`. `main.qml`'s root `StackView` owns `Keys.onEscapePressed` and pops back to the host carousel when `stackView.depth > 1`; this file leaves the event unaccepted so it bubbles there. |
+| **B, options popup** | `Key_Escape` / `Key_Back` | Closes `GameOptionsOverlay` and restores focus to the same game; the tab selections and Library scroll belong to the retained `AppView`. |
+| **B** | `Key_Escape` / `Key_Back` | Normally left unaccepted so it bubbles to `main.qml` and pops back to the host carousel. While launch or quit preparation is busy, `AppView` consumes it so the retained screen cannot be popped from under an in-flight capture, proxy, or prepared Session. |
 | **START** | `Key_Hangup` | Client settings. |
 | **L1** | `Key_Context2` | Switch to Recent. |
 | **R1** | `Key_Context3` | Switch to Library. |
@@ -84,9 +86,9 @@ host carousel.
 records SELECT opening `HostSettingsOverlay` on the carousel. The client's own
 game-grid mockup draws the same Host Settings hint on this screen. This screen
 has no host-settings surface of its own, and building a second one is out of
-this task's scope — `TASK-BRIEF.md`'s explicit exclusions list only Game
-Detail, `StreamSegue.qml`, screen transitions, and backend behaviour, but
-building a second host-settings overlay was never in scope to begin with.
+the completed game-grid task's scope. That task explicitly left the launch and
+quit segues, general screen transitions, and backend behaviour alone; building
+a second host-settings overlay was never in its scope either.
 `HintBar.qml`'s own governing rule is that a hint promising an action that
 does nothing is worse than showing fewer hints, so the hint is withheld along
 with the binding. **This is a known gap, not a completed item** — the mockup
@@ -114,7 +116,7 @@ showing — for the same reason Up/Down are swallowed on Recent.
 | **Artwork missing** | `boxart` is an empty string; `art.status` never reaches `Ready`; the fallback stays shown permanently. |
 | **Artwork detected as a GFE placeholder** | `art.status === Ready` but `sourceSize` exactly matches one of the three known GFE/Sunshine placeholder dimensions (130×180, 628×888, 200×266), gated off for `appCollectorGame` (Overcooked's real art matches one of these sizes by coincidence). `showArt` stays false and the fallback is shown even though the image loaded. |
 | **Long title** | The fallback wraps up to 4 lines and elides; the label-row title elides against whatever width the "Running" label leaves it. |
-| **Empty library** | One line, `"No games here yet."`, in the app's voice — the minimal placeholder `TASK-BRIEF.md` scoped for this task. The designed treatment is Phase D, deferred. |
+| **Empty library** | One line, `"No games here yet."`, in the app's voice — the minimal placeholder scoped by the completed game-grid work order. The designed treatment is Phase D, deferred. |
 | **Partial final row** | The Library `Repeater` draws exactly `gameCount` tiles; a short final row simply has fewer items at the row's end, and `moveLibraryRow()`'s clamp keeps Down from landing on a cell that does not exist. |
 | **Single game** | Both views render one tile; on Recent, `slot`'s clamp still resolves to a single tile at distance 0 with no neighbours to draw. |
 
@@ -133,8 +135,8 @@ the single point both the A-press and direct-launch paths pass through — reads
 the current time once and writes it to both the computer's own `appList` entry
 and the model's visible-apps copy, then emits `dataChanged` for
 `LastPlayedRole`. This is *you pressed Play*, not *the stream succeeded*; that
-is the reading `TASK-BRIEF.md` recorded as the honest and simpler one, and it
-is what is built.
+is the reading the completed game-grid work order recorded as the honest and
+simpler one, and it is what is built.
 
 **Never played.** A game that has never launched has an invalid
 (default-constructed) `QDateTime`, which QML sees as a `Date` with a `NaN`
@@ -175,7 +177,7 @@ interrupts; ambient motion is separately disableable).
 | Focus-ring border colour | `motionFocusMs` `ColorAnimation` | Rule 1 — one settle on a border-colour change, no re-trigger mid-flight. |
 | Recent tile travel (`x`, `y`, `tileScale`, `opacity`) | `motionFocusMs`, `Easing.InOutQuad`, gated on a `settled` flag | Copies `HostCarousel.qml`'s `HostTile` delegate block exactly: one clock for the whole move, so a tile travels, shrinks and dims as one object. `settled` stops the first frame from animating in from a corner. |
 | Focus bloom glide (Library) | `motionFocusMs`, `Easing.InOutQuad` | Same clock as the tile it follows, so the halo never visibly lags the selection. |
-| Tab cross-fade (Recent ↔ Library) | `motionFocusMs`, `Easing.InOutQuad` | **Deliberately not `motionTransitionMs`** (220 ms). `Bulan.qml` reserves that token for a full screen transition, Phase B item 4; switching tabs on this screen is not a screen change. |
+| Tab cross-fade (Recent ↔ Library) | `motionFocusMs`, `Easing.InOutQuad` | **Deliberately not `motionTransitionMs`** (220 ms). That longer token now drives the selected-game launch handoff and remains intended for Phase B item 4's general screen transitions; switching tabs on one screen is still a focus-scale change. |
 | Library scroll-to-focus | Explicit `NumberAnimation` on `contentY`, `motionFocusMs`, `Easing.OutCubic` | Rule 3, in the harder case. |
 
 **Why the Library scroll is an explicit `NumberAnimation`, not a `Behavior`.**
@@ -232,14 +234,57 @@ afford. The inset is a constant, not tied to the live border width, because
 tying it to the border would rescale the artwork on every focus change, which
 reads as the picture flinching.
 
-**v1 decision — X opens options, not Game Detail.** `FLOW.md` states
-`Library -->|X on tile| GameDetail`, and Game Detail is not part of this task.
-`GameOptionsOverlay` (Play/Resume, Quit Game, Hide Game, Direct Launch)
-carries the mockup's own *Options* hint label and is, for now, the only route
-by which a running game can be quit from this screen. `TASK-BRIEF.md` records
-that when Game Detail is built, it takes over the same button. `FLOW.md` is
-unedited by this task; whether that edge is reworded is a client decision at
-acceptance, not made here.
+**Superseded history — X was temporary until Game Detail.** The earlier flow
+sent `Library -->|X on tile| GameDetail`, and the game-grid work order described
+`GameOptionsOverlay` as a temporary route until Game Detail took over X. That
+was the plan under which the grid was built, so it remains recorded here as
+history rather than being silently rewritten. The client subsequently replaced
+that direction before the launch-and-quit task began.
+
+**v1 decision — X opens Game Options as its intended destination.** No Game
+Detail screen is planned. A launches or resumes directly from the focused game
+in Recent or Library, with that selected tile entering the launch transition.
+`GameOptionsOverlay` remains the permanent private-v1 home for Play/Resume,
+Quit Game, Hide Game, and Direct Launch. B closes it over the same selected
+game. Popup Play/Resume uses the same selected-tile launch path as A; an
+automatic Direct Launch uses that path too when opening a host. Quit Game uses
+the quit path, and quit-and-switch remains a confirmed operation that waits for
+a successful quit before entering launch. A quit or launch failure returns to
+the retained game-grid context rather than discarding its tab, selection, or
+Library scroll.
+
+### Selected-game launch and quit integration
+
+**Accepted 2 August 2026; awaiting local merge.**
+Every launch request is keyed by the existing stable `appid`, not a delegate or
+row that can move when `lastPlayed` changes. `AppView` resolves the currently
+rendered artwork, grabs its exact on-screen crop and mask before Session
+creation, hides only that source artwork, and hands the frozen texture to
+`LaunchTransition.qml`. The proxy travels once to the measured 202×302 launch
+destination centred at x 640 / y 293 in the 1280×800 Deck composition, then the
+custom launch surface takes ownership without a duplicate-source frame.
+
+Recent, Library, scrolled Library, popup Play/Resume, and automatic Direct
+Launch share that contract. Missing or destroyed delegates fall back to an
+honest title card; capture, component, session, or push failure releases the
+busy guard and restores the retained grid. Warning and failure screens show
+short front-facing copy and never expose the Session's port, protocol, or raw
+error text.
+
+Quit-and-switch captures the next game's source contract first and preserves
+the established early `createSessionForApp()` call and `lastPlayed` stamp. The
+prepared Session remains inert while the custom quit surface waits. A failed
+quit never starts it; a successful quit transfers that one Session into the
+same launch path without constructing another. Direct-A quit failure returns
+to the retained grid, while popup-origin failure returns to Game Options. If a
+popup-origin switch succeeds but the following launch fails, dismissal also
+reopens Game Options.
+
+Both segue screens are dynamically created Items. `QuitSegue` releases itself
+after removal. `StreamSegue` releases review/session-free instances then, but a
+production instance removed during `quitStarting()` survives until Session's
+`readyForDeletion` signal so the inherited cleanup and automatic-quit contract
+remain intact.
 
 **Accepted compromise — no backdrop blur behind the options popup.**
 `HostCarousel.qml` wraps its entire screen content in an `Item` whose
@@ -258,9 +303,9 @@ alone carries the separation for now.
 
 ## The scroll defect, diagnosed
 
-`TASK-BRIEF.md` recorded, after stage 2, a Library grid seen scrolled down one
-row with no input — captured once, two immediate re-runs were correct, and it
-was recorded explicitly as *not reproduced, not diagnosed, not claimed fixed*.
+The former game-grid work order recorded, after stage 2, a Library grid seen
+scrolled down one row with no input — captured once, two immediate re-runs were
+correct, and explicitly *not reproduced, not diagnosed, not claimed fixed*.
 
 It became reproducible in stage 4, once the Library tab could be opened
 directly against the real host: every run landed a row down with the focused
@@ -304,20 +349,16 @@ to have caught the final state.
 
 ## Known unfinished work and v1 compromises
 
-This table records durable surface gaps, not the current task or branch.
-`TASK-BRIEF.md` owns active implementation scope while this branch is open.
+This table records durable surface gaps, not a current task or branch.
 
 | Thing | Label | Durable state |
 |---|---|---|
 | **SELECT / Host Settings** | **Provisional** | Deliberately unbound; hint withheld. The mockup shows Host Settings on this screen; no host-settings surface exists for it. Not started as a side effect of this task's scope. |
 | **Backdrop blur behind the options popup** | **Accepted compromise** | Absent. `HostCarousel.qml`'s blurred-backdrop pattern was not extended here; the scrim alone separates the popup from the grid. Would require restructuring this screen's content into a wrapping layered `Item`. |
 | **Designed empty-library state** | **Provisional** | One line, `"No games here yet."`, is the whole treatment. The designed version is Phase D per `ROADMAP.md` and `FLOW.md` records it as unresolved flow design. |
-| **`StreamSegue.qml`** | **Provisional** | Remains stock upstream Qt. `ROADMAP.md` records it as a Phase B gap explicitly deferred by the client until after the game grid lands. |
-| **`QuitSegue.qml`** | **Provisional** | Also remains stock upstream. Reused unchanged from `AppView.qml`'s `quitRunningGame()`; rebuilding it was not in this task's scope. |
-| **Game Detail** | **Provisional** | Not built. `FLOW.md`'s `Library -->|X on tile| GameDetail` edge is unedited; X currently opens `GameOptionsOverlay` instead, by explicit task decision. |
-| **Screen transitions (Phase B item 4)** | **Provisional** | The tab cross-fade uses `motionFocusMs`, deliberately not `motionTransitionMs` — that token is reserved and unused until this item is built. |
+| **Screen transitions (Phase B item 4)** | **Provisional** | The tab cross-fade uses `motionFocusMs`, deliberately not `motionTransitionMs`. Item 3 now uses the 220 ms token for its selected-game launch handoff; wiring it into the rest of the core route remains item 4. |
 | **Tile aspect ratio vs. the client's own artwork** | **Provisional** | 18 of 25 cached box-art files on the review station are 2:3, which the build now matches; the remaining 7 are 3:4 and lose a band top and bottom under crop-to-fill. Raised for client decision at stage 2 review, not settled. |
-| **Rename PC, merged multi-host library** | **Deferred** | Out of this task per `TASK-BRIEF.md`'s explicit exclusions; unrelated to the surfaces this task changed. |
+| **Rename PC, merged multi-host library** | **Deferred** | Explicitly excluded from the completed game-grid and launch/quit work orders; unrelated to these surfaces. |
 
 ---
 
@@ -335,7 +376,7 @@ MOONLIGHT_FAKE_GAMES=mixed MOONLIGHT_INITIAL_VIEW=qrc:/gui/AppView.qml ^
 | `MOONLIGHT_FAKE_GAMES=<preset>` | Substitutes a fixed `ListModel` for the real `AppModel` in `AppView.qml`. Required, not optional: a fake host's row in the carousel names a real machine at the same position, and `HostCarousel.actConfirm()` blocks the real-action path outright for fake hosts — reading past the end of the real list segfaulted the app once already — so there is no other way to open this screen at all without a real paired host. Presets: `none` (proves the empty-library placeholder), `one` (single-item grid, no partial-row arithmetic), `partial` (7 games — one full row of 5 plus a partial row of 2), `many` (23 games — more than one screen, partial final row), and `mixed` (default for any unrecognised value; ~12 games covering a running game, a 45+ character title, and a mix of played/never-played dates in one list). |
 | `MOONLIGHT_FAKE_GAMES_ART=<dir>` | Fake games take real box art (`1.jpg`, `2.jpg`, … in call order, consistent across every preset) instead of always falling back to the placeholder tile. Unset, every fake game has no artwork at all — the common review case. |
 | `MOONLIGHT_OPEN_APPS_FOR_HOST=<name>` | Opens the game grid for a **real, paired** host by name once the carousel settles, through `HostCarousel`'s ordinary `openAppView()` — so an offline, unpaired, or unsupported host is refused exactly as a real A-press would refuse it. The opposite of `MOONLIGHT_FAKE_GAMES`, and the two must not be combined: only a real host proves box art actually arriving from `BoxArtManager` — real files, real aspect ratios, real load timing, real GFE placeholder detection. **Needs `MOONLIGHT_SCREENSHOT_DELAY_MS`** because a saved host loads offline at startup and only reports itself reachable once the discovery poll answers; without extra delay, the screenshot grabs the carousel instead of the grid. |
-| `MOONLIGHT_GAME_REVIEW=options\|switch` | Opens `GameOptionsOverlay` (or, for `switch`, the quit-and-switch confirmation on the first non-running fake game) on the focused fake game once the grid settles — needed because the screenshot hook grabs on a timer and cannot press X itself. Also accepts `library`, which only switches the visible tab; that action is safe against a real host too, since switching tabs changes nothing about the machine, and it exists because the Library tab could otherwise never be photographed against real box art (no way to press R1 on a timer). Fake-games-only for `options`/`switch`; fires once per launch, not once per return to the screen. |
+| `MOONLIGHT_GAME_REVIEW=<case>` | Keeps `options`, `switch`, and `library`, and adds fake-only launch/quit routes: Recent, Library, scrolled Library, resume, warning, launch failure, valid/no-source fallback, repeated launch cycles, quit progress/failure, quit-and-switch success/failure, and popup-origin switch-then-launch failure. These routes exercise QML state and navigation without touching a real host; they do not prove a real stream or quit. |
 | `MOONLIGHT_SCREENSHOT_DELAY_MS=<ms>` | Extra wait added to the screenshot timer's base interval (2500 ms) before the grab. The base interval is enough for any screen built from state the app already has; it is not enough for one that has to wait on the network, which is exactly `MOONLIGHT_OPEN_APPS_FOR_HOST`'s case — a saved host loads offline and only becomes reachable when the discovery poll answers. Zero unless set, so every existing recipe times exactly as before. |
 
 Existing carousel hooks (`MOONLIGHT_FAKE_HOSTS`, `MOONLIGHT_INITIAL_VIEW`,
@@ -349,9 +390,10 @@ Existing carousel hooks (`MOONLIGHT_FAKE_HOSTS`, `MOONLIGHT_INITIAL_VIEW`,
 
 - Windows review-station builds with Qt 6.9.3 / MSVC, `qmlcachegen` compiling
   every changed QML file.
-- `qmllint` on every changed QML file, showing only this project's four
-  long-standing categories (`[import]`, `[missing-property]`, `[unqualified]`,
-  `[unresolved-type]`).
+- `qmllint` on every changed QML file. The current launch/quit pass exits 0
+  with `[import]`, `[index]`, `[missing-property]`, `[unqualified]`,
+  `[unresolved-type]`, and `[use-proper-function]` warnings around registered
+  runtime types, dynamic properties/callbacks, and existing delegate patterns.
 - Screenshot review against the real paired host `Steambox` (roughly twenty
   games, real box art from `BoxArtManager`) on both the Recent and Library tabs.
 - Screenshot review against every `MOONLIGHT_FAKE_GAMES` preset (`none`,
@@ -360,12 +402,35 @@ Existing carousel hooks (`MOONLIGHT_FAKE_HOSTS`, `MOONLIGHT_INITIAL_VIEW`,
   via the `MOONLIGHT_GAME_REVIEW` hook.
 - Application logs read on every run. Only two known-environmental lines
   appear: `mDNS is disabled by user preference` (a local machine preference,
-  not a code fault, per `TASK-BRIEF.md`) and the `ToolTip attached property`
+  not a code fault) and the `ToolTip attached property`
   line from `main.qml` (the same pre-existing environmental warning
   `HANDOFF.md` records for the prior task).
 - The Library scroll defect: reproduced against the real host, diagnosed, and
   the fix verified across three consecutive runs against the real Steambox
   library.
+- The launch/quit task's Windows Release target rebuilt after each stage; the
+  final build compiled the revised QML through `qmlcachegen` and linked with
+  only the pre-existing `LNK4291` warning.
+- The complete deterministic launch/quit matrix rendered to screenshots with
+  no critical QML runtime error. The only repeated QML warning was the existing
+  `main.qml` `ToolTip attached property` line.
+- A 51-cycle repeated-launch run showed no upward working-set accumulation:
+  the first five warm samples averaged 168.4 MiB and the last five 162.3 MiB.
+  A Windows `QSG_RENDER_TIMING` trace, after discarding startup and screenshot
+  frames, recorded 84 steady frames at p95 1 ms, maximum 13 ms, with none over
+  16.67 ms. This is supporting evidence from an RTX 4070 Ti SUPER using Qt's
+  basic render loop, not a Steam Deck performance result.
+- Two independent read-only lifecycle/performance audits found retained segue
+  Items, per-frame JavaScript dot motion, a replay-pop race, Session cleanup
+  ownership, and repeated failure dismissal risks. The fixes were re-audited,
+  rebuilt, and the affected deterministic routes rerun successfully.
+- A live Windows Computer Use pass sent controller-equivalent keys through the
+  rendered fake-game route: B recovered from launch failure, Right visibly
+  moved Recent focus, X opened the selected game's options, and B closed the
+  popup with that game still selected. The first pass exposed Qt's deprecated
+  implicit `event` injection warning; commit `285ff231` declares all nine
+  options key-handler parameters. After rebuild and rerun, the log contained
+  only the known `main.qml` ToolTip warning.
 
 ### Not performed
 
@@ -379,10 +444,10 @@ Existing carousel hooks (`MOONLIGHT_FAKE_HOSTS`, `MOONLIGHT_INITIAL_VIEW`,
   or stopped through this screen; `launchOrResumeApp()`, `quitRunningGame()`,
   and the quit-and-switch dispatch have been read and reasoned about, not
   exercised end to end against a live stream.
-- Any judgement of the motion in flight. Every animation in the table above
-  has been built and its reasoning checked against the brief; none of it has
-  been watched running — stills and a static read of the QML cannot show
-  motion.
+- Any physical-controller or live human judgement of the launch motion in
+  flight. The Windows automation proves key delivery and recovery on the
+  rendered fake route; it does not establish how the motion feels under a
+  player's thumb.
 
 ---
 
@@ -426,13 +491,12 @@ handed the toolbar back on the way out, the grid took it away on the way in,
 and the frames between the two handlers drew it.
 
 Neither Bulan screen restores it any more. Screens that genuinely want the
-toolbar already turn it on themselves. The remaining case is an **upstream**
-screen handing it back to a Bulan screen underneath — `StreamSegue` and
-`QuitSegue` both do that, and both sit on top of the game grid — so a Bulan
-screen declares `bulanScreen: true` and `main.qml` takes the toolbar off after
-the push or pop has settled. `Qt.callLater` is what makes it deterministic: it
-runs after both handlers, whichever order they fire in. Reasoning about that
-order is what made the fault awkward to describe in the first place.
+toolbar already turn it on themselves. At the time of the grid task, the
+remaining case was an upstream `StreamSegue` or `QuitSegue` handing it back to
+the Bulan grid underneath, so a Bulan screen declared `bulanScreen: true` and
+`main.qml` hid the toolbar after a settled push or pop. **Later Phase B item 3
+evolution:** both segues are now custom Bulan screens and participate directly
+in that same hidden-toolbar contract; the backstop remains for safe recovery.
 
 **Not verified:** the transition itself cannot be photographed — a screenshot
 hook grabs a settled frame, and the flash is the frames in between. The code
@@ -443,10 +507,8 @@ on it.
 
 ## Client review outcome
 
-Not yet held. This file is written at the close of stage 4, before stage 5's
-client review. `TASK-BRIEF.md` remains the active authority for this task's
-open items until the client accepts the work; at that point this file's
-"Known unfinished work" table and the "Reviewed" language throughout should be
-reconciled against whatever the client actually says, following
-`AGENTS.md`'s documentation-lifecycle rule that `TASK-BRIEF.md` is deleted and
-its durable decisions move here only after acceptance.
+Held on 1 August 2026. The client drove the deployed grid against the real
+`Steambox` library, requested the four changes recorded above, accepted the
+result, and instructed the merge into `bulan`. The client accepted the separate
+launch-and-quit work order on 2 August 2026 after its final completion audit;
+its local integration is next and its temporary task brief has been retired.

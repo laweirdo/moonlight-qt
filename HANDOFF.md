@@ -1,6 +1,6 @@
 # Bulan - current handoff
 
-Current as of **1 August 2026**.
+Current as of **2 August 2026**.
 
 This file records live repository and validation state. `AGENTS.md` owns
 permanent operating rules; `ROADMAP.md` owns sequencing; `BUGS.md` owns
@@ -11,144 +11,113 @@ snapshot.
 
 | Item | State |
 |---|---|
-| Integration branch | `bulan`, with the game grid merged and pushed to `origin/bulan` |
-| Task branch | `game-grid`, merged at the client's instruction and deleted |
-| Remote | `origin` only, the client's fork. Never pushed to upstream Moonlight |
-| Active task | **None.** `TASK-BRIEF.md` was removed on completion |
+| Integration branch | `bulan` at `f54d3648`, tracking `origin/bulan` |
+| Task branch | `launch-quit-experience`; accepted, with its acceptance-cleanup commit at the current branch head; no tracking branch |
+| Remote | `origin` only, the client's fork. Nothing from this task has been pushed |
+| Active task | **None.** `TASK-BRIEF.md` was removed after final client acceptance |
 | Open defects | None recorded in `BUGS.md` |
 
-**The client drove the deployed review build on 1 August 2026** against the real
-`Steambox` library, reported four faults, and all four were fixed and merged in
-the same session — the running-game title block, Recent showing only three
-games, the typeface changing through focus, and upstream's toolbar flashing
-between screens. `SPEC-game-grid.md` carries each fix and its reasoning.
-
-**That review was the first time any of this was driven by a person rather than
-photographed.** It was not an item-by-item sign-off, and it happened on the
-Windows review station, not a Deck.
-
-The next objective after acceptance is `ROADMAP.md`'s Phase B item 3, game
-detail and launch — and the two Phase B gaps the grid raised, recorded there.
+The task branch was cut from the accepted game-grid merge. The client accepted
+Stage 1, then authorized the remaining stages to proceed without intermediate
+stops and requested one approval after all work was complete. The client gave
+that final approval on 2 August 2026 and authorized local acceptance cleanup,
+merge into `bulan`, and task-branch deletion. The cleanup is complete; the
+local merge is next. Push remains unauthorized.
 
 ## What was built
 
-Phase B item 2, the game grid: `AppView.qml` rebuilt as a Bulan screen with
-Recent and Library views. `SPEC-game-grid.md` owns the durable design and the
-full reasoning.
+Phase B item 3 replaces the inherited visible launch and quit screens while
+preserving the existing Session, streaming, persistence, and quit backends.
+`SPEC-game-grid.md` owns the durable design and lifecycle reasoning.
 
 | Commit | What |
 |---|---|
-| `0e8c8c61` | The shell, the static Library, the `lastPlayed` record, the review hook |
-| `8fd8df94` | `GameTile.qml` — real box art, fallback, focus ring and bloom |
-| `1f36244b` | Controller navigation, Recent, tabs, launching, the options popup |
-| `e3c1a22d` | Motion, and the diagnosis of the Library scroll defect |
+| `94d92bf4` | Corrected flow authority and defined the launch/quit work order |
+| `dc0bc8a9` | Added deterministic fake-only launch and quit review routes |
+| `c3625cba` | Added stable app-ID dispatch, exact artwork capture, and `LaunchTransition.qml` |
+| `74a20505` | Built the custom launch/resume, warning, and failure experience |
+| `b01a408e` | Built custom quit, quit failure, and success-gated quit-and-switch |
+| `30f7cad4` | Hardened cross-surface routing, route lifetime, replay, and animation cost |
+| `285ff231` | Declared options key-event parameters after live input exposed Qt's implicit-injection warning |
 
 ## Current product state
 
 | Area | Current state |
 |---|---|
-| Recent | Horizontal row, focused tile centred, ordered by last played then alphabetically. Focused game carries its title, a `Running` marker, and `"Pick up where you left off."` when it is the running one. Neighbours carry a relative last-played line, or none if never played. |
-| Library | Five-column scrolling grid, 216×324 tiles at 2:3. Scroll follows focus. |
-| Artwork | Cropped to fill, rounded, inset inside the focus ring. Games with none, or with GFE's placeholder, fall back to their title on a plain surface. Upstream's exact-pixel placeholder detection is preserved. |
-| Launching | **Unchanged.** A pushes the existing `StreamSegue`. Quit and quit-and-switch push the existing `QuitSegue`. Both remain stock upstream Qt. |
-| Options (X) | Custom Bulan glass popup: Resume/Play, Quit Game, Hide Game, Direct Launch, with upstream's enable rules preserved and a blocked entry saying why. |
-| Last played | New persisted per-app attribute on `NvApp`, stamped in `AppModel::createSessionForApp()` — i.e. when you press Play, not when the stream succeeds. |
-| L1 / R1 | **Newly mapped.** Both shoulder buttons previously delivered no keycode to QML at all, on any screen. |
-| SELECT on the grid | **Unbound, and its hint withheld.** The grid has no host-settings surface. The client's mockup shows one. Recorded as a Phase B gap. |
-| Empty library | One line, `"No games here yet."` A holding treatment; the designed state is Phase D. |
-| Everything else | Discovery, pairing, streaming, the host carousel, its busy state and the root quit confirmation are untouched. |
-
-## Implementation notes
-
-- Recent's ordering is computed **in QML**, from the model's own roles, using
-  the mirror-`Repeater` pattern the carousel already uses. Not a C++ sort and
-  not a proxy model: the review hook substitutes a plain `ListModel`, and
-  neither could have served it.
-- `lastPlayed` is deliberately **excluded from `NvApp::operator==`**. That
-  operator drives `updateAppList`'s add/remove/replace pass, and a timestamp
-  there would churn the whole list on every launch.
-- The shoulder buttons send `Key_Context2` / `Key_Context3`, following the
-  precedent set when Y and Select had the same problem. They are deliberately
-  **not** switched by the swap-face-buttons preference.
-- The options popup has **no backdrop blur**, unlike the host-settings overlay.
-  Giving it one means wrapping the whole screen in a single layered item, which
-  is a structural change to a file this task had already rewritten twice. The
-  scrim carries it alone. Recorded as an accepted compromise in
-  `SPEC-game-grid.md`.
-- Artwork masking uses `MultiEffect`, which is a shader effect. **It renders as
-  nothing under `QT_QPA_PLATFORM=offscreen`**, so the Mac's offscreen
-  screenshot path cannot review artwork. Windows and the Deck both have a real
-  GPU and are unaffected.
+| Selected-game launch | A in Recent or Library captures the exact visible selected artwork, hides only that source, and moves one frozen proxy into the 202×302 centred launch composition. Stable `appid` owns identity across `lastPlayed` reordering and model updates. |
+| Shared entry points | A, popup Play/Resume, and automatic Direct Launch use the same source and transition contract. Missing/destroyed sources fall back to a title card instead of launching the wrong delegate. |
+| Launch surface | Custom Bulan `StreamSegue`: Starting/Resuming progress, three declaratively animated dots, a timed warning, and recoverable failure with sanitized copy. The retained `AppView` remains underneath. |
+| Quit surface | Custom Bulan `QuitSegue`: progress, quit-and-switch copy, and recoverable failure. Direct-A failure returns to the grid; popup-origin failure returns to Game Options. |
+| Quit-and-switch | Captures the next source first, preserves the existing early Session creation and `lastPlayed` stamp, starts nothing before quit success, and transfers the one prepared Session into the shared launch path. Popup-origin switch success followed by launch failure returns to Game Options. |
+| Focus and duplicate input | Busy guards reject repeated confirm. Failure dismissal is one-shot. A/B share the same visible 64 px recovery target, and retained grid focus/selection/scroll are restored by stable app ID. |
+| Lifetime | Dynamically pushed review/quit routes destroy after removal. A production `StreamSegue` removed by ordinary completion or `quitStarting()` survives until Session emits `readyForDeletion`, preserving its cleanup contract. |
+| Backends | Discovery, pairing, session, streaming, persistence, and quit backend source were not changed. |
 
 ## Validation record
 
 ### Performed
 
-- The Windows app target built with Qt 6.9.3 and MSVC Build Tools on every
-  change, and `qmlcachegen` compiled each changed QML file — a real syntax
-  check, not only a lint pass. The only link warning was the pre-existing
-  `LNK4291`.
-- `qmllint` on `AppView.qml`, `GameTile.qml`, `GameOptionsOverlay.qml`,
-  `Bulan.qml`, `HostCarousel.qml` and `main.qml`. Only this project's four
-  long-standing categories appeared: `[import]`, `[missing-property]`,
-  `[unqualified]`, `[unresolved-type]`. `Bulan.qml` produced no output at all.
-- **Reviewed against the real paired host `Steambox`**, on both tabs, with real
-  box art delivered by `BoxArtManager` from its own cache — roughly twenty
-  games at three different source aspect ratios. This is the first Bulan screen
-  in this project to have been checked against real host data rather than a
-  fake preset.
-- Reviewed against every `MOONLIGHT_FAKE_GAMES` preset — `none`, `one`,
-  `partial`, `many`, `mixed` — on both tabs. That covers an empty library, a
-  single game, a partially filled final row, more than one screen of scrolling,
-  a 45-character title, and a running game.
-- The options popup and the quit-and-switch confirmation captured and read.
-- Application logs read on every run. Only two lines ever appear, both
-  environmental: the `ToolTip attached property` warning from `main.qml` that
-  this project has always had, and `mDNS is disabled by user preference`, which
-  is a local preference on the review station.
-- **A model update while the screen was live** was exercised without meaning to
-  be: a host's app list arrives in chunks, and that is what surfaced the scroll
-  defect below.
-
-### The scroll defect, found and diagnosed
-
-The Library grid was seen **scrolled down one row with no input and no focus
-ring on screen**, once, during stage 2. Two immediate re-runs were correct, so
-it was recorded as unreproduced and explicitly **not** claimed fixed.
-
-It became reproducible in stage 4, once the Library tab could be opened
-directly against the real host. A host's app list arrives in chunks; each
-arrival recomputed the scroll — while the Library was not the visible tab and
-while the content height was still growing. The viewport test ran against a
-grid a fraction of its eventual size, scrolled there, and nothing recomputed it
-afterwards. It looked intermittent because it depended on how the host happened
-to chunk its list on that run.
-
-Fixed, and verified across three consecutive runs against the real host. The
-transferable lesson is in `SPEC-game-grid.md`.
+- `git diff --check`, complete diff inspection, branch/status checks, and
+  scoped staged-file checks at each commit boundary.
+- `qmllint` on all changed QML. It exits 0; its warning categories are
+  `[import]`, `[index]`, `[missing-property]`, `[unqualified]`,
+  `[unresolved-type]`, and `[use-proper-function]` around registered runtime
+  types, dynamic properties/callbacks, and existing delegate patterns.
+- Qt 6.9.3 / MSVC Release builds throughout implementation. The final rebuilds
+  ran `qmlcachegen` over each revised QML source and linked successfully. Their
+  only link warning was the pre-existing `LNK4291`.
+- The full deterministic review matrix rendered successfully: launch from
+  Recent, Library, and a scrolled lower Library row; resume; warning; failure;
+  valid and no-source fallback; repeated cycles; quit progress/failure;
+  quit-and-switch success/failure; and popup-origin switch success followed by
+  launch failure. Final logs contained no critical QML/runtime error. The known
+  `main.qml` `ToolTip attached property` warning appeared on every run.
+- The normal launch composition, repeated-cycle return to the same retained
+  grid, and popup-origin **Back to options** launch-failure target were visually
+  inspected from the final captures.
+- Windows `QSG_RENDER_TIMING` supporting evidence on an RTX 4070 Ti SUPER with
+  Qt's basic render loop: 84 steady frames after excluding cold-start and
+  screenshot frames, p95 1 ms, maximum 13 ms, zero frames over 16.67 ms. Across
+  all 88 captured frames, p95 was 12 ms and maximum 31 ms; the two over-budget
+  frames were startup/screenshot boundary work.
+- A roughly 51-cycle repeated-launch run showed no upward memory accumulation:
+  the first five warm working-set samples averaged 168.4 MiB and the last five
+  162.3 MiB (observed range 158–177.1 MiB; the final screenshot was the high).
+- Two independent read-only audits covered source/proxy ownership, replay,
+  repeated route cleanup, quit-switch prepared Sessions, return routing,
+  Session cleanup, focus recovery, and progress animation cost. All concrete
+  findings were fixed; the lifecycle fixes were independently re-audited, then
+  rebuilt and rerun through the three affected routes.
+- A final read-only audit across all six Stage 6 documents corrected the two
+  remaining stale grid-era claims: conditional B handling during busy work and
+  the launch transition's legitimate use of `motionTransitionMs`. No other
+  documentation contradiction or validation overclaim was found.
+- A live Windows Computer Use pass exercised controller-equivalent keys on the
+  rendered fake-game route. B returned from launch failure to the same grid;
+  Right moved Recent focus from Portal 2 to Celeste; X opened Celeste's options;
+  and B closed them with Celeste still selected. The first pass exposed Qt's
+  deprecated implicit `event` injection warning in `GameOptionsOverlay`; all
+  nine key handlers were corrected, linted, rebuilt, and rerun. The final log
+  contained no critical runtime error and only the known `main.qml` ToolTip
+  warning.
 
 ### Not performed
 
-- **No Steam Deck validation, in either Desktop Mode or Game Mode.** Everything
-  above happened on the Windows review station, which `BUILDING-WINDOWS.md` is
-  explicit is not a product target.
-- **No LCD or OLED appearance check.** Tile sizes, the 2:3 ratio and the Recent
-  composition were judged on a scaled desktop panel, not a 7-inch one at
-  204 ppi. The previous task had to change a value for exactly this reason.
-- **No hardware-gamepad review, by anyone.** Every controller path here —
-  the D-pad in both views, A, X, B, L1/R1, START — has been built and reasoned
-  about and checked in code. None of it has been driven with a physical
-  controller. **This is the single largest gap in this record**, and the newly
-  mapped shoulder buttons are the part of it least supported by precedent.
-- **No stream has been started or stopped through this screen.** Launch,
-  resume, Quit Game and quit-and-switch all push existing upstream components,
-  and none of those paths has been exercised end to end against a live game.
-- **The motion has never been watched.** Stills cannot show it. Every animation
-  was built against the brief's rules and read back in the source; that is not
-  the same as seeing whether it feels right.
-- **Hide Game and Direct Launch have never been triggered against a real host.**
-  They are wired to the existing model calls and were only exercised in review
-  mode, which refuses them by design.
+- **No Steam Deck validation**, in Desktop Mode or Game Mode. The Windows frame
+  trace is supporting evidence only; it does not satisfy the 60 fps target-device
+  criterion.
+- **No OLED or LCD appearance review** of these new surfaces.
+- **No real stream was launched, resumed, failed, or quit** through this task's
+  paths. The real Session and quit backend contracts were preserved and audited,
+  but fake QML outcomes cannot prove network or host behavior.
+- **No physical-controller review** of the affected paths. Computer Use proves
+  controller-equivalent key delivery and visible focus recovery on Windows,
+  but it is not a gamepad, Steam Input, or target-device result.
+- **No live human judgement of the transition in flight.** Timing traces and
+  settled captures establish cost and end states, not feel.
+
+These are honest validation gaps, not acknowledged product defects. `BUGS.md`
+therefore remains empty.
 
 ## Required reading before continuation
 
@@ -160,5 +129,10 @@ transferable lesson is in `SPEC-game-grid.md`.
 6. This file
 7. `BUGS.md`
 8. `SPEC-host-carousel.md` and `SPEC-game-grid.md`
-9. The active task brief, `TASK-BRIEF.md`
-10. The applicable `BUILDING-*.md` before a build
+9. `BUILDING-WINDOWS.md` or the applicable target build guide before a build
+
+## Next action
+
+Merge `launch-quit-experience` into `bulan`, delete the accepted local task
+branch, then update this repository-state file again after those operations.
+Nothing may be pushed unless the client separately authorizes the push.
