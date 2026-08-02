@@ -187,6 +187,40 @@ accidental implementation deviation.
 3. **Input always interrupts animation.** No exceptions.
 4. Ambient motion must be disableable in one toggle.
 
+### Screen entry — transition first, then a staggered element entrance
+
+*Client decision, 2 August 2026. Durable guidance: it governs every screen
+added from here, and existing screen-entry motion is reconciled to it.*
+
+1. **The screen transition happens first.** Ordinary navigation uses the
+   established vertical push/pop. No element entrance begins while the screen
+   itself is still travelling.
+2. **Elements animate in after the screen settles.** Once it has arrived, the
+   screen's principal elements rise and fade into place on a slight stagger.
+3. **Stagger by visual reading order**, not source-file order — the order the
+   eye should meet things. Keep the delays subtle and **cap the number of
+   stagger steps**, so a dense screen does not take noticeably longer to
+   become usable than a sparse one.
+4. **A slight overshoot and a single soft bounce.** Entrances settle by
+   crossing their resting place once and coming back. Playful and tactile, not
+   elastic. This is rule 1 above, not an exception to it.
+5. **Input remains authoritative.** Focus and controls are usable immediately.
+   Input may finish or interrupt an entrance; an entrance must never consume,
+   queue, or reject the next action. A launch pressed during the game-artwork
+   entrance settles the artwork immediately and captures it, rather than
+   degrading to the fallback.
+6. **Do not stagger blindly.** Persistent window-level furniture — the hint bar
+   — holds still. Modals, confirmations, and the launch and quit surfaces keep
+   their own established motion. Do not animate every decorative child
+   independently.
+7. **Share the tokens.** Cadence, duration, travel distance and overshoot live
+   in the `Bulan` singleton. No raw per-screen values, and no second
+   near-identical copy of the same animation.
+
+The overshoot deliberately uses its own token rather than the focus overshoot:
+`motionOvershoot` is tuned for a 4% scale change, and the same figure applied
+to a screen-scale translation is invisible. See `motionEntranceOvershoot`.
+
 ---
 
 ## 7. Sound Identity *(key differentiator)*
@@ -284,7 +318,7 @@ is blocked. `ROADMAP.md`, not this list, decides what private v1 requires.
 
 1. **Primary mark** — full-color, mono, inverse + safe-area and minimum-size specs
 2. **App icon** — 512, 256, 128, 64, 32 px
-3. **Steam Deck artwork set** — 460×215 capsule, 920×430 wide capsule, 1920×620 hero, transparent logo PNG
+3. ~~**Steam Deck artwork set** — 460×215 capsule, 920×430 wide capsule, 1920×620 hero, transparent logo PNG~~ **Removed from the deliverables, 2 August 2026.** Client decision: Steam library artwork is not a Bulan deliverable at all. Game artwork comes from the host PC, and Bulan renders what the host provides rather than shipping capsule, hero, or wide-capsule art of its own. The **app icon** (item 2) is unaffected and is still required, because the non-Steam application entry is Bulan's own.
 4. **Wordmark lockups** — horizontal, stacked, icon-only
 5. **Boot / splash animation** — ≤1.2s, skippable
 6. **Color tokens** — as a QML singleton *and* design-token JSON

@@ -62,10 +62,14 @@ introduced screen and reconciles existing screen-entry animation.
 
 ## Stages
 
-| Stage | Scope | Acceptance |
-|---|---|---|
-| 1 | Navigation lifetime: destroy discarded `AppView`s; restore per-host grid context (tab, selected game, Library scroll) for the app session | Repeated carousel↔grid cycles do not accumulate; returning to a host restores context; the retained-grid launch/quit contract is unchanged |
-| 2 | Shared entrance motion tokens and helper; correct the game-artwork cascade to overshoot with one bounce | One helper, one token set; existing cascade direction, order, interruption and capture contract preserved |
+**Status, 2 August 2026: stages 1 and 2 are complete. Stages 3-7 have not been
+started.** This brief stays open until they are. `HANDOFF.md` records what is on
+the branch and what was and was not checked.
+
+| Stage | Scope | Acceptance | State |
+|---|---|---|---|
+| 1 | Navigation lifetime: destroy discarded `AppView`s; restore per-host grid context (tab, selected game, Library scroll) for the app session | Repeated carousel↔grid cycles do not accumulate; returning to a host restores context; the retained-grid launch/quit contract is unchanged | **Done** — `783bca16`. Library-tab restore is built but unobserved: L1/R1 cannot be synthesised without a gamepad |
+| 2 | Shared entrance motion tokens; correct the game-artwork cascade to overshoot with one bounce | One token set; existing cascade direction, order, interruption and capture contract preserved | **Done** — `7f10fe06`. A shared entrance *helper component* was deliberately not created: the screens that would consume it are stages 3-5 and do not exist yet, so it would have been speculative. The tokens are the centralisation |
 | 3 | First run: splash, "Let's find your PC", searching, host selection, PIN pairing, manual-address escape hatch, Steam-keyboard-compatible entry, first-run and post-pair destinations | Controller-only route end to end on existing discovery/pairing backends |
 | 4 | Edge states: zero hosts, unreachable host, empty library, couldn't start stream, disconnect confirmation, wake success/timeout/failure | Every state has a controller-safe recovery route and preserves context |
 | 5 | Settings shell and About: spatial D-pad navigation, custom Bulan controls, atmosphere-effect flags, "Built on Moonlight" attribution, grid SELECT → host settings | No stock Qt Quick Controls in a Bulan screen; usable without a mouse |
