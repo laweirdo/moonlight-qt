@@ -801,6 +801,14 @@ FocusScope {
             route.quitOutcome = "success"
             return route
         }
+        if (action === "quit-switch-launch-failure-options") {
+            route.kind = "quit"
+            route.switching = true
+            route.quitOutcome = "success"
+            route.launchOutcome = "failure"
+            route.returnTarget = "options"
+            return route
+        }
         if (action === "quit-failure") {
             route.kind = "quit"
             route.quitOutcome = "failure"
@@ -954,6 +962,9 @@ FocusScope {
             console.error("Review StreamSegue.qml failed to load:", component.errorString())
             return false
         }
+        var returnsToOptions = root.pendingLaunch
+                && root.pendingLaunch.preparedByQuit === true
+                && route.returnTarget === "options"
         var segue = component.createObject(stackView, {
             "appName": game ? game.name : qsTr("Review game"),
             "isResume": route.resume,
@@ -970,7 +981,11 @@ FocusScope {
             "reviewSourceIndex": sourceIndex,
             "reviewOrigin": route.origin,
             "reviewSourceAvailable": reviewState.sourceAvailable,
-            "reviewRepeat": route.repeat
+            "reviewRepeat": route.repeat,
+            "failureReturnTarget": returnsToOptions ? "options" : "grid",
+            "failureReturnFn": returnsToOptions ? function() {
+                root.preparedLaunchFailureDismissed()
+            } : null
         })
         if (segue === null) {
             console.error("Review StreamSegue.qml loaded but could not be created")
@@ -1322,7 +1337,15 @@ FocusScope {
                                          ? root.frozenLaunchContract.fallback : true,
             "launchArtworkTitle": root.frozenLaunchContract
                                       ? root.frozenLaunchContract.gameName
-                                      : request.gameName
+                                      : request.gameName,
+            "failureReturnTarget": request.preparedByQuit === true
+                                   && request.returnTarget === "options"
+                                   ? "options" : "grid",
+            "failureReturnFn": request.preparedByQuit === true
+                               && request.returnTarget === "options"
+                               ? function() {
+                                   root.preparedLaunchFailureDismissed()
+                               } : null
         })
         if (segue === null) {
             console.error("StreamSegue.qml loaded but could not be created")
@@ -1398,6 +1421,17 @@ FocusScope {
         root.frozenLaunchContract = null
     }
 
+    function preparedLaunchFailureDismissed() {
+        if (!root.pendingLaunch
+                || root.pendingLaunch.preparedByQuit !== true
+                || root.pendingLaunch.returnTarget !== "options") {
+            return
+        }
+        root.pendingQuitReturnTarget = "options"
+        root.pendingQuitReturnAppId = root.pendingLaunch.appId
+        root.pendingQuitReturnOrigin = root.pendingLaunch.origin
+    }
+
     onReviewLaunchCycleRequested: function(reviewState, cycle) {
         // Cycle 1 is the transition already played before the review segue was
         // pushed. Later cycles reuse the same frozen texture and mapped contract
@@ -1415,7 +1449,13 @@ FocusScope {
         if (reviewSegue && reviewSegue.reviewMode === true) {
             reviewSegue.reviewRepeat = false
         }
-        stackView.pop()
+        root.launchSeguePushCommitted = false
+        var poppedSegue = stackView.pop()
+        if (poppedSegue === null || poppedSegue === undefined) {
+            root.reviewReplayActive = false
+            root.rollbackLaunch("The review launch screen could not be popped for replay.")
+            return
+        }
         Qt.callLater(function() {
             if (!root.reviewReplayActive || !root.launchBusy
                     || root.pendingLaunch === null) {

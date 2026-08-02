@@ -20,6 +20,8 @@ FocusScope {
     property string appName: ""
     property bool isResume: false
     property bool quitAfter: false
+    property var failureReturnFn: null
+    property string failureReturnTarget: "grid"
     // AppView owns the QQuickItemGrabResult for the lifetime of this route so
     // its memory URL stays valid. CLI launches have no captured source and use
     // the same honest title-card fallback as Stage 2's no-source path.
@@ -35,6 +37,8 @@ FocusScope {
     property bool connectionBegan: false
     property bool sessionSignalsConnected: false
     property bool guiGamepadDisabled: false
+    property bool removedFromStack: false
+    property bool failureReturnHandled: false
 
     // Deterministic QML-only launch review. Production leaves reviewMode false
     // and follows initialize/start/finish exactly as before.
@@ -141,16 +145,23 @@ FocusScope {
         // Preserve the heavyweight Session cleanup contract.
         session = null
         gc()
+        if (removedFromStack) {
+            destroy()
+        }
     }
 
     function returnFromFailure()
     {
-        if (!showingFailure) {
+        if (!showingFailure || failureReturnHandled) {
             return
         }
+        failureReturnHandled = true
         if (quitAfter) {
             Qt.quit()
         } else {
+            if (failureReturnFn) {
+                failureReturnFn()
+            }
             stackView.pop()
         }
     }
@@ -206,6 +217,17 @@ FocusScope {
         if (!reviewMode && guiGamepadDisabled) {
             SdlGamepadKeyNavigation.enable()
             guiGamepadDisabled = false
+        }
+    }
+
+    // This route is pushed as a pre-created Item. StackView does not own it,
+    // but the Session can outlive a pop/replace while deferred cleanup emits
+    // sessionFinished and readyForDeletion. Release review/session-free routes
+    // immediately; otherwise wait for the Session's explicit cleanup signal.
+    StackView.onRemoved: {
+        removedFromStack = true
+        if (reviewMode || session === null) {
+            destroy()
         }
     }
 
@@ -331,33 +353,45 @@ FocusScope {
                 width: Bulan.spaceSm * 3 + Bulan.space2xs * 2
                 height: Bulan.spaceSm + Bulan.motionBusyBounceHeight
 
-                property real phase
-                NumberAnimation on phase {
-                    running: progressContent.visible
-                    from: 0
-                    to: 1
-                    duration: Bulan.motionBusyBounceMs
-                    loops: Animation.Infinite
-                    easing.type: Easing.Linear
-                }
-
                 Repeater {
                     model: 3
                     Rectangle {
+                        id: busyDot
                         width: Bulan.spaceSm
                         height: width
                         radius: width / 2
                         color: Bulan.accentPrimary
                         x: index * (Bulan.spaceSm + Bulan.space2xs)
-                        y: busyDots.height - height - lift
+                        y: busyDots.height - height
 
-                        property real lift: {
-                            var p = busyDots.phase
-                                    - index * (Bulan.motionBusyStaggerMs
-                                               / Bulan.motionBusyBounceMs)
-                            p -= Math.floor(p)
-                            return Math.sin(p * Math.PI)
-                                    * Bulan.motionBusyBounceHeight
+                        readonly property int travelMs:
+                            (Bulan.motionBusyBounceMs
+                             - Bulan.motionBusyStaggerMs * 2) / 2
+
+                        SequentialAnimation on y {
+                            running: progressContent.visible
+                            loops: Animation.Infinite
+                            PauseAnimation {
+                                duration: index * Bulan.motionBusyStaggerMs
+                            }
+                            NumberAnimation {
+                                from: busyDots.height - busyDot.height
+                                to: busyDots.height - busyDot.height
+                                    - Bulan.motionBusyBounceHeight
+                                duration: busyDot.travelMs
+                                easing.type: Easing.InOutQuad
+                            }
+                            NumberAnimation {
+                                from: busyDots.height - busyDot.height
+                                    - Bulan.motionBusyBounceHeight
+                                to: busyDots.height - busyDot.height
+                                duration: busyDot.travelMs
+                                easing.type: Easing.InOutQuad
+                            }
+                            PauseAnimation {
+                                duration: (2 - index)
+                                          * Bulan.motionBusyStaggerMs
+                            }
                         }
                     }
                 }
@@ -440,7 +474,10 @@ FocusScope {
 
                 Text {
                     anchors.centerIn: parent
-                    text: root.quitAfter ? qsTr("Close") : qsTr("Back to games")
+                    text: root.quitAfter ? qsTr("Close")
+                         : (root.failureReturnTarget === "options"
+                            ? qsTr("Back to options")
+                            : qsTr("Back to games"))
                     color: Bulan.textPrimary
                     font.family: Bulan.familyUi
                     font.pixelSize: Bulan.sizeBody
@@ -449,6 +486,8 @@ FocusScope {
 
                 MouseArea {
                     anchors.fill: parent
+                    enabled: root.showingFailure
+                             && !root.failureReturnHandled
                     onClicked: root.returnFromFailure()
                 }
             }

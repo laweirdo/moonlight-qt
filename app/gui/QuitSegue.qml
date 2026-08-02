@@ -122,6 +122,10 @@ FocusScope {
         disconnectQuitSignal()
     }
 
+    // AppView and StreamSegue push this route as a pre-created Item, which
+    // StackView does not own. Destroy it after pop/replace completes.
+    StackView.onRemoved: destroy()
+
     Component.onDestruction: disconnectQuitSignal()
 
     Atmosphere {
@@ -145,33 +149,45 @@ FocusScope {
                 width: Bulan.spaceSm * 3 + Bulan.space2xs * 2
                 height: Bulan.spaceSm + Bulan.motionBusyBounceHeight
 
-                property real phase
-                NumberAnimation on phase {
-                    running: busyDots.visible
-                    from: 0
-                    to: 1
-                    duration: Bulan.motionBusyBounceMs
-                    loops: Animation.Infinite
-                    easing.type: Easing.Linear
-                }
-
                 Repeater {
                     model: 3
                     Rectangle {
+                        id: busyDot
                         width: Bulan.spaceSm
                         height: width
                         radius: width / 2
                         color: Bulan.accentPrimary
                         x: index * (Bulan.spaceSm + Bulan.space2xs)
-                        y: busyDots.height - height - lift
+                        y: busyDots.height - height
 
-                        property real lift: {
-                            var p = busyDots.phase
-                                    - index * (Bulan.motionBusyStaggerMs
-                                               / Bulan.motionBusyBounceMs)
-                            p -= Math.floor(p)
-                            return Math.sin(p * Math.PI)
-                                    * Bulan.motionBusyBounceHeight
+                        readonly property int travelMs:
+                            (Bulan.motionBusyBounceMs
+                             - Bulan.motionBusyStaggerMs * 2) / 2
+
+                        SequentialAnimation on y {
+                            running: busyDots.visible
+                            loops: Animation.Infinite
+                            PauseAnimation {
+                                duration: index * Bulan.motionBusyStaggerMs
+                            }
+                            NumberAnimation {
+                                from: busyDots.height - busyDot.height
+                                to: busyDots.height - busyDot.height
+                                    - Bulan.motionBusyBounceHeight
+                                duration: busyDot.travelMs
+                                easing.type: Easing.InOutQuad
+                            }
+                            NumberAnimation {
+                                from: busyDots.height - busyDot.height
+                                    - Bulan.motionBusyBounceHeight
+                                to: busyDots.height - busyDot.height
+                                duration: busyDot.travelMs
+                                easing.type: Easing.InOutQuad
+                            }
+                            PauseAnimation {
+                                duration: (2 - index)
+                                          * Bulan.motionBusyStaggerMs
+                            }
                         }
                     }
                 }
