@@ -398,6 +398,34 @@ ApplicationWindow {
             onFinished: if (owner) owner.launchTransitionFinished()
             onFailed: if (owner) owner.launchTransitionFailed()
         }
+
+        // Window-level hint bar, sibling of stackView for exactly the reason
+        // LaunchTransition above is: a child cannot opt out of its parent's
+        // stack-transition opacity, and nothing about this bar should move
+        // or fade with the screen (client decision, 2 August 2026 review --
+        // "nothing about it changes between the carousel and the grid except
+        // its labels"). HostCarousel.qml and AppView.qml no longer draw
+        // their own; they expose hintBarVisible/hintLeftHints/hintRightHints
+        // instead, and this single bar reads whichever one is current.
+        //
+        // Screens that never had a hint bar -- settings, the segues, CLI
+        // routes, the token/glyph proofs -- simply don't define these
+        // properties, so `currentItem.hintBarVisible === true` is false
+        // (undefined) for all of them and this bar stays hidden there,
+        // exactly as before.
+        HintBar {
+            id: sharedHintBar
+            anchors.left: parent.left
+            anchors.right: parent.right
+            anchors.bottom: parent.bottom
+
+            visible: stackView.currentItem !== null
+                     && stackView.currentItem !== undefined
+                     && stackView.currentItem.hintBarVisible === true
+
+            leftHints: visible ? stackView.currentItem.hintLeftHints : []
+            rightHints: visible ? stackView.currentItem.hintRightHints : []
+        }
     }
 
     // This timer keeps us polling for 5 minutes of inactivity
