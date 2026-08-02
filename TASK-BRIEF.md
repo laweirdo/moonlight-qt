@@ -3,7 +3,7 @@
 **Opened:** 1 August 2026
 **Branch:** `launch-quit-experience`, cut from `bulan` at `f54d3648`
 **Roadmap item:** Phase B item 3 — *Launch and quit experience*
-**Current stage:** Stage 0 — authority correction and work-order definition
+**Current stage:** Stage 6 complete — awaiting final client acceptance
 
 This file is temporary. It owns the scope, stage boundaries, and acceptance
 criteria of this task. It does not override `AGENTS.md`,
@@ -11,9 +11,9 @@ criteria of this task. It does not override `AGENTS.md`,
 client accepts the completed work and its durable decisions have moved to the
 appropriate specifications.
 
-`HANDOFF.md` is deliberately unchanged at Stage 0. `AGENTS.md` requires live
-repository-state documentation to be written last, after implementation and
-validation facts are known.
+At Stage 0, `HANDOFF.md` was deliberately left unchanged. `AGENTS.md` requires
+live repository-state documentation to be written last, after implementation
+and validation facts are known; Stage 6 now records those facts there.
 
 ---
 
@@ -253,8 +253,10 @@ Nearby issues are recorded and raised; they are not repaired as side effects.
 
 ## Stages and allowed files
 
-Every stage stops for client review before a commit. Files not named for that
-stage are out of scope. A stage may use fewer files than its allowance.
+The original work order required a client stop before every commit. After
+accepting Stage 1, the client explicitly authorized Stages 2–6 to proceed with
+one approval only after all work was complete. Files not named for a stage
+remain out of scope. A stage may use fewer files than its allowance.
 
 ### Deterministic review matrix
 
@@ -295,6 +297,18 @@ No C++ or backend file is allowed by this plan. If implementation proves one is
 necessary, work stops and the client decides whether to expand scope before
 that file is touched. In particular, Stage 1 does not authorize
 `app/main.cpp`.
+
+### Implementation record
+
+| Stage | Commit | Result |
+|---|---|---|
+| 0 | `94d92bf4` | Corrected the product flow and defined this work order. |
+| 1 | `dc0bc8a9` | Added the fake-only deterministic launch/quit review matrix. |
+| 2 | `c3625cba` | Added stable app-ID dispatch, exact source capture, and the selected-game transition. |
+| 3 | `74a20505` | Replaced the visible launch, warning, and failure treatment with custom Bulan QML. |
+| 4 | `b01a408e` | Replaced the quit surface and added success-gated quit-and-switch using one prepared Session. |
+| 5 | `30f7cad4` | Hardened cross-surface return routing, repeated-cycle cleanup, Session lifetime, dismissal idempotence, and progress animation cost. |
+| 6 | This documentation stage | Records final evidence and repository state; the brief remains until client acceptance. |
 
 ---
 
@@ -342,27 +356,48 @@ that file is touched. In particular, Stage 1 does not authorize
 
 ---
 
-## Validation plan and current limits
+## Validation record and current limits
 
-### Available during implementation
+### Performed
 
-- Markdown checks for Stage 0: repository search, `git diff --check`, complete
-  diff inspection, and `git status`.
-- `qmllint` on every changed QML file in later stages.
-- The documented Qt 6.9.3 Windows build and windowed GPU review from
-  `BUILDING-WINDOWS.md`.
-- Existing fake-game presets plus Stage 1's deterministic review matrix,
-  exposing launch/quit states without touching a real host.
-- Application log inspection on every run.
-- Frame capture or timing evidence for start-rectangle continuity, duplicate
-  suppression, interruption, and transition cost.
+- Repository search, complete diff inspection, `git diff --check`, and status
+  checks at each stage boundary.
+- `qmllint` on every changed QML file. It exits 0; warnings fall into
+  `[import]`, `[index]`, `[missing-property]`, `[unqualified]`,
+  `[unresolved-type]`, and `[use-proper-function]` around registered runtime
+  types, dynamic properties/callbacks, and existing delegate patterns.
+- Repeated Qt 6.9.3 / MSVC Release builds on the Windows review station. The
+  final build ran `qmlcachegen` over the revised lifecycle source and linked
+  successfully with only the pre-existing `LNK4291` warning.
+- The full deterministic review matrix rendered at 1280×800 composition:
+  launch from Recent/Library/scrolled Library, resume, warning, launch failure,
+  valid/no-source fallback, repeated cycles, quit, quit failure,
+  quit-and-switch success/failure, and popup-origin switch-then-launch failure.
+  Final logs contained no critical QML/runtime errors; the known
+  `ToolTip attached property` warning remained.
+- Visual inspection of the supplied normal-launch composition, repeated-cycle
+  return to the same retained grid, and popup-origin launch failure's visible
+  **Back to options** target.
+- Windows `QSG_RENDER_TIMING` supporting evidence: 84 steady frames after
+  excluding cold-start and screenshot frames, p95 1 ms, maximum 13 ms, zero
+  frames over 16.67 ms. Hardware was an RTX 4070 Ti SUPER using Qt's basic
+  render loop; this is not target-device proof.
+- A roughly 51-cycle repeated-launch run showed no upward working-set trend:
+  first five warm samples averaged 168.4 MiB, last five 162.3 MiB.
+- Independent read-only performance and lifecycle audits. Their findings were
+  fixed and re-audited: manually created route cleanup, per-frame JavaScript
+  dot motion, replay-pop state, production Session cleanup ownership, and
+  repeated failure dismissal.
 
-### Outstanding until actually performed
+### Not performed
 
 - Steam Deck Desktop Mode and Game Mode validation.
 - OLED/LCD appearance and target-device frame timing.
 - Real-stream launch, resume, warning, failure, quit, and quit-and-switch.
 - Physical-controller review of every affected path.
+- Live Windows controller-style interaction: the in-app automation attempt
+  could not obtain approval to control the local Moonlight window before its
+  timeout. No input result is inferred from static key handlers or screenshots.
 
 None of those outstanding checks may be reported as passed from Windows,
 screenshots, source inspection, or fake data.
@@ -371,7 +406,9 @@ screenshots, source inspection, or fake data.
 
 ## Git and review boundary
 
-- No stage is committed before the client reviews and accepts it.
+- Stage 1 was reviewed and accepted before commit. The client then authorized
+  Stages 2–6 to proceed without intermediate approval and requested one final
+  approval after all tasks were complete.
 - One independently reviewable change per approved commit.
 - No push is authorized by this brief.
 - No merge into `bulan` is authorized by this brief.

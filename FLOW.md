@@ -1,6 +1,6 @@
 # Bulan — navigation flow
 
-**Last reconciled:** 1 August 2026
+**Last reconciled:** 2 August 2026
 
 This file governs intended navigation states, transitions, and flow decisions.
 It does not report which screens are implemented, which task is active, or how
@@ -135,7 +135,8 @@ flowchart LR
     QuitGame -->|No| GameOptions
     StreamStarted -->|Yes| Stream
     StreamStarted -->|No| CouldntStart
-    CouldntStart -->|Try again| StreamStarted
+    CouldntStart -->|Back - tile or ordinary launch| Library
+    CouldntStart -->|Back - popup quit-and-switch| GameOptions
 
     Stream -->|Start plus Select| Overlay
     Overlay -->|Resume| Stream
@@ -184,11 +185,13 @@ launch until quitting has succeeded. A direct-A quit failure returns to the
 retained grid context; a popup-origin quit failure returns to Game Options.
 
 **Failures are recoverable and they land you back where you were.** Neither red
-state is a dead end: "Couldn't reach PC" retries into the Library, "Couldn't
-start" tries again into the same selected-game decision it came from, and a
-Quit Game failure returns to Game Options. Direct-A quit-and-switch failure
-instead returns to the retained grid context. Nothing in this diagram sends you
-back to Launch or loses the selected game merely because an operation failed.
+state is a dead end: "Couldn't reach PC" retries into the Library, and
+"Couldn't start" returns to the retained grid so the player can try the same
+game again. The narrower popup-origin quit-and-switch case returns to Game
+Options because that is the decision context it left. Quit Game failure also
+returns to Game Options; direct-A quit-and-switch failure returns to the
+retained grid. Nothing sends the player back to Launch or loses the selected
+game merely because an operation failed.
 
 ---
 

@@ -1,15 +1,15 @@
 # Bulan — roadmap
 
-**Current as of:** 31 July 2026
+**Current as of:** 2 August 2026
 
 **Owner:** Lao
 
 **Current phase:** Phase B — Close the core loop
 
-**Next milestone:** Launch and quit experience. The host tile's
-connecting/waking busy state and the game grid are complete; Phase B item 3 now
-owns the route from a selected game into a stream, the quit route, and recovery
-from either route — see Phase B below.
+**Next milestone:** Final client acceptance of the launch and quit experience.
+Phase B item 3 is implementation-complete on `launch-quit-experience`; after
+acceptance and merge, item 4's general screen transitions are next. Steam Deck
+and real-stream validation remain outstanding — see Phase B and `HANDOFF.md`.
 
 This file governs v1 scope, phase order, exit conditions, and the next
 milestone. It does not govern live repository state (`HANDOFF.md`), the active
@@ -121,21 +121,24 @@ Remaining work, in order:
    - **X opens a per-game options popup as its intended private-v1
      destination.** It is not a temporary stand-in. No Game Detail screen is
      planned. See `FLOW.md` and `SPEC-game-grid.md` for the corrected decision.
-3. **Launch and quit experience** — replace the stock launch and quit surfaces
-   along the core route. A launches or resumes directly; the selected game's
-   visible tile moves toward the centre from either Recent or Library before
-   the launch surface takes over. The options popup's Play/Resume uses that
-   same route. Quit Game remains recoverable, and quit-and-switch waits for a
-   successful quit before entering the launch route.
+3. **Launch and quit experience** — **implementation complete 2 August 2026;
+   awaiting client acceptance and merge.** The task branch replaces both stock
+   surfaces, moves the selected game's exact visible artwork from Recent or
+   Library into the custom launch surface, and shares that route with popup
+   Play/Resume and automatic Direct Launch. Quit Game is recoverable, and
+   quit-and-switch waits for a successful quit before entering the same launch
+   route. Windows build, deterministic-state, lifecycle, frame-timing, and
+   repeated-cycle evidence is recorded in `HANDOFF.md`; target-device and
+   real-stream checks are not claimed.
 4. **General screen transitions** — wire the existing 220 ms transition token
    into the rest of the completed core route. The selected-game transition in
    item 3 belongs to the launch experience, not to this general pass.
 
-**Phase B item 3 owns the two inherited segue gaps.** `StreamSegue.qml` and
-`QuitSegue.qml` remain stock upstream Qt. The game grid's A press and popup
-Play/Resume push the former; Quit Game and quit-and-switch push the latter.
-They were deliberately left until the grid landed and are now the active
-milestone, not separate unsequenced follow-ups.
+**Phase B item 3 owns the two inherited segue gaps.** They were deliberately
+left until the grid landed. The task branch now replaces the visible stock
+`StreamSegue.qml` and `QuitSegue.qml` treatments while preserving their Session
+and quit contracts; this remains an unmerged task milestone until the client
+accepts it.
 
 **Second Phase B gap, raised 1 August 2026 by the game grid:** the grid has
 **no host-settings surface**, so SELECT does nothing there and its hint is
