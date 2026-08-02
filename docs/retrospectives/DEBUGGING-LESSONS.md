@@ -62,6 +62,39 @@ listening.
 When one input fails after a modal or screen transition, inspect focus and
 component lifetime before changing controller mappings.
 
+## A restore that succeeds and then quietly undoes itself
+
+Restoring the game grid's remembered selection worked on the first attempt and
+still showed the wrong game. The saved app id was found, the selection was set,
+and the restore marked itself done — and then the rest of the host's app list
+arrived, the Recent order was recomputed, and the rank that had pointed at the
+restored game pointed at a different one.
+
+The bug was invisible in the log, which showed the restore succeeding. It was
+only visible on screen, one full list-load later.
+
+When restoring a position into a model that is still loading, decide whether
+what you restored is stable under everything that arrives afterwards. A stable
+identity resolved once into a positional index is only correct until the next
+reorder. Re-apply the identity until the user takes over, rather than resolving
+it once and trusting the result.
+
+The matching rule is that the restore must lose to the player. Re-applying on
+every model change is only safe because the first press retires it outright;
+without that, a late chunk pulls the selection out from under someone already
+moving.
+
+## Synthetic input needs a delivery mechanism the environment permits
+
+Scripted `SendKeys` review runs appeared to work and were in fact landing in
+whatever window happened to be in front, because this environment refuses to
+give a background process the foreground. The app looked like it was ignoring
+input, and one run looked like a crash that had not happened.
+
+Check that the input actually reached the application before drawing any
+conclusion from what the screen shows. Posting `WM_KEYDOWN` straight to the
+window handle does not need the foreground and was what worked here.
+
 ## A check is not recorded until its evidence is written down
 
 Mouse behavior was verified by the client but remained labelled unverified in a

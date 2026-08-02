@@ -11,12 +11,106 @@ snapshot.
 
 | Item | State |
 |---|---|
-| Integration branch | `bulan`, carrying the accepted screen transition work, pushed to `origin/bulan` |
-| Task branch | `general-screen-transitions` was deleted locally after the accepted merge and never existed on `origin` |
-| Remote | `origin` only, the client's fork. `bulan` has been pushed with the client's explicit authorisation |
-| Active task | **None.** `TASK-BRIEF.md` was retired on client acceptance |
-| Open defects | **Two**, both pre-existing, both recorded in `BUGS.md` on 2 August 2026 |
+| Integration branch | `bulan` at `cbf04a80`, unchanged, pushed to `origin/bulan` |
+| Task branch | **`v1-finalisation`**, cut from `bulan` at `cbf04a80`. Local only, never pushed, **not merged** |
+| Remote | `origin` only, the client's fork. Nothing has been pushed for this task |
+| Active task | **`TASK-BRIEF.md`, private v1 finalisation.** Stages 1 and 2 are complete; stages 3-7 are not started |
+| Open defects | **None.** Both entries in `BUGS.md` were fixed on this branch |
 | Working tree | Clean |
+
+## `v1-finalisation` — what is on the branch
+
+| Commit | What |
+|---|---|
+| `bca4d86f` | Opened the work order: client decisions, motion rule, stage table, scope exclusions |
+| `783bca16` | Destroyed discarded grids and gave each host its remembered place back |
+| `7f10fe06` | Landed the grid entrance with an overshoot and one soft bounce |
+
+**The two `BUGS.md` defects are fixed.** A discarded `AppView` now publishes
+what it was showing and destroys itself, following the treatment `StreamSegue`
+and `QuitSegue` already use. `HostCarousel` keeps that context in memory keyed
+by host UUID for the app session, and the next grid opened for the same host
+restores the tab, the selected game by stable app id, and the Library scroll.
+
+The retained-grid contract is untouched. A launch or quit pushes its segue on
+top of the grid without popping it, and `StackView.onRemoved` fires only when
+the item itself leaves the stack.
+
+**The restore re-applies on every model change rather than stopping at its
+first success.** `recentFocusedIndex` is a rank in `recentOrder`, and each
+arriving chunk of the host's app list recomputes that order — so a rank
+restored early points at a different game once the list finishes arriving. This
+was observed, not theorised: the first implementation restored correctly at
+four games loaded and was showing the wrong game by twenty-two. The player's
+first press retires the restore outright, so a late chunk can never override
+someone already moving.
+
+**The grid entrance now overshoots and settles with one bounce.** Both cascades
+moved from `Easing.OutCubic` to `Easing.OutBack`, which crosses its target
+exactly once. The overshoot is its own token, `motionEntranceOvershoot`, rather
+than a reuse of `motionOvershoot` — that value is tuned for a 4% focus scale
+change and moves this 32px rise by about a pixel. Opacity is clamped in both
+grids so only the travel bounces. Direction, stagger order, the six-step cap,
+interruption behaviour and the launch-artwork capture contract are unchanged.
+
+### Validation performed for stages 1 and 2
+
+- `git diff --check` clean; the full diff from `cbf04a80` reviewed directly.
+- `qmllint` on every changed QML file, exit 0 throughout. Compared against the
+  same files on `bulan`: exactly three new warnings, all in categories those
+  files already produce (`contextSaved` on a `createObject` result, typed
+  `QObject`, matching the existing `segue.reviewCycleRequested` pattern; two
+  unqualified `fakeGames` accesses matching the existing `fakeConnectHoldMs`
+  pattern in the same function), plus `[missing-property]` on the new
+  `Bulan.motionEntranceOvershoot`, the category every `Bulan.*` reference
+  produces because `qmllint` cannot resolve a C++-registered singleton. **No new
+  warning category.**
+- Qt 6.9.3 / MSVC Release builds per `BUILDING-WINDOWS.md`, linking cleanly.
+  The only link warning was the pre-existing `LNK4291`.
+- **A/B memory measurement, same route, 50 carousel↔grid cycles each.** With the
+  destroy in place the process was flat: first-five-sample average 166.1 MiB,
+  last-five 164.5 MiB, a change of **−1.6 MiB**, handles steady at 1195–1208.
+  A binary differing only by the removal of that one `destroy()` grew from
+  191.6 MiB to 674.6 MiB, **+483.0 MiB**, about 9.7 MiB per cycle, still
+  climbing at cycle 50 with handles flat. That reproduces `BUGS.md`'s recorded
+  ~10.8 MB per cycle and identifies the mechanism directly.
+- **Per-host restore verified on screen.** Leaving the grid on Celeste and
+  reopening the same host reopened on Celeste, with the full library loaded
+  around it.
+- **Input authority verified on screen.** Pressing Right 120 ms after
+  re-entering — while the app list was still arriving — moved to Outer Wilds
+  and the restore did not pull it back.
+- Rapid interruption: 50 cycles at 750 ms and a further 15 on the new easing,
+  faster than the transition and the entrance. The process stayed responsive,
+  the settled screen showed no stray offset or opacity, and the log contained
+  no critical QML or runtime error.
+- The fake-host review route was added so this cycle is reachable without a real
+  paired host. It does not weaken `actConfirm()`'s fake-host guard: that guard
+  exists because the branches below it index the real host list at a fake row's
+  position, and `AppView` with `fakeGames` active returns from `createModel()`
+  before reading `computerIndex` at all. Verified by reading every
+  `computerIndex` reference in the file.
+
+### Not performed for stages 1 and 2
+
+- **No Steam Deck validation**, in Desktop Mode or Game Mode.
+- **No physical-controller review.** Input was `WM_KEYDOWN` posted to the window.
+  `SendKeys` is unusable here — this environment refuses a background process
+  the foreground, so scripted keys land in whatever window is in front.
+- **No Recent↔Library tab switch by input, and therefore no restore of the
+  Library tab or its scroll by input.** L1/R1 reach QML only from a real gamepad
+  shoulder button (`Key_Context2`/`Key_Context3`), which cannot be synthesised
+  as a virtual keycode, and no controller is attached. The Library branch of the
+  restore is built and reviewed by reading, **not observed running.**
+- **No second-host check.** The only other fake host is unpaired, so pressing A
+  on it pairs rather than opening a grid. That per-host contexts do not leak
+  into each other is argued from the UUID key, not observed.
+- **No human judgement of the new overshoot and bounce in flight.** The settled
+  result was captured and is correct; the bounce is about three pixels over
+  180 ms and no captured frame proves how it feels. **This needs a person on
+  hardware.**
+- **No real stream** was launched, resumed, failed or quit through these paths.
+- **No OLED or LCD appearance review** of the new motion.
 
 The previous task, the launch and quit experience, was accepted on 2 August 2026
 and merged locally as `c0e79970`; its branch is deleted. This entry supersedes
@@ -125,7 +219,7 @@ preserving the existing Session, streaming, persistence, and quit backends.
 | Lifetime | Dynamically pushed review/quit routes destroy after removal. A production `StreamSegue` removed by ordinary completion or `quitStarting()` survives until Session emits `readyForDeletion`, preserving its cleanup contract. |
 | Backends | Discovery, pairing, session, streaming, persistence, and quit backend source were not changed. |
 | Screen transitions | Ordinary screen changes rise vertically over 220 ms and reverse on the way back, declared once on the navigation stack. Launch, quit, CLI entry, and the first screen at startup change without stack motion. Built on a task branch, **not yet accepted**. |
-| Returning from the grid to the carousel | The host you left from is remembered. The selected game, tab, and Library scroll are **not** — a fresh grid is built on every entry, and memory grows each cycle. Both are pre-existing and are recorded in `BUGS.md`; the retained-grid path under launch and quit is unaffected and still works. |
+| Returning from the grid to the carousel | The host you left from is remembered, and so are the tab, the selected game and the Library scroll, per host, for the app session. A fresh grid is still built on every entry, but the discarded one now destroys itself, so repeated cycles no longer accumulate. Fixed on `v1-finalisation`; the retained-grid path under launch and quit is unaffected. |
 
 ## Validation record — Phase B item 3, launch and quit
 
@@ -266,18 +360,29 @@ These are honest validation gaps, not acknowledged product defects.
 
 ## Next action
 
-Phase B is complete on paper. Before treating it as closed, note what is owed:
+`v1-finalisation` is **not** review-ready as a whole. Stages 1 and 2 of
+`TASK-BRIEF.md` are done and validated as far as this station allows; stages
+3-7 have not been started. What that means concretely:
 
-1. **The two defects in `BUGS.md` need triage.** The first is partly a product
-   question — what the grid should remember per host, and for how long. The
-   second, memory growing on every grid entry, matters more on a Deck than it
-   did on the review station.
-2. **The blur's cost on the Deck is unmeasured**, by the client's deliberate
-   deferral. It is the first thing to measure when Deck hardware is next
-   available.
-3. **Carry the standing validation debt forward** rather than claiming it:
-   no Steam Deck session, no physical controller, no real stream through the
-   launch and quit paths, no OLED or LCD appearance review of the new motion.
+1. **The first-run route does not exist yet.** A user with no paired host still
+   meets the carousel rather than a splash and "Let's find your PC". This is the
+   largest remaining gap between the branch and the definition of private v1.
+2. **The reachable edge states are not built** — zero hosts, unreachable host,
+   empty library beyond its one line of placeholder copy, couldn't start
+   stream, disconnect confirmation, wake presentation.
+3. **Settings and About are still upstream screens.** `SettingsView.qml` is
+   inherited and instantiates stock Qt Quick Controls throughout, and there is
+   no About or "Built on Moonlight" attribution anywhere. SELECT on the game
+   grid still does nothing, though the client has now decided it should reach
+   the existing host-settings surface.
+4. **Packaging is untouched.** No Bulan app icon is installed in the
+   application or Flatpak locations, and no Flatpak build has been attempted.
+5. **The blur's cost on the Deck is still unmeasured**, by the client's
+   deliberate deferral.
+6. **Carry the standing validation debt forward** rather than claiming it: no
+   Steam Deck session, no physical controller, no real stream through the launch
+   and quit paths, no OLED or LCD appearance review, and no human judgement of
+   the new entrance bounce in flight.
 
 The client mentioned possibly revisiting the screen transition later to push it
 further toward the brief's "whimsical" character. That is a future task, not an

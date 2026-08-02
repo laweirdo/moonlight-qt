@@ -6,11 +6,12 @@
 
 **Current phase:** Phase B — Close the core loop
 
-**Next milestone:** triage of the two defects in `BUGS.md` and a Steam Deck
-session. Phase B item 4 is accepted and merged, which closes the last built item
-in Phase B, but Steam Deck, real-stream, and physical-controller validation
-remain outstanding across the phase, and the accepted transition blur's cost on
-the Deck is deliberately unmeasured. See Phase B, `BUGS.md`, and `HANDOFF.md`.
+**Next milestone:** Phase C, first run. Both `BUGS.md` defects were fixed on
+`v1-finalisation` on 2 August 2026 and that file is now empty, so the triage
+that previously blocked this milestone is done. Steam Deck, real-stream, and
+physical-controller validation remain outstanding across Phase B, and the
+accepted transition blur's cost on the Deck is still deliberately unmeasured.
+See `HANDOFF.md` for what is on the branch and what has not been checked.
 
 This file governs v1 scope, phase order, exit conditions, and the next
 milestone. It does not govern live repository state (`HANDOFF.md`), an active
@@ -58,8 +59,9 @@ game through Flatpak.
 
 - The app must carry its licence and a clear “Built on Moonlight” credit. A
   simple About treatment is sufficient for private v1.
-- The app icon and Steam artwork are v1 because the non-Steam library entry
-  should not look unfinished.
+- The app icon is v1 because the non-Steam application entry should not look
+  unfinished. **Steam library artwork is not a Bulan deliverable** — client
+  decision, 2 August 2026. Game artwork comes from the host PC.
 - Public-facing release preparation, a full brand rules sheet, and broader
   contributor guidance are later work.
 - The root README keeps its upstream content. A concise Bulan-fork notice is
@@ -151,8 +153,11 @@ Session and quit contracts.
 **Second Phase B gap, raised 1 August 2026 by the game grid:** the grid has
 **no host-settings surface**, so SELECT does nothing there and its hint is
 withheld. The client's game-grid mockup shows *SELECT Host Settings* on that
-screen. Either the existing `HostSettingsOverlay` is reused from the grid, or
-the mockup's hint is dropped — a client decision, not yet taken.
+screen. ~~Either the existing `HostSettingsOverlay` is reused from the grid, or
+the mockup's hint is dropped — a client decision, not yet taken.~~
+**Decided 2 August 2026:** the grid reaches the existing `HostSettingsOverlay`,
+and the SELECT hint appears there. **Decided but not yet built** — it belongs to
+the Phase E work and is not on `v1-finalisation` yet.
 
 **Exit:** launch → pick host → pick game → stream → return, with no screen in
 the user journey that still reads as upstream Moonlight.
@@ -205,7 +210,6 @@ without a mouse.
 ### Phase F — Ship private v1
 
 - App icon in required sizes
-- Steam Deck artwork set
 - Flatpak installs cleanly
 - Full `REVIEW-CHECKLIST.md` pass on available Deck hardware
 - Creative brief reconciled with deliberate evolution clearly labelled
