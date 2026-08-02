@@ -173,6 +173,19 @@ QtObject {
     // screen rises or descends during a stack transition.
     readonly property int  motionTransitionRise: space3xl
 
+    // Screen transition blur. Client override, 2 August 2026 review: the
+    // opacity falloff alone was not enough, and real runtime blur is
+    // accepted with the Deck performance cost to be measured after private
+    // v1. Deliberately its own pair of tokens rather than reusing
+    // popupBackdropBlurStrength/Radius -- the popup glass sits still at a
+    // fixed strength behind a stationary menu, while this exists only for
+    // the ~220ms a screen is actually travelling and has to read as motion
+    // blur, not glass. Half the popup's own numbers: strong enough to read
+    // as blur on a moving screen, restrained enough not to look like the
+    // popup treatment when there is no popup involved.
+    readonly property real motionTransitionBlurStrength: popupBackdropBlurStrength / 2
+    readonly property int  motionTransitionBlurRadius:   popupBackdropBlurRadius / 2
+
     // Waiting motion: the three bouncing dots drawn over a busy host tile.
     //
     // Brief §6 rule 1 is "never bounce twice", and this loops forever, so it

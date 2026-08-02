@@ -191,22 +191,39 @@ ApplicationWindow {
             anchors.fill: parent
         focus: true
         enabled: !quitConfirmationDialog.visible
-        layer.enabled: quitConfirmationDialog.visible
+        // One layer, one effect, claimed by whichever of the two blur
+        // callers is actually active -- they never overlap in practice
+        // (the quit dialog opens over a settled screen, never mid
+        // transition), and this OR keeps them from being able to fight
+        // over the layer even if that ever changed. `busy` is StackView's
+        // own signal that a push/pop transition is currently animating, so
+        // this leaves nothing enabled -- no layer, no effect, no cost --
+        // the instant a screen settles (client override, 2 August 2026
+        // review: real blur during the transition, on top of the existing
+        // opacity falloff, accepting the Deck performance cost).
+        layer.enabled: quitConfirmationDialog.visible || stackView.busy
         layer.effect: MultiEffect {
             autoPaddingEnabled: false
             blurEnabled: true
-            blur: Bulan.popupBackdropBlurStrength
-            blurMax: Bulan.popupBackdropBlurRadius
+            blur: quitConfirmationDialog.visible
+                  ? Bulan.popupBackdropBlurStrength
+                  : Bulan.motionTransitionBlurStrength
+            blurMax: quitConfirmationDialog.visible
+                     ? Bulan.popupBackdropBlurRadius
+                     : Bulan.motionTransitionBlurRadius
         }
 
         // Ordinary screen navigation, brief §6 "Screen transition": content
         // surfaces vertically over Bulan.motionTransitionMs, ease-out with no
         // overshoot (Easing.OutCubic; motionOvershoot belongs to focus motion,
-        // not this), and the "slight motion blur" note is read as opacity
-        // falling off during travel rather than an actual blur effect. Push
-        // and pop are exact mirrors of each other so forward and back read as
-        // one reversible movement. Declared once here per the accepted
-        // decision that no per-screen route may attach its own animation.
+        // not this). The opacity falloff below was originally the whole of
+        // the "slight motion blur" reading; the layer.enabled/layer.effect
+        // pair above now adds genuine blur on top of it, gated to the
+        // transition's own `busy` window (client override, 2 August 2026).
+        // Push and pop are exact mirrors of each other so forward and back
+        // read as one reversible movement. Declared once here per the
+        // accepted decision that no per-screen route may attach its own
+        // animation.
         // replaceEnter/replaceExit are deliberately left at their implicit
         // immediate default so StreamSegue.qml's existing replace is
         // unaffected.
