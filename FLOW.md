@@ -313,6 +313,14 @@ their resolution is not lost.
   earlier plan, is in `SPEC-game-grid.md`.
 - **Libraries remain separate by host for v1.** A merged multi-host library is
   deferred unless the separate model proves awkward after use.
+- **Ordinary screen changes move vertically.** Going forward, the arriving
+  screen rises into place from below while the one it replaces continues
+  upward. Going back is the exact mirror. 220 ms, one settle, no bounce, and a
+  new press is never made to wait for it. Built on the branch
+  `general-screen-transitions` and **not yet reviewed by the client on
+  hardware.** The selected-game launch is not part of this: it keeps its own
+  accepted artwork motion, and the launch and quit surfaces deliberately change
+  without stack motion so nothing competes with it.
 - **The Bulan stream overlay is deferred pending input validation.**
   `Start+Select` remains a proposed, unvalidated summon binding. The Overlay
   node records the intended flow; it does not claim that the binding works or

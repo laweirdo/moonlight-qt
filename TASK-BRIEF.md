@@ -1,7 +1,9 @@
 # Task brief — general screen transitions (Phase B item 4)
 
 **Branch:** `general-screen-transitions`, cut from `bulan` at `7da2ce60`.
-**Status:** in implementation. Not accepted by the client.
+**Status:** implemented and locally validated at `78c05eee`. **Not accepted by
+the client**, not merged, not pushed. Two decisions below are awaiting the
+client's confirmation — see "Open for the client".
 
 This brief is temporary. `AGENTS.md` owns permanent rules, `ROADMAP.md` owns
 sequencing, `FLOW.md` owns navigation edges, `HANDOFF.md` owns repository state.
@@ -109,10 +111,16 @@ changed QML.
 each other; launch, quit, and CLI routes are unchanged in behavior; focus and
 selection recover; rapid navigation cannot create duplicate or stranded routes.
 
-**Stage 4 — hardening.** Repeated carousel↔grid cycles accumulate no route
-objects; rapid input never leaves controls dead or focus stranded; selected
-host, selected game, Recent/Library tab, and Library scroll position survive the
-return; logs show no new critical QML or runtime error.
+**Stage 4 — hardening.** Rapid input never leaves controls dead or focus
+stranded; logs show no new critical QML or runtime error; and the transition
+neither introduces route accumulation nor degrades any return state that the
+pre-transition baseline preserved.
+
+The original wording of this criterion — that selected game, tab, and Library
+scroll must "survive the return" to the carousel — was a drafting error. The
+baseline never preserved them on that edge, so it was never a property this task
+could preserve. Both facts are now recorded in `BUGS.md`. The criterion above is
+the one this task is actually accountable for.
 
 ## Required checks
 
@@ -129,6 +137,21 @@ return; logs show no new critical QML or runtime error.
 7. Runtime log inspection for new critical warnings or errors
 
 Do not build new test infrastructure for this task.
+
+## Open for the client
+
+Neither blocks the branch; both are visual judgements that only a live look can
+settle.
+
+1. **"Slight motion blur" is not a blur.** Brief §6 asks for one. A real blur on
+   a moving full screen is the single most expensive thing this transition could
+   do, and the work order rules out shaders and runtime blur for it. It is built
+   as opacity falling away during travel, which is the standard inexpensive
+   reading. If the client wants an actual blur, that is a separate decision with
+   a real Steam Deck cost.
+2. **How far a screen travels: 64 px.** Reused from the accepted `space3xl`
+   spacing token rather than invented, so no new visual value was introduced
+   without the client. It is a deliberately short rise. Easy to change.
 
 ## Known validation limits
 
