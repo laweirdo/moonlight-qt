@@ -44,6 +44,22 @@ FocusScope {
     property int computerIndex
     property bool showHiddenGames
 
+    // Set by HostCarousel.openAppView() alongside computerIndex/objectName --
+    // see that function and BUGS.md's "forgets itself" defect. hostUuid names
+    // whose context this instance publishes on the way out; restoreContext is
+    // whatever that host last published, or null for a host with nothing
+    // saved yet (including every fake-host/review path that never sets it).
+    property string hostUuid: ""
+    property var restoreContext: null
+
+    // Emitted once, from StackView.onRemoved just before destroy() -- see
+    // that handler below -- so HostCarousel can remember this host's tab,
+    // selected game and Library scroll for the rest of the app session. Kept
+    // one-directional, the same way optionsRequested/switchGameRequested are:
+    // this file only reports what it was showing, never reaches up into
+    // HostCarousel to store it itself.
+    signal contextSaved(string hostUuid, var context)
+
     // Grid entrance: Recent and Library tiles rise from below in a short
     // stagger once this screen has visually arrived, replacing the old
     // horizontal slide-into-rank motion (client decision, 2 August 2026
@@ -420,6 +436,9 @@ FocusScope {
                 root.clampLibraryIndex()
                 root.clampRecentIndex()
                 root.ensureLibraryFocusVisible()
+                // See attemptContextRestore()'s own comment: a saved game may
+                // arrive in a later chunk than this screen opened with.
+                root.attemptContextRestore()
             }
             onItemRemoved: {
                 root.recomputeRunning()
@@ -434,6 +453,11 @@ FocusScope {
         recomputeRunning()
         recomputeRecentOrder()
         ensureLibraryFocusVisible()
+        // Covers the case where restoreContext's game is already present at
+        // construction (the fake-games list, or a real host whose app list
+        // had already arrived before this screen was opened). The chunked
+        // case is covered by modelMirror's onItemAdded above instead.
+        attemptContextRestore()
     }
 
     // The host's name. Normally objectName, which HostCarousel.openAppView()
@@ -562,6 +586,113 @@ FocusScope {
         }
         root.selectReviewSource(sourceIndex, origin)
         return true
+    }
+
+    // What contextSaved() reports when this instance is discarded: the tab
+    // showing, the currently focused game by stable id (null if nothing is
+    // focused -- an empty library, say), and the Library's own scroll. Read
+    // back by attemptContextRestore() below on the NEXT instance opened for
+    // this host.
+    function contextSnapshot() {
+        return {
+            activeTab: root.activeTab,
+            appId: root.appIdAtSourceIndex(root.currentSourceIndex()),
+            contentY: libraryFlickable.contentY
+        }
+    }
+
+    // Restores whatever contextSnapshot() captured for this host last time,
+    // by stable app id rather than index -- restoreAfterLaunch() below is the
+    // established precedent for exactly this reasoning: the Recent order and
+    // even the row count can differ from what they were when the context was
+    // saved.
+    //
+    // The host's app list arrives in chunks (see libraryFlickable's "rows come
+    // in chunks" comment), so this is called again from modelMirror's
+    // onItemAdded below on every row that arrives, until the player's first
+    // input retires it -- see abandonContextRestore().
+    //
+    // It deliberately does NOT stop at the first success, and that is the
+    // whole subtlety. recentFocusedIndex is a RANK in recentOrder, not a
+    // source row, and every arriving row makes onItemAdded recompute
+    // recentOrder -- so a rank that pointed at the restored game one chunk ago
+    // points at a different game the next. Restoring once, early, and calling
+    // it done is exactly the failure restoreAfterLaunch() warns about in its
+    // own comment: it looks like it worked, and then the list finishes
+    // arriving and quietly moves the selection somewhere else. Re-applying the
+    // saved app id on every change is what makes the restore survive the rest
+    // of the list showing up.
+    //
+    // Re-applying is idempotent -- it selects the same game by the same stable
+    // id, and writes the same saved scroll -- so the cost of doing it on every
+    // row is one lookup, and the screen simply keeps showing the game you left
+    // on until you touch something. It also repairs itself: the scroll clamp
+    // below is bound by the rows present, so a saved position deeper than the
+    // partial list allows is clamped now and re-applied in full once the
+    // remaining rows have arrived.
+    //
+    // If the saved game never arrives at all (uninstalled on the host), this
+    // simply never matches, changes nothing, and is discarded with this
+    // instance.
+    function attemptContextRestore() {
+        if (root.restoreContext === null) {
+            return
+        }
+        var context = root.restoreContext
+        root.activeTab = context.activeTab
+        if (!root.selectAppById(context.appId, context.activeTab)) {
+            return
+        }
+        if (context.activeTab !== "library") {
+            return
+        }
+        // selectAppById() above wrote libraryFocusedIndex synchronously (see
+        // selectReviewSource()), which ran ensureLibraryFocusVisible() once
+        // via onLibraryFocusedIndexChanged and started libraryScrollAnimation
+        // towards ITS OWN idea of where to land. That happened earlier in this
+        // same call, before a frame was drawn, so stopping the animation and
+        // writing contentY outright here replaces it with the saved position
+        // before anything is visible.
+        //
+        // Two DEFERRED calls to the same function are still queued behind this
+        // one, though -- selectReviewSource() and onActiveTabChanged each add a
+        // Qt.callLater -- and they run after this function returns. They do not
+        // undo this: ensureLibraryFocusVisible() only moves contentY when the
+        // focused row falls outside the viewport, and at the position being
+        // restored here that row is inside it by construction, because this is
+        // the scroll that was saved while that same game was focused. The one
+        // case where they do move it is the case where they should -- the
+        // library changed shape since the save and the restored scroll no
+        // longer shows the game.
+        //
+        // Clamped because the library may be shorter now than when this was
+        // saved. contentHeight is a plain binding on the row count, so it is
+        // already correct for the rows present; rows arriving in a LATER chunk
+        // than the saved game can still leave this clamped tighter than the
+        // save intended, which is the honest limit of restoring against a list
+        // that is still arriving.
+        var maxY = Math.max(0, libraryFlickable.contentHeight - libraryFlickable.height)
+        libraryScrollAnimation.stop()
+        libraryFlickable.contentY = Math.max(0, Math.min(context.contentY, maxY))
+    }
+
+    // A pending restore belongs to ARRIVING on this screen, not to living on
+    // it. modelMirror's onItemAdded retries attemptContextRestore() on every
+    // row the host ever inserts, and a real host keeps inserting them long
+    // after the grid has settled -- so without this, a late chunk could still
+    // pull the tab or the selection out from under someone who had already
+    // started moving. Worse, a saved game that has since been uninstalled
+    // never matches, which leaves the tab being re-applied on every future
+    // insert forever.
+    //
+    // Input is authoritative (creative brief §6 rule 3): a restore that
+    // arrives after the player's first press is not a restore, it is the
+    // screen arguing with them. Called from Keys.onPressed, which Qt emits
+    // before any of the specific key handlers below, so it covers every
+    // button this screen reads -- and from the Library's own drag, which is
+    // the one mouse gesture that moves the same scroll this would rewrite.
+    function abandonContextRestore() {
+        root.restoreContext = null
     }
 
     function sourceTileForAppId(appId, origin) {
@@ -1806,6 +1937,33 @@ FocusScope {
         if (appModel !== null) {
             appModel.computerLost.disconnect(computerLost)
         }
+    }
+
+    // HostCarousel.openAppView() creates a fresh AppView on every entry and
+    // never retains one of its own -- see the file banner and BUGS.md's
+    // "grows every time" defect. Without this, every carousel round trip left
+    // the discarded instance parented to the StackView forever.
+    //
+    // This does NOT fire during a launch or a quit: pushLaunchSegue() and
+    // pushPreparedQuitSegue() both call stackView.push(segue, ...) to put
+    // StreamSegue/QuitSegue on TOP of this screen without ever popping it, so
+    // this screen stays in the stack -- just not the current item -- for
+    // exactly as long as the retained-grid contract requires. StackView.onRemoved
+    // only fires when THIS item itself leaves the stack, which is not what
+    // pushing something above it does, so restoreAfterLaunch() and
+    // resumeHeldLaunchAfterQuit() still find the same live instance they
+    // always did.
+    //
+    // Publish this host's context before destroying, so the next fresh
+    // instance opened for the same host can restore it -- see
+    // contextSnapshot()/attemptContextRestore() above. Skipped only in review
+    // mode with no host at all (hostUuid left at its default ""), where there
+    // is nothing to key a saved context by.
+    StackView.onRemoved: {
+        if (root.hostUuid.length > 0) {
+            root.contextSaved(root.hostUuid, root.contextSnapshot())
+        }
+        destroy()
     }
 
     // Focus recovery, copied from HostCarousel.qml's own pattern and reasoning.
@@ -3101,7 +3259,14 @@ FocusScope {
         // flight -- see ensureLibraryFocusVisible()'s own comment for why
         // that scroll is a NumberAnimation rather than a Behavior in the
         // first place.
-        onDraggingChanged: if (dragging) libraryScrollAnimation.stop()
+        onDraggingChanged: {
+            if (dragging) {
+                libraryScrollAnimation.stop()
+                // A hand on the view outranks a pending restore of where the
+                // view used to be -- see abandonContextRestore().
+                root.abandonContextRestore()
+            }
+        }
 
         // No ScrollBar attached -- that is a stock QtQuick.Controls control and
         // forbidden here.
@@ -3330,6 +3495,10 @@ FocusScope {
     // launch. Once the proxy is visible, any input resolves the motion to its
     // destination instead of cancelling it.
     Keys.onPressed: function(event) {
+        // Qt emits this for every key before the specific handlers below, so
+        // this is the one place that sees the player's first press whatever it
+        // was. See abandonContextRestore().
+        root.abandonContextRestore()
         if (root.consumeLaunchInput()) {
             event.accepted = true
         }

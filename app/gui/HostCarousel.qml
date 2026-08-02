@@ -482,6 +482,29 @@ FocusScope {
     // One function per hint, so the buttons and the mouse share a single path and
     // cannot drift apart.
 
+    // A fresh AppView is created on every entry (see the createObject() call
+    // below) and destroys itself on the way out (AppView.qml's
+    // StackView.onRemoved) rather than being retained the way the launch and
+    // quit surfaces retain it -- see BUGS.md's "forgets itself" defect. This
+    // is where the app remembers what a discarded instance was showing, so
+    // the next fresh instance for the SAME host can look like it never left.
+    //
+    // Keyed by host UUID rather than carousel index or row, for the same
+    // reason busyHostUuid/wakingHostUuid are: discovery can reorder the
+    // carousel while a grid is open elsewhere. In memory only, for this app
+    // session only -- nothing here is written to disk, and a different host's
+    // entry is never read or touched by this one.
+    property var appViewContextByHostUuid: ({})
+
+    // Connected to every AppView this screen creates. AppView calls this on
+    // itself right before destroy() -- see contextSaved's declaration -- so
+    // the dependency runs the same direction optionsRequested and
+    // switchGameRequested already do: AppView names what happened, this
+    // screen decides what to do with it.
+    function rememberAppViewContext(hostUuid, context) {
+        root.appViewContextByHostUuid[hostUuid] = context
+    }
+
     function openAppView(computerIndex, hostUuid, hostName, showHiddenGames) {
         beginConnecting(hostUuid)
         var component = Qt.createComponent("AppView.qml")
@@ -496,9 +519,12 @@ FocusScope {
             return
         }
 
+        var savedContext = root.appViewContextByHostUuid[hostUuid]
         var properties = {
             "computerIndex": computerIndex,
-            "objectName": hostName
+            "objectName": hostName,
+            "hostUuid": hostUuid,
+            "restoreContext": savedContext !== undefined ? savedContext : null
         }
         if (showHiddenGames) {
             properties.showHiddenGames = true
@@ -512,6 +538,7 @@ FocusScope {
                               qsTr("Something went wrong loading the game list."))
             return
         }
+        view.contextSaved.connect(root.rememberAppViewContext)
         stackView.push(view)
     }
 
@@ -564,6 +591,26 @@ FocusScope {
             if (typeof fakeConnectHoldMs !== "undefined" && fakeConnectHoldMs > 0) {
                 beginConnecting(host.uuid)
                 fakeConnectHoldTimer.restart()
+                return
+            }
+            // Review hook: MOONLIGHT_FAKE_HOSTS together with MOONLIGHT_FAKE_GAMES.
+            // Lets Stage 1's destroy-on-leave and per-host restore (BUGS.md's two
+            // carousel-round-trip defects) be exercised repeatedly with no real
+            // paired host attached -- Confirm opens, B leaves, Confirm again on
+            // the same fake host proves both the old instance was destroyed and
+            // the new one restored this host's tab/selection/scroll.
+            //
+            // This does not weaken the guard above: that guard exists because
+            // openAppView() otherwise leads to code that indexes the REAL host
+            // list at this fake row's position (pairComputer(), the branches
+            // below). AppView with fakeGames active never does anything of the
+            // kind -- createModel() returns null without touching
+            // ComputerManager and gameModel becomes the fake ListModel instead
+            // (see AppView.qml) -- so computerIndex reaches AppView here but is
+            // never read. Both variables must be set together on purpose; this
+            // is inert with either one alone.
+            if (typeof fakeGames !== "undefined" && fakeGames !== "" && fakeGames !== "off") {
+                openAppView(root.currentIndex, host.uuid, host.hostName, false)
                 return
             }
             // Says so out loud rather than doing nothing. A silent A is
