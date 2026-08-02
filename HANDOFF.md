@@ -12,7 +12,7 @@ snapshot.
 | Item | State |
 |---|---|
 | Integration branch | `bulan`, carrying the accepted screen transition work, pushed to `origin/bulan` |
-| Task branch | `general-screen-transitions` still exists locally. Its deletion was **not** authorised and it has not been deleted |
+| Task branch | `general-screen-transitions` was deleted locally after the accepted merge and never existed on `origin` |
 | Remote | `origin` only, the client's fork. `bulan` has been pushed with the client's explicit authorisation |
 | Active task | **None.** `TASK-BRIEF.md` was retired on client acceptance |
 | Open defects | **Two**, both pre-existing, both recorded in `BUGS.md` on 2 August 2026 |
@@ -23,8 +23,8 @@ and merged locally as `c0e79970`; its branch is deleted. This entry supersedes
 that snapshot.
 
 Phase B item 4 was reviewed live by the client in two rounds on 2 August 2026
-and accepted. The client authorised the merge and the push in the same message.
-Branch deletion was not mentioned and so has not been done.
+and accepted. The client authorised the merge and the push, then authorised the
+branch deletion separately. Acceptance cleanup is complete.
 
 ## Phase B item 4 — what is on the branch
 
@@ -282,6 +282,3 @@ Phase B is complete on paper. Before treating it as closed, note what is owed:
 The client mentioned possibly revisiting the screen transition later to push it
 further toward the brief's "whimsical" character. That is a future task, not an
 open item on this one.
-
-`general-screen-transitions` still exists locally and was not deleted, because
-deletion was not authorised.
