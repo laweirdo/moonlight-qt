@@ -221,6 +221,25 @@ QtObject {
     // rather than a second copy of it.
     readonly property int  motionGridEntranceRise: space3xl / 2
 
+    // How far an element entrance overshoots its resting place before
+    // settling, as Easing.OutBack's overshoot parameter. One overshoot, one
+    // settle -- OutBack crosses its target exactly once, which is what keeps
+    // this inside brief §6 rule 1, "never bounce twice". Anything elastic is
+    // forbidden here for the same reason.
+    //
+    // Deliberately NOT motionOvershoot. That value is 0.7 because it is
+    // applied to a 4% focus SCALE change, where the brief wants the overshoot
+    // barely perceptible; the same 0.7 applied to this 32px translation
+    // overshoots by about a pixel, which is not a bounce anyone can see. This
+    // is Easing.OutBack's own default to one decimal, roughly 10% -- about 3px
+    // here, which reads as a soft landing rather than a spring.
+    //
+    // The two are separate tokens so entrance feel and focus feel can be
+    // retuned independently on hardware without one dragging the other with
+    // it. Client decision, 2 August 2026: newly arriving elements settle with
+    // a restrained overshoot and a single soft bounce.
+    readonly property real motionEntranceOvershoot: 1.7
+
     // Waiting motion: the three bouncing dots drawn over a busy host tile.
     //
     // Brief §6 rule 1 is "never bounce twice", and this loops forever, so it

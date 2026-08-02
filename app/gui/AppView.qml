@@ -2828,7 +2828,16 @@ FocusScope {
                         property: "entranceProgress"
                         to: 1
                         duration: Bulan.motionGridEntranceRiseMs
-                        easing.type: Easing.OutCubic
+                        // Overshoots its resting place once and settles back,
+                        // rather than easing flat into it -- see
+                        // Bulan.motionEntranceOvershoot. OutBack crosses the
+                        // target exactly once, so this is one bounce, never
+                        // two. entranceProgress therefore passes slightly
+                        // above 1 mid-flight, which is what lifts y a few
+                        // pixels past its rest position; opacity clamps it
+                        // below so only the travel bounces, not the fade.
+                        easing.type: Easing.OutBack
+                        easing.overshoot: Bulan.motionEntranceOvershoot
                     }
                 }
                 // NOT readonly, matching HostTile's tileScale exactly (see
@@ -2882,10 +2891,14 @@ FocusScope {
                 // than the old fixed distance === 1. Multiplied by
                 // entranceProgress so the tile fades in as it rises rather
                 // than appearing at full/dimmed opacity mid-flight.
+                // Clamped: entranceProgress overshoots above 1 on the way in
+                // (see recentEntranceAnimation), and only the rise should
+                // carry that -- a tile must not flash brighter than its
+                // settled opacity on arrival.
                 opacity: launchMotionFrozen ? frozenLaunchOpacity
                        : (distance === 0 ? 1.0
                        : (distance <= recentView.recentVisibleRadius ? 0.5 : 0.0))
-                         * entranceProgress
+                         * Math.min(1, entranceProgress)
                 visible: opacity > 0.01
 
                 // One clock for the whole move, copying HostCarousel.qml's
@@ -3386,14 +3399,16 @@ FocusScope {
                         property: "entranceProgress"
                         to: 1
                         duration: Bulan.motionGridEntranceRiseMs
-                        easing.type: Easing.OutCubic
+                        // See recentEntranceAnimation's matching comment.
+                        easing.type: Easing.OutBack
+                        easing.overshoot: Bulan.motionEntranceOvershoot
                     }
                 }
 
                 x: root.libraryFocusInset + column * root.libraryCellWidth
                 y: root.libraryFocusInset + row * root.libraryCellHeight
                    + (1 - entranceProgress) * Bulan.motionGridEntranceRise
-                opacity: entranceProgress
+                opacity: Math.min(1, entranceProgress)
 
                 appId: model.appid
                 launchSourceHidden:
