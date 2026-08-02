@@ -62,6 +62,44 @@ FocusScope {
         onTriggered: root.gridEntranceStarted = true
     }
 
+    // Belt-and-braces against a settled tile re-entering. Ordinary Recent
+    // re-ranking (a launch updates lastPlayed, recomputeRecentOrder() below
+    // reorders) never recreates a delegate -- rank/slot/x are plain
+    // property bindings recomputed on the SAME Item, and Repeater only
+    // destroys/creates delegates on an actual model row insert, remove, or
+    // reset, none of which this screen's own code triggers for reordering.
+    // These two sets exist for the cases that are less certain -- a host's
+    // app list arriving in chunks after this screen is already open (see
+    // libraryFlickable's "rows come in chunks" comment), or any future
+    // change that does cause a delegate to be recreated for a game already
+    // shown once. Recent and Library are tracked separately: the same game
+    // legitimately gets its own first entrance in each grid.
+    property var recentEntranceSeenAppIds: ({})
+    property var libraryEntranceSeenAppIds: ({})
+
+    // Returns true if this appId already played its entrance in this grid
+    // during this screen instance, marking it seen as a side effect either
+    // way -- so a delegate's own Component.onCompleted can call this once
+    // and know, from the single return value, whether to animate in or
+    // simply appear settled.
+    function markRecentEntranceSeen(appId) {
+        var key = String(appId)
+        if (root.recentEntranceSeenAppIds[key] === true) {
+            return true
+        }
+        root.recentEntranceSeenAppIds[key] = true
+        return false
+    }
+
+    function markLibraryEntranceSeen(appId) {
+        var key = String(appId)
+        if (root.libraryEntranceSeenAppIds[key] === true) {
+            return true
+        }
+        root.libraryEntranceSeenAppIds[key] = true
+        return false
+    }
+
     property AppModel appModel: createModel()
 
     // Emitted instead of building the popup. X on a tile means "show its
@@ -660,26 +698,48 @@ FocusScope {
         }
     }
 
+    // Ends the grid entrance (Recent and Library both) immediately: every
+    // tile still mid-rise snaps straight to its resting position and
+    // opacity, same "finish it now rather than fight it" shape as
+    // launchTransition.completeImmediately() below. Called the moment a
+    // launch is committed to, so nothing is ever captured mid-flight and
+    // nothing is left stranded part-risen if the launch later rolls back
+    // and returns the player to this same screen.
+    function completeGridEntrance() {
+        var i, item
+        for (i = 0; i < recentRepeater.count; i++) {
+            item = recentRepeater.itemAt(i)
+            if (item && !item.entranceSettled) {
+                item.completeEntrance()
+            }
+        }
+        for (i = 0; i < libraryRepeater.count; i++) {
+            item = libraryRepeater.itemAt(i)
+            if (item && !item.entranceSettled) {
+                item.completeEntrance()
+            }
+        }
+    }
+
     function freezeLaunchSourceMotion(appId, origin) {
         libraryScrollAnimation.stop()
         libraryFlickable.cancelFlick()
+        // A launch pressed while the source tile is still mid-rise (grid
+        // entrance) must never freeze and capture that in-flight geometry --
+        // the frozen proxy would zoom from a position and opacity the
+        // player never actually saw settle. Rather than withholding the
+        // capture (which would silently degrade the accepted launch
+        // experience for the whole entrance window), the entrance is simply
+        // over now: finish it immediately, for every tile, then capture the
+        // now-settled geometry exactly as if the entrance had already
+        // finished on its own.
+        root.completeGridEntrance()
         root.frozenLaunchAppId = appId
         var tile = root.sourceTileForAppId(appId, origin)
         var slot = root.sourceSlotForAppId(appId, origin)
-        // entranceSettled: a launch pressed while the source tile is still
-        // mid-rise (grid entrance, see the Recent/Library delegates) must
-        // never freeze and capture that in-flight geometry -- the frozen
-        // proxy would zoom from a position and opacity the player never
-        // actually saw settle. Recent's entrance lives on the wrapper slot,
-        // not the inner GameTile that `tile` resolves to for that origin,
-        // so the check reads whichever of the two actually owns it.
-        var entranceSettled = origin === "recent"
-                ? (slot && slot.entranceSettled)
-                : (tile && tile.entranceSettled)
         var valid = tile && root.sameAppId(tile.appId, appId)
                 && tile.launchMotionFrozen
                 && (origin !== "recent" || (slot && slot.launchMotionFrozen))
-                && entranceSettled
         if (!valid) {
             root.frozenLaunchAppId = null
         }
@@ -2427,9 +2487,12 @@ FocusScope {
         anchors.top: tabStrip.bottom
         anchors.topMargin: Bulan.spaceXl
         // The hint bar itself now lives in main.qml (see the "hint bar"
-        // section below), so its geometry is reproduced here rather than
-        // referenced by id: it always occupies exactly Bulan.targetRowHeight
-        // at the foot of the screen (HintBar.qml's own implicitHeight).
+        // section below), so it can no longer be referenced by id here.
+        // Bulan.targetRowHeight is not a stand-in reproducing its height --
+        // it is the literal same token HintBar.qml binds its own
+        // implicitHeight to (HintBar.qml:90), so this margin cannot drift
+        // out of sync with the bar's actual footprint; if that token ever
+        // changes, both follow it together.
         anchors.bottom: parent.bottom
         anchors.bottomMargin: Bulan.targetRowHeight
 
@@ -2569,14 +2632,23 @@ FocusScope {
                 readonly property int entranceOrder:
                     Math.min(distance, Bulan.motionGridEntranceMaxSteps)
                 property real entranceProgress: 0
-                // True once this tile's own rise has finished. Gates the
-                // x/y/opacity Behaviors below (so the entrance itself is
-                // never double-animated) and, via freezeLaunchSourceMotion()
-                // above, whether a launch is allowed to capture this tile's
-                // pixels at all -- a launch pressed mid-rise falls back to
-                // the honest no-source card instead of grabbing an
-                // in-flight frame.
+                // True once this tile's own rise has finished (either by
+                // playing out, or by root.completeGridEntrance() below
+                // ending it early for a launch). Gates the x/y/opacity
+                // Behaviors below, so the entrance itself is never
+                // double-animated.
                 property bool entranceSettled: false
+
+                // Snaps straight to the resting position/opacity and stops
+                // the animation below, rather than fighting it. Called from
+                // root.completeGridEntrance() -- see freezeLaunchSourceMotion()
+                // -- the moment a launch on ANY tile is committed to, so a
+                // capture never reads in-flight geometry and no tile is ever
+                // left stranded part-risen.
+                function completeEntrance() {
+                    recentSlot.entranceProgress = 1
+                    recentSlot.entranceSettled = true
+                }
 
                 SequentialAnimation {
                     id: recentEntranceAnimation
@@ -2584,8 +2656,9 @@ FocusScope {
                     // Animation.finished() needs a newer QtQuick minor version
                     // than this file imports; onStopped is available since
                     // QtQuick 2.0 and, since nothing here ever sets
-                    // `running` false except entranceSettled becoming true,
-                    // is equivalent for this animation's whole lifetime.
+                    // `running` false except entranceSettled becoming true
+                    // (naturally, or via completeEntrance() above), is
+                    // equivalent for this animation's whole lifetime.
                     onStopped: recentSlot.entranceSettled = true
 
                     PauseAnimation {
@@ -2728,6 +2801,16 @@ FocusScope {
                 property bool settled: false
                 Component.onCompleted: {
                     settled = true
+                    // See root.markRecentEntranceSeen()'s comment: if this
+                    // game's entrance already played once in Recent during
+                    // this screen instance (only possible if a delegate got
+                    // recreated for it, which ordinary re-ranking never
+                    // does), skip straight to settled rather than rising
+                    // again.
+                    if (root.markRecentEntranceSeen(model.appid)) {
+                        recentSlot.entranceProgress = 1
+                        recentSlot.entranceSettled = true
+                    }
                     if (launchMotionFreezeRequested) {
                         freezeLaunchMotion()
                     }
@@ -2978,7 +3061,9 @@ FocusScope {
         anchors.top: tabStrip.bottom
         anchors.topMargin: Bulan.spaceLg - root.libraryFocusInset
         // See recentView's matching comment: the hint bar now lives in
-        // main.qml, so its footprint is reproduced rather than referenced.
+        // main.qml, so it can no longer be referenced by id, and
+        // Bulan.targetRowHeight is the same token driving its actual height
+        // (HintBar.qml:90), not an independent number that happens to match.
         anchors.bottom: parent.bottom
         anchors.bottomMargin: Bulan.targetRowHeight
         width: Bulan.gameGridColumns * Bulan.gameTileWidth
@@ -3101,8 +3186,24 @@ FocusScope {
                 // left-to-right, top-to-bottom.
                 readonly property int entranceOrder:
                     Math.min(index, Bulan.motionGridEntranceMaxSteps)
-                property real entranceProgress: 0
-                property bool entranceSettled: false
+                // GameTile.qml already declares its own Component.onCompleted
+                // (freeze setup), so root.markLibraryEntranceSeen() cannot be
+                // called from a second onCompleted here without silently
+                // overriding that one -- QML does not merge two onCompleted
+                // declarations for the same object. A one-shot property
+                // binding runs exactly once instead: model.appid never
+                // changes after creation, so this expression has nothing
+                // left to react to once it has run.
+                readonly property bool entranceAlreadySeen:
+                    root.markLibraryEntranceSeen(model.appid)
+                property real entranceProgress: entranceAlreadySeen ? 1 : 0
+                property bool entranceSettled: entranceAlreadySeen
+
+                // See recentSlot.completeEntrance()'s matching comment.
+                function completeEntrance() {
+                    tile.entranceProgress = 1
+                    tile.entranceSettled = true
+                }
 
                 SequentialAnimation {
                     id: libraryEntranceAnimation
