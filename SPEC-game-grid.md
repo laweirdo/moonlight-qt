@@ -32,8 +32,8 @@ The grid's Stage 5 validation and documentation originally produced this file.
 The client reviewed the surface on 1 August 2026, requested the four changes
 recorded below, accepted them, and merged the task into `bulan`. Phase B item 3
 later extended this specification with the selected-game launch and quit
-integration; the client accepted that separate task on 2 August 2026 and its
-local merge is next.
+integration; the client accepted that separate task on 2 August 2026 and it is
+now merged into `bulan`.
 
 ---
 
@@ -255,7 +255,7 @@ Library scroll.
 
 ### Selected-game launch and quit integration
 
-**Accepted 2 August 2026; awaiting local merge.**
+**Accepted and merged 2 August 2026.**
 Every launch request is keyed by the existing stable `appid`, not a delegate or
 row that can move when `lastPlayed` changes. `AppView` resolves the currently
 rendered artwork, grabs its exact on-screen crop and mask before Session
@@ -511,4 +511,4 @@ Held on 1 August 2026. The client drove the deployed grid against the real
 `Steambox` library, requested the four changes recorded above, accepted the
 result, and instructed the merge into `bulan`. The client accepted the separate
 launch-and-quit work order on 2 August 2026 after its final completion audit;
-its local integration is next and its temporary task brief has been retired.
+it is merged into `bulan` and its temporary task brief has been retired.

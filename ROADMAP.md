@@ -6,10 +6,9 @@
 
 **Current phase:** Phase B — Close the core loop
 
-**Next milestone:** Integrate the accepted launch and quit experience into
-`bulan`. After that local merge, item 4's general screen transitions are next.
-Steam Deck and real-stream validation remain outstanding — see Phase B and
-`HANDOFF.md`.
+**Next milestone:** Phase B item 4 — general screen transitions. The accepted
+launch and quit experience is now integrated into `bulan`. Steam Deck and
+real-stream validation remain outstanding — see Phase B and `HANDOFF.md`.
 
 This file governs v1 scope, phase order, exit conditions, and the next
 milestone. It does not govern live repository state (`HANDOFF.md`), an active
@@ -121,9 +120,9 @@ Remaining work, in order:
    - **X opens a per-game options popup as its intended private-v1
      destination.** It is not a temporary stand-in. No Game Detail screen is
      planned. See `FLOW.md` and `SPEC-game-grid.md` for the corrected decision.
-3. **Launch and quit experience** — **accepted 2 August 2026; awaiting local
-   merge.** The task branch replaces both stock
-   surfaces, moves the selected game's exact visible artwork from Recent or
+3. ~~**Launch and quit experience** — replace both stock surfaces.~~ **Done and
+   accepted 2 August 2026; merged into `bulan`.** The completed work moves the
+   selected game's exact visible artwork from Recent or
    Library into the custom launch surface, and shares that route with popup
    Play/Resume and automatic Direct Launch. Quit Game is recoverable, and
    quit-and-switch waits for a successful quit before entering the same launch
@@ -134,11 +133,10 @@ Remaining work, in order:
    into the rest of the completed core route. The selected-game transition in
    item 3 belongs to the launch experience, not to this general pass.
 
-**Phase B item 3 owns the two inherited segue gaps.** They were deliberately
-left until the grid landed. The accepted task branch replaces the visible
+**Phase B item 3 closed the two inherited segue gaps.** They were deliberately
+left until the grid landed. The accepted implementation replaces the visible
 stock `StreamSegue.qml` and `QuitSegue.qml` treatments while preserving their
-Session and quit contracts; its local integration is the next repository
-operation.
+Session and quit contracts.
 
 **Second Phase B gap, raised 1 August 2026 by the game grid:** the grid has
 **no host-settings surface**, so SELECT does nothing there and its hint is

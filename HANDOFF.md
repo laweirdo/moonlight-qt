@@ -11,9 +11,9 @@ snapshot.
 
 | Item | State |
 |---|---|
-| Integration branch | `bulan` at `f54d3648`, tracking `origin/bulan` |
-| Task branch | `launch-quit-experience`; accepted, with its acceptance-cleanup commit at the current branch head; no tracking branch |
-| Remote | `origin` only, the client's fork. Nothing from this task has been pushed |
+| Integration branch | `bulan`; accepted launch/quit merge `c0e79970`; tracking `origin/bulan` and locally ahead |
+| Task branch | `launch-quit-experience` was deleted locally after the accepted merge and never existed on `origin` |
+| Remote | `origin` only, the client's fork. The local integration has not been pushed |
 | Active task | **None.** `TASK-BRIEF.md` was removed after final client acceptance |
 | Open defects | None recorded in `BUGS.md` |
 
@@ -21,8 +21,9 @@ The task branch was cut from the accepted game-grid merge. The client accepted
 Stage 1, then authorized the remaining stages to proceed without intermediate
 stops and requested one approval after all work was complete. The client gave
 that final approval on 2 August 2026 and authorized local acceptance cleanup,
-merge into `bulan`, and task-branch deletion. The cleanup is complete; the
-local merge is next. Push remains unauthorized.
+merge into `bulan`, and task-branch deletion. The cleanup is complete, the
+accepted work is merged locally as `c0e79970`, and the task branch is deleted.
+Push remains unauthorized.
 
 ## What was built
 
@@ -39,6 +40,9 @@ preserving the existing Session, streaming, persistence, and quit backends.
 | `b01a408e` | Built custom quit, quit failure, and success-gated quit-and-switch |
 | `30f7cad4` | Hardened cross-surface routing, route lifetime, replay, and animation cost |
 | `285ff231` | Declared options key-event parameters after live input exposed Qt's implicit-injection warning |
+| `cd26aefa` | Recorded the final live controller-equivalent review and validation limits |
+| `5d1ff48b` | Closed the accepted work order and retired its temporary task brief |
+| `c0e79970` | Merged the accepted launch and quit experience into local `bulan` |
 
 ## Current product state
 
@@ -133,6 +137,9 @@ therefore remains empty.
 
 ## Next action
 
-Merge `launch-quit-experience` into `bulan`, delete the accepted local task
-branch, then update this repository-state file again after those operations.
-Nothing may be pushed unless the client separately authorizes the push.
+Begin Phase B item 4, general screen transitions, from the current local
+`bulan` baseline: create its temporary task brief, cut a short task branch, and
+follow the staged review process. Carry the outstanding Steam Deck,
+physical-controller, and real-stream launch/quit checks forward as validation
+debt rather than claiming them complete. Nothing may be pushed unless the
+client separately authorizes the push.
