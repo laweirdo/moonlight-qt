@@ -4,14 +4,23 @@
 
 **Owner:** Lao
 
-**Current phase:** Phase B — Close the core loop
+**Current phase:** Phase F — Ship private v1. **Every phase is built.** What
+remains is not implementation: a client review of the whole route, and the
+target-device validation that cannot happen off a Steam Deck.
 
-**Next milestone:** Phase C, first run. Both `BUGS.md` defects were fixed on
-`v1-finalisation` on 2 August 2026 and that file is now empty, so the triage
-that previously blocked this milestone is done. Steam Deck, real-stream, and
-physical-controller validation remain outstanding across Phase B, and the
-accepted transition blur's cost on the Deck is still deliberately unmeasured.
-See `HANDOFF.md` for what is on the branch and what has not been checked.
+**Next milestone:** a client review of `v1-review-build`, then a Steam Deck
+session.
+
+**A complete v1 draft exists.** The route from cold launch through first run,
+pairing, host selection, game selection, launch, quit and return is built, and
+no screen along it still reads as upstream Moonlight. Phases C, D and E and the
+app icon were all built on 3 August 2026 and **no part of that has been seen by
+the client**.
+
+That is a draft, not an accepted release. Steam Deck, real-stream,
+physical-controller, real-pairing, Steam on-screen-keyboard and Flatpak
+validation are all outstanding, and the accepted transition blur's cost on the
+Deck is still deliberately unmeasured. See `HANDOFF.md` for the honest list.
 
 This file governs v1 scope, phase order, exit conditions, and the next
 milestone. It does not govern live repository state (`HANDOFF.md`), an active
@@ -162,14 +171,22 @@ the Phase E work and is not on `v1-finalisation` yet.
 **Exit:** launch → pick host → pick game → stream → return, with no screen in
 the user journey that still reads as upstream Moonlight.
 
-### Phase C — First run
+### Phase C — First run — built 3 August 2026, not yet client-reviewed
 
-- Static splash
-- “Let's find your PC”
-- “Looking for your PC”
-- PIN entry
-- Manual IP entry, including deliberate Steam on-screen-keyboard handling
-- First-run routing and the post-pairing destination
+Built on `v1-review-build` to the client's S0–S3 boards.
+
+- ~~Static splash~~ **Done.** Carries the vertical lockup, holds briefly,
+  skippable by any press, replaces itself so B never returns to it.
+- ~~“Let's find your PC”~~ **Done.**
+- ~~“Looking for your PC”~~ **Done.** Discovered hosts as selectable rows.
+- ~~PIN entry~~ **Done.** Four tiles, per the board.
+- ~~Manual IP entry~~ **Done**, reusing the carousel's existing panel and
+  `addNewHostManually`. **Steam on-screen-keyboard handling in Game Mode
+  remains UNVALIDATED** — it cannot be tested off the Deck, and the source
+  says so.
+- ~~First-run routing and the post-pairing destination~~ **Done.** Launch goes
+  to first run only when no paired host is known; pairing success lands on the
+  host carousel with the onboarding screens cleared off the stack.
 
 The reflected-moon mark is superseded. The horizontal corner wordmark is final
 for that role, but it must not be enlarged or recomposed for centred-logo
@@ -179,12 +196,20 @@ centred treatment depends on vector assets designed and supplied by the client.
 **Exit:** a first-time user can discover or enter a host, pair, and arrive in
 the normal loop without encountering an upstream screen.
 
-### Phase D — Edges
+### Phase D — Edges — built 3 August 2026, not yet client-reviewed
 
-- Couldn't reach PC
-- Couldn't start stream
-- Empty library for a paired host
-- Zero hosts
+- ~~Couldn't reach PC~~ **Already existed** from the carousel work.
+- ~~Couldn't start stream~~ **Already existed** from the launch and quit work.
+- ~~Empty library for a paired host~~ **Done.** Replaces the single line of
+  holding copy `FLOW.md` recorded as not the designed state. Names the host and
+  points at Host Settings, because a library that looks empty is often one
+  where everything has been hidden.
+- ~~Zero hosts~~ **Done.** The carousel with no hosts was the last obviously
+  unfinished surface in the app. It now uses the first-run language and offers
+  both *Look again* and *Enter an address instead*.
+- ~~Disconnect confirmation~~ **Already existed.** `GameOptionsOverlay`'s
+  `quitConfirm` page asks *Quit &lt;game&gt;?* with Cancel and Quit Game, and
+  the quit-and-switch confirmation covers the other case.
 - ~~Waking PC waiting overlay, held until success or failure~~ **Done, pulled
   forward into Phase B on 31 July 2026.** Its designed form changed on the way:
   the client asked for a waiting *overlay* on 28 July and, when the work was
@@ -197,20 +222,32 @@ the normal loop without encountering an upstream screen.
 **Exit:** every reachable failure or empty state has a designed, controller-safe
 route back to the loop.
 
-### Phase E — Settings and About
+### Phase E — Settings and About — built 3 August 2026, not yet client-reviewed
 
-- Settings in a Bulan shell using custom components
-- D-pad navigation that follows the visual layout
-- Controls for the existing atmosphere-effect flags
-- About with the Moonlight credit
+Built on `v1-review-build` to the client's four settings boards.
+
+- ~~Settings in a Bulan shell using custom components~~ **Done.** Two panes,
+  a data-driven row list, and two custom popups. No stock Qt Quick Control is
+  instantiated. Nothing in the app routes to `SettingsView.qml` any more.
+- ~~D-pad navigation that follows the visual layout~~ **Done.** Left/Right
+  moves between the rail and the rows, Up/Down within a pane.
+- ~~Controls for the existing atmosphere-effect flags~~ **Done**, and they are
+  real persisted preferences now rather than read-only tokens.
+- ~~About with the Moonlight credit~~ **Done.** Mark, version, “Built on
+  Moonlight”, the fork statement and GPLv3.
 
 **Exit:** required settings and legal attribution are reachable and usable
 without a mouse.
 
 ### Phase F — Ship private v1
 
-- App icon in required sizes
-- Flatpak installs cleanly
+- ~~App icon in required sizes~~ **Done 3 August 2026.** The client's icon
+  installs under the application ID and the desktop entry reads *Bulan*. The
+  supplied master's white frame backdrop was dropped so the corners are
+  transparent. Windows `RC_ICONS` still points at the upstream `.ico`; Windows
+  is not a target.
+- Flatpak installs cleanly — **not attempted.** The review station is Windows
+  and cannot build or install one.
 - Full `REVIEW-CHECKLIST.md` pass on available Deck hardware
 - Creative brief reconciled with deliberate evolution clearly labelled
 

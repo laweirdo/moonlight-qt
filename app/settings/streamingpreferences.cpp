@@ -52,6 +52,10 @@
 #define SER_KEEPAWAKE "keepawake"
 #define SER_LANGUAGE "language"
 #define SER_RENDERER "renderer"
+#define SER_LASTHOSTUUID "lasthostuuid"
+#define SER_ATMOS_GRADIENT "atmospheregradient"
+#define SER_ATMOS_VIGNETTE "atmospherevignette"
+#define SER_ATMOS_GRAIN "atmospheregrain"
 
 #define CURRENT_DEFAULT_VER 2
 
@@ -171,6 +175,13 @@ void StreamingPreferences::reload()
                                                                                                                  : UIDisplayMode::UI_MAXIMIZED)).toInt());
     language = static_cast<Language>(settings.value(SER_LANGUAGE,
                                                     static_cast<int>(Language::LANG_AUTO)).toInt());
+    // Bulan atmosphere kill switches. Default true, matching Bulan.qml's own
+    // atmosphere*Enabled tokens -- those tokens now only describe the
+    // out-of-the-box state, not a hardcoded truth Atmosphere.qml reads.
+    lastHostUuid = settings.value(SER_LASTHOSTUUID).toString();
+    atmosphereGradientEnabled = settings.value(SER_ATMOS_GRADIENT, true).toBool();
+    atmosphereVignetteEnabled = settings.value(SER_ATMOS_VIGNETTE, true).toBool();
+    atmosphereGrainEnabled = settings.value(SER_ATMOS_GRAIN, true).toBool();
 
 
     // Perform default settings updates as required based on last default version
@@ -362,6 +373,10 @@ void StreamingPreferences::save()
     settings.setValue(SER_SWAPFACEBUTTONS, swapFaceButtons);
     settings.setValue(SER_CAPTURESYSKEYS, captureSysKeysMode);
     settings.setValue(SER_KEEPAWAKE, keepAwake);
+    settings.setValue(SER_LASTHOSTUUID, lastHostUuid);
+    settings.setValue(SER_ATMOS_GRADIENT, atmosphereGradientEnabled);
+    settings.setValue(SER_ATMOS_VIGNETTE, atmosphereVignetteEnabled);
+    settings.setValue(SER_ATMOS_GRAIN, atmosphereGrainEnabled);
 }
 
 int StreamingPreferences::getDefaultBitrate(int width, int height, int fps, bool yuv444)

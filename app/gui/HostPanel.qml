@@ -28,19 +28,31 @@ FocusScope {
     signal submitted(string text)
     signal dismissed()
 
-    visible: false
+    // `opened` is the intent, `visible` trails it, so this panel animates out
+    // instead of vanishing -- see PopupMotion.qml. This is the panel the
+    // onboarding screens raise for "Enter an address instead", which had no
+    // motion at all (client review, 3 August 2026).
+    property bool opened: false
+    visible: opened || popupMotion.progress > 0.001
     z: 100
+
+    // The shared popup entrance. Every Bulan popup uses this one object rather
+    // than its own copy of the animation.
+    PopupMotion {
+        id: popupMotion
+        open: panel.opened
+    }
 
     // A hidden panel must not be able to hold focus. Qt will not give active
     // focus to a disabled item, and relinquishes it if an item holding focus
     // becomes disabled -- so this is what stops focus being trapped on a panel
     // that has closed, which leaves the screen underneath listening to nothing.
-    enabled: visible
+    enabled: opened
 
     function show(t, b) {
         title = t
         body = b
-        visible = true
+        opened = true
         panel.forceActiveFocus()
     }
 
@@ -60,7 +72,7 @@ FocusScope {
         field.focus = false
         panel.focus = false
 
-        visible = false
+        opened = false
         field.text = ""
         dismissed()
         // Hand focus back to the screen beneath, or the D-pad stops working.
@@ -88,7 +100,7 @@ FocusScope {
     Rectangle {
         anchors.fill: parent
         color: Bulan.bgBaseOled
-        opacity: 0.72
+        opacity: 0.72 * popupMotion.scrimOpacity
         MouseArea {
             anchors.fill: parent
             hoverEnabled: true
@@ -99,6 +111,13 @@ FocusScope {
     // --- surface -------------------------------------------------------------
     Rectangle {
         id: surface
+
+        // Grows from motionPopupEnterScale past its resting size and settles
+        // back once. Opacity is clamped in PopupMotion so only the scale
+        // carries the overshoot.
+        scale: popupMotion.surfaceScale
+        opacity: popupMotion.surfaceOpacity
+
         anchors.centerIn: parent
         width: Math.min(parent.width - Bulan.layoutScreenMarginX * 2, 640)
         height: content.implicitHeight + Bulan.spaceXl * 2

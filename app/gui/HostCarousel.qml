@@ -8,6 +8,7 @@ import QtQuick.Controls 2.2
 import ComputerModel 1.0
 
 import ComputerManager 1.0
+import StreamingPreferences 1.0
 import SdlGamepadKeyNavigation 1.0
 
 import Bulan 1.0
@@ -326,7 +327,16 @@ FocusScope {
             root.reviewAppsAttempts++
             for (var i = 0; i < hostRepeater.count; i++) {
                 var tile = hostRepeater.itemAt(i)
-                if (!tile || tile.hostName !== openAppsForHost) {
+                // Matches either the review hook's host NAME or the remembered
+                // last-used host's UUID -- one timer serving both, because the
+                // waiting problem is identical: a saved host loads OFFLINE and
+                // only reports itself reachable once the discovery poll
+                // answers, so neither target exists on the first frame.
+                var wanted = (typeof openAppsForHost !== "undefined"
+                              && openAppsForHost !== "")
+                        ? (tile && tile.hostName === openAppsForHost)
+                        : (tile && tile.uuid === root.autoOpenUuid)
+                if (!wanted) {
                     continue
                 }
                 if (!tile.online || !tile.paired) {
@@ -353,6 +363,10 @@ FocusScope {
     // The selection. This is the whole of the carousel's state: every tile's
     // position, scale and opacity is a function of the distance between its own
     // index and this one, so there is no view offset, no phase and no join.
+    // The remembered last-used host the startup auto-open is waiting for, or
+    // "" when there is nothing to return to. See StackView.onActivated.
+    property string autoOpenUuid: ""
+
     property int currentIndex: 0
 
     readonly property int hostCount: hostRepeater.count
@@ -377,7 +391,50 @@ FocusScope {
     // Belt and braces. The Repeater's own signals cover every path that populates
     // the list, but a null `host` reads on screen as a completely dead screen --
     // the exact failure this project keeps meeting -- so it is worth one more call.
-    Component.onCompleted: refreshHost()
+    Component.onCompleted: {
+        refreshHost()
+        if (!root.hasHosts) {
+            zeroHostsEntranceDelay.restart()
+        }
+    }
+
+    // --- zero-hosts entrance ---------------------------------------------
+    // Motion rule: the zero-hosts state (below) waits out the screen
+    // transition before it moves, exactly like AppView's own
+    // gridEntranceStarted -- motionTransitionMs is the same "screen has
+    // settled" duration, reused rather than a second raw value.
+    //
+    // Reset on every true->false edge of hasHosts, not just once at
+    // Component.onCompleted: the carousel is a persistent object (only
+    // AppView is destroyed and recreated per visit -- see the file banner),
+    // so losing the last known host while this screen is already open --
+    // Forget PC on the final remaining host, or discovery losing it -- is a
+    // real way to arrive here without the object ever being recreated.
+    property real zeroHostsEntranceProgress: 0
+    onHasHostsChanged: {
+        if (!hasHosts) {
+            zeroHostsEntranceProgress = 0
+            zeroHostsEntranceDelay.restart()
+        }
+    }
+    Timer {
+        id: zeroHostsEntranceDelay
+        interval: Bulan.motionTransitionMs
+        onTriggered: zeroHostsEntranceAnimation.start()
+    }
+    SequentialAnimation {
+        id: zeroHostsEntranceAnimation
+        NumberAnimation {
+            target: root
+            property: "zeroHostsEntranceProgress"
+            to: 1
+            duration: Bulan.motionGridEntranceRiseMs
+            // One restrained overshoot, one bounce -- brief §6 rule 1 --
+            // rather than motionOvershoot's stronger press-release curve.
+            easing.type: Easing.OutBack
+            easing.overshoot: Bulan.motionEntranceOvershoot
+        }
+    }
 
     readonly property bool hostOnline: host !== null && host.online
 
@@ -395,7 +452,7 @@ FocusScope {
     }
 
     function pairingComplete(error) {
-        pinPanel.visible = false
+        pinPanel.opened = false
         if (error !== undefined) {
             messagePanel.show(qsTr("Couldn't pair"), error)
         }
@@ -519,6 +576,16 @@ FocusScope {
             return
         }
 
+        // Remember which PC this was, so the next launch can go straight back
+        // to its games instead of stopping here (client decision, 3 August
+        // 2026). Written for real hosts only -- a fake review row's UUID names
+        // nothing, and persisting it would send the next real launch chasing a
+        // host that does not exist.
+        if (!root.useFakeHosts) {
+            StreamingPreferences.lastHostUuid = hostUuid
+            StreamingPreferences.save()
+        }
+
         var savedContext = root.appViewContextByHostUuid[hostUuid]
         var properties = {
             "computerIndex": computerIndex,
@@ -627,7 +694,7 @@ FocusScope {
             computerModel.pairComputer(root.currentIndex, pin)
             pinPanel.pin = pin
             pinPanel.hostName = host.hostName
-            pinPanel.visible = true
+            pinPanel.opened = true
             return
         }
         if (!host.serverSupported) {
@@ -703,12 +770,32 @@ FocusScope {
         }
     }
 
+    // Adding a PC opens the onboarding screen, not a popup (client review,
+    // 3 August 2026). This used to raise addPcPanel -- a bare "type an
+    // address" box, which is upstream's Add PC dialog with Bulan paint on it
+    // and skips the discovery step entirely. FLOW.md has always drawn this
+    // edge as "Your PCs --> Add another --> find your PC"; it is the same
+    // destination actLookAgain() uses, because adding a PC and looking again
+    // are the same act from the player's side.
+    //
+    // The manual-address escape hatch is not lost: HostDiscovery.qml carries
+    // "Enter an address instead", which is where a typed address belongs --
+    // after looking has failed, not instead of looking.
     function actAddPc() {
-        addPcPanel.visible = true
+        stackView.push("HostDiscovery.qml")
+    }
+
+    // The zero-hosts state's primary action -- the same re-scan FirstRun.qml's
+    // "Look" button starts, reached from the other direction. Pushes straight
+    // to the discovered-hosts list rather than back through FirstRun's own
+    // splash copy, since this screen already implies "look again", not "look
+    // for the first time".
+    function actLookAgain() {
+        stackView.push("HostDiscovery.qml")
     }
 
     function actClientSettings() {
-        navigateTo("qrc:/gui/SettingsView.qml", SettingsView)
+        navigateTo("qrc:/gui/SettingsShell.qml", SettingsShell)
     }
 
     function actHostSettings() {
@@ -851,6 +938,23 @@ FocusScope {
             openAppsReviewTimer.restart()
         }
 
+        // Go straight back to the PC whose games you were last in (client
+        // decision, 3 August 2026). Launch stopping at the carousel meant one
+        // extra press every single time for anyone with one PC, which is most
+        // people, and FLOW.md has always drawn a known paired host as going
+        // to the library rather than to the host list.
+        //
+        // Guarded on reviewAppsOpened exactly as the hook above is, so this
+        // runs ONCE per launch rather than once per return: reopening the grid
+        // every time the player backs out of it would make B useless. The
+        // carousel is still underneath, so B still lands where it always did.
+        if (!root.useFakeHosts && !reviewAppsOpened
+                && StreamingPreferences.lastHostUuid !== "") {
+            root.autoOpenUuid = StreamingPreferences.lastHostUuid
+            reviewAppsAttempts = 0
+            openAppsReviewTimer.restart()
+        }
+
         if (root.useFakeHosts && !reviewWakeStarted &&
                 typeof fakeWakeOnStart !== "undefined" && fakeWakeOnStart) {
             reviewWakeStarted = true
@@ -913,7 +1017,12 @@ FocusScope {
     Item {
         id: screenContent
         anchors.fill: parent
-        layer.enabled: hostSettingsMenu.visible
+        // Blurred behind ANY panel, not just the host menu (client review,
+        // 3 August 2026). The pairing PIN, the message panel and the
+        // add-a-PC panel all sat on an unblurred screen, so the same glass
+        // treatment appeared or did not depending on which panel you opened.
+        layer.enabled: hostSettingsMenu.visible || messagePanel.visible
+                       || pinPanel.visible || addPcPanel.visible
         layer.effect: MultiEffect {
             autoPaddingEnabled: false
             blurEnabled: true
@@ -1194,40 +1303,136 @@ FocusScope {
 
 
     // --- zero hosts ----------------------------------------------------------
-    // Two stacked elements, per spec. The copy is deliberately off-register from
-    // the rest of the app: this is a screen you see once, which makes it the one
-    // place a joke costs nothing.
+    // Reached whenever hostCount is 0: nothing has ever answered, every known
+    // host was forgotten, or discovery lost the last one while this screen
+    // stayed open. This is the same moment as FirstRun.qml's S1 -- "no host
+    // known yet" -- seen from the other direction, so it borrows that
+    // screen's composition (crescent, display headline, secondary supporting
+    // line, one amber primary action) rather than inventing a second
+    // language for an empty carousel. The copy is deliberately NOT FirstRun's
+    // own "Let's find your PC.": the player has been here before, so brief
+    // §8's warm-second-person register is followed with different words for
+    // a different moment.
         Column {
+        id: zeroHostsContent
         anchors.centerIn: parent
+        // Motion rule: rises into place after the screen itself has settled
+        // (see zeroHostsEntranceDelay below), reusing motionGridEntranceRise
+        // rather than a raw per-screen distance.
         anchors.verticalCenterOffset: -Bulan.space2xl
+                + (1 - root.zeroHostsEntranceProgress) * Bulan.motionGridEntranceRise
         spacing: Bulan.spaceLg
+        width: Math.min(parent.width - Bulan.layoutScreenMarginX * 2,
+                         Bulan.hostTileSize * 2.4)
         visible: !root.hasHosts
+        opacity: Math.min(1, root.zeroHostsEntranceProgress)
+
+        Image {
+            anchors.horizontalCenter: parent.horizontalCenter
+            source: "qrc:/res/bulan_logomark.svg"
+            width: Bulan.onboardingMarkSize
+            height: width
+            fillMode: Image.PreserveAspectFit
+            sourceSize.width: width * 2
+            sourceSize.height: width * 2
+            smooth: true
+        }
 
         Text {
             anchors.horizontalCenter: parent.horizontalCenter
-            text: qsTr("you have no pc's lol")
+            text: qsTr("No PC to play on right now.")
             color: Bulan.textPrimary
             font.family: Bulan.familyDisplay
             font.pixelSize: Bulan.sizeDisplay
+            horizontalAlignment: Text.AlignHCenter
         }
 
-        Row {
+        Text {
             anchors.horizontalCenter: parent.horizontalCenter
-            spacing: Bulan.spaceXs
+            width: parent.width
+            horizontalAlignment: Text.AlignHCenter
+            wrapMode: Text.Wrap
+            text: qsTr("Make sure it's awake and on the same network.")
+            color: Bulan.textSecondary
+            font.family: Bulan.familyUi
+            font.pixelSize: Bulan.sizeBody
+        }
 
-            ControllerGlyph {
-                anchors.verticalCenter: parent.verticalCenter
-                action: "options"
-                tone: "focus"
-                glyphSize: Bulan.sizeBodyLg
+        // --- primary button: FirstRun.qml's own "Look" treatment ------------
+        Item {
+            id: lookAgainButton
+            anchors.horizontalCenter: parent.horizontalCenter
+            width: Math.max(Bulan.hostTileSize * 0.7,
+                             lookAgainLabel.implicitWidth + Bulan.space2xl * 2)
+            height: Math.max(Bulan.targetMin,
+                              lookAgainLabel.implicitHeight + Bulan.spaceLg * 2)
+
+            // Press feedback for controller input, which has no release event
+            // to hang a state off -- HostTile.flashPress()'s own pattern.
+            property bool pressed: lookAgainMouse.pressed || lookAgainPressFlash.running
+            function flashPress() { lookAgainPressFlash.restart() }
+            Timer { id: lookAgainPressFlash; interval: Bulan.motionPressMs }
+
+            scale: lookAgainButton.pressed ? Bulan.motionPressScale : 1.0
+            Behavior on scale {
+                NumberAnimation {
+                    duration: lookAgainButton.pressed ? Bulan.motionPressMs : Bulan.motionFocusMs
+                    easing.type: lookAgainButton.pressed ? Easing.OutCubic : Easing.OutBack
+                    easing.overshoot: Bulan.motionOvershoot
+                }
             }
 
-            Text {
-                anchors.verticalCenter: parent.verticalCenter
-                text: qsTr("Press to pair a PC")
-                color: Bulan.textSecondary
-                font.family: Bulan.familyUi
-                font.pixelSize: Bulan.sizeBodyLg
+            Rectangle {
+                anchors.fill: parent
+                radius: Bulan.radiusLg
+                color: Bulan.accentPrimary
+
+                layer.enabled: true
+                layer.effect: MultiEffect {
+                    shadowEnabled: true
+                    shadowColor: Bulan.accentGlow
+                    shadowBlur: Bulan.buttonGlowBlur
+                    shadowOpacity: Bulan.buttonGlowOpacity
+                    shadowHorizontalOffset: 0
+                    shadowVerticalOffset: 0
+                }
+
+                Text {
+                    id: lookAgainLabel
+                    anchors.centerIn: parent
+                    text: qsTr("Look again")
+                    // Dark text on the amber fill, matching FirstRun.qml's
+                    // "Look" -- the only place on this screen text sits on a
+                    // light ground rather than the dark atmosphere.
+                    color: Bulan.bgBaseOled
+                    font.family: Bulan.familyUi
+                    font.pixelSize: Bulan.sizeBodyLg
+                    font.bold: true
+                }
+            }
+
+            MouseArea {
+                id: lookAgainMouse
+                anchors.fill: parent
+                onClicked: {
+                    lookAgainButton.flashPress()
+                    root.actLookAgain()
+                }
+            }
+        }
+
+        Text {
+            id: enterAddressLink
+            anchors.horizontalCenter: parent.horizontalCenter
+            text: qsTr("Enter an address instead")
+            color: Bulan.textSecondary
+            font.family: Bulan.familyUi
+            font.pixelSize: Bulan.sizeLabel
+
+            MouseArea {
+                anchors.fill: parent
+                anchors.margins: -Bulan.spaceSm
+                onClicked: root.actAddPc()
             }
         }
     }
@@ -1241,7 +1446,14 @@ FocusScope {
     // child cannot opt out of its parent's stack-transition opacity, so the
     // single window-level HintBar reads these three properties off
     // whichever screen is current instead of this screen drawing its own.
-    readonly property bool hintBarVisible: true
+    // Hidden while any overlay owns the input, because the overlay draws its
+    // own hints and the two bars would otherwise print on top of each other --
+    // "A Select" over "A Connect", "B Close" over "Host Settings". AppView.qml
+    // already guards its bar the same way; this screen was missed.
+    readonly property bool hintBarVisible: !hostSettingsMenu.visible
+                                           && !messagePanel.visible
+                                           && !pinPanel.visible
+                                           && !addPcPanel.visible
 
     readonly property var hintLeftHints: root.hasHosts
         ? [
@@ -1269,7 +1481,8 @@ FocusScope {
               { action: "options",   label: qsTr("Add a PC") }
           ]
         : [
-              { action: "options", label: qsTr("Add a PC"), emphasis: true }
+              { action: "confirm", label: qsTr("Look again"), emphasis: true },
+              { action: "options", label: qsTr("Enter an address instead") }
           ]
 
     readonly property var hintRightHints: root.hasHosts
@@ -1289,8 +1502,8 @@ FocusScope {
 
     // Inert, and swallowed. Without accepting them they bubble to the StackView
     // and drag focus into chrome this screen does not have.
-    Keys.onUpPressed: event.accepted = true
-    Keys.onDownPressed: event.accepted = true
+    Keys.onUpPressed: function(event) { event.accepted = true }
+    Keys.onDownPressed: function(event) { event.accepted = true }
 
     // A. Three keycodes for one button: Return and Enter are the same press on
     // different keyboards, and Space is what A becomes while the settings page's
@@ -1298,15 +1511,35 @@ FocusScope {
     // Space anyway means a mode that leaks in from elsewhere can no longer make
     // A do nothing at all -- which is the failure defect 1 produced, and the
     // reason it read as a pairing problem rather than a navigation one.
-    Keys.onReturnPressed: actConfirm()
-    Keys.onEnterPressed: actConfirm()
-    Keys.onSpacePressed: {
-        actConfirm()
+    //
+    // With zero hosts there is no host for actConfirm() to act on -- it
+    // returns immediately on a null host -- so A instead does what the
+    // zero-hosts state's own primary button does: look again.
+    Keys.onReturnPressed: function(event) {
+        if (root.hasHosts) {
+            actConfirm()
+        } else {
+            actLookAgain()
+        }
+    }
+    Keys.onEnterPressed: function(event) {
+        if (root.hasHosts) {
+            actConfirm()
+        } else {
+            actLookAgain()
+        }
+    }
+    Keys.onSpacePressed: function(event) {
+        if (root.hasHosts) {
+            actConfirm()
+        } else {
+            actLookAgain()
+        }
         event.accepted = true
     }
 
     // X. Menu is also what the toolbar used for settings upstream; consumed here.
-    Keys.onMenuPressed: {
+    Keys.onMenuPressed: function(event) {
         actAddPc()
         event.accepted = true
     }

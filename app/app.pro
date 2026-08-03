@@ -536,7 +536,13 @@ unix:!macx: {
     desktop.files = deploy/linux/com.moonlight_stream.Moonlight.desktop
     desktop.path = $$PREFIX/$$DATADIR/applications/
 
-    icons.files = res/moonlight.svg
+    # The Bulan app icon, installed under the application ID rather than as
+    # "moonlight". That is the freedesktop convention the desktop entry's
+    # Icon= key now points at, and it is what Flatpak expects to find, so the
+    # non-Steam library entry shows the Bulan mark instead of an upstream icon
+    # or a blank placeholder. res/moonlight.svg is left in the tree: it is the
+    # upstream mark and nothing in the app draws it.
+    icons.files = deploy/linux/com.moonlight_stream.Moonlight.svg
     icons.path = $$PREFIX/$$DATADIR/icons/hicolor/scalable/apps/
 
     appstream.files = deploy/linux/com.moonlight_stream.Moonlight.appdata.xml

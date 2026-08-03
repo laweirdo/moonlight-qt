@@ -3,9 +3,13 @@ import QtQuick 2.9
 // this screen pushes and pops through the app's existing StackView. No stock
 // control from this module is instantiated anywhere in this file.
 import QtQuick.Controls 2.2
+// MultiEffect only, for the shared popup backdrop blur below. This module has
+// no stock control to instantiate.
+import QtQuick.Effects
 
 import AppModel 1.0
 import ComputerManager 1.0
+import ComputerModel 1.0
 
 import Bulan 1.0
 
@@ -70,6 +74,25 @@ FocusScope {
     // AppView instance is created on every push (HostCarousel.openAppView()),
     // so re-entering the grid always replays this from scratch.
     property bool gridEntranceStarted: false
+
+    // One backdrop blur, shared by every visual block on this screen -- see
+    // each layer.effect below. Declared once rather than repeated, per the
+    // motion rule's call to avoid near-identical copies of the same effect.
+    Component {
+        id: popupBackdropEffect
+        MultiEffect {
+            autoPaddingEnabled: false
+            blurEnabled: true
+            blur: Bulan.popupBackdropBlurStrength
+            blurMax: Bulan.popupBackdropBlurRadius
+        }
+    }
+
+    // True while a popup owns the screen. Client review, 3 August 2026: a
+    // popup should blur what is behind it, the same glass treatment the host
+    // carousel and the settings screen already give theirs.
+    readonly property bool popupBackdropActive:
+        gameOptions.visible || hostSettingsMenu.visible
 
     Timer {
         id: gridEntranceTimer
@@ -143,6 +166,79 @@ FocusScope {
     readonly property bool useFakeGames:
         typeof fakeGames !== "undefined" && fakeGames !== "" && fakeGames !== "off"
     property var gameModel: useFakeGames ? fakeModel : appModel
+
+    // A second, independent ComputerModel purely for Host Settings (SELECT)
+    // actions -- wake, test network, forget -- and for the address/details
+    // line in its header. This screen cannot reach HostCarousel's own
+    // computerModel instance: the carousel may not even be the item directly
+    // below this one on the stack (see openAppViewForHost() below, which can
+    // stack a second AppView on top of a first for the same host), and
+    // nothing here should assume it is. Null in review mode, matching
+    // createModel()'s own guard -- there is no real ComputerManager list to
+    // wrap when neither fakeHosts nor a real pair got this screen open.
+    property ComputerModel hostSettingsModel: root.useFakeGames ? null : createHostSettingsModel()
+
+    function createHostSettingsModel() {
+        var model = Qt.createQmlObject('import ComputerModel 1.0; ComputerModel {}', root, '')
+        model.initialize(ComputerManager)
+        model.connectionTestCompleted.connect(handleHostSettingsNetworkTestComplete)
+        return model
+    }
+
+    // HostCarousel.connectionTestComplete()'s own guard, copied verbatim:
+    // leaving this screen abandons only the overlay's presentation of the
+    // test, not the upstream connectivity task itself, which is allowed to
+    // finish in the background.
+    function handleHostSettingsNetworkTestComplete(result, blockedPorts) {
+        if (!hostSettingsMenu.visible || !hostSettingsMenu.networkTestPending) {
+            return
+        }
+        if (result === -1) {
+            hostSettingsMenu.showFeedback(
+                        qsTr("Test unavailable"),
+                        qsTr("Moonlight couldn't reach its connection-testing servers. Check this device's internet connection and try again."))
+        } else if (result === 0) {
+            hostSettingsMenu.showFeedback(
+                        qsTr("Network looks ready"),
+                        qsTr("Moonlight did not detect any blocked streaming ports on this network."))
+        } else {
+            hostSettingsMenu.showFeedback(
+                        qsTr("Streaming ports are blocked"),
+                        qsTr("This network may prevent streaming over the internet.")
+                            + "\n\n" + qsTr("Blocked ports:")
+                            + "\n" + blockedPorts)
+        }
+    }
+
+    // Invisible mirror of hostSettingsModel, HostCarousel's own `counter`
+    // pattern: reads by role name rather than a raw model.data() call, so a
+    // reordering of computermodel.h's role enum cannot break this silently.
+    Item {
+        visible: false
+        Repeater {
+            id: hostSettingsMirror
+            model: root.hostSettingsModel
+            delegate: Item {
+                readonly property string uuid: model.uuid
+                readonly property string address: model.address
+                readonly property string details: model.details
+                readonly property bool online: model.online
+                readonly property bool paired: model.paired
+                readonly property bool wakeable: model.wakeable
+                readonly property bool statusUnknown: model.statusUnknown
+            }
+        }
+    }
+
+    function findHostSettingsRow(uuid) {
+        for (var i = 0; i < hostSettingsMirror.count; i++) {
+            var it = hostSettingsMirror.itemAt(i)
+            if (it && it.uuid === uuid) {
+                return it
+            }
+        }
+        return null
+    }
 
     ListModel {
         id: fakeModel
@@ -1879,6 +1975,20 @@ FocusScope {
             root.beginStageOneReview(stageOneRoute)
         }
 
+        // Review hook: MOONLIGHT_GAME_REVIEW=hostsettings opens SELECT's
+        // destination once this screen has settled. SELECT is Key_Context1,
+        // which sdlgamepadkeynavigation.cpp only ever synthesises from a real
+        // gamepad's Select button -- it has no virtual keycode, so scripted
+        // input cannot press it and this surface could otherwise be built and
+        // shipped having only ever been reasoned about. Same argument as
+        // MOONLIGHT_OPEN_HOST_SETTINGS on the carousel, which exists for the
+        // identical reason.
+        if (root.useFakeGames && !root.gameReviewOpened
+                && root.gameReviewCase === "hostsettings") {
+            root.gameReviewOpened = true
+            Qt.callLater(root.actHostSettings)
+        }
+
         if (root.useFakeGames && !root.gameReviewOpened &&
                 (root.gameReviewCase === "options" || root.gameReviewCase === "switch")) {
             root.gameReviewOpened = true
@@ -2000,10 +2110,144 @@ FocusScope {
         if (root.StackView.status !== StackView.Active) {
             return
         }
-        if (gameOptions.visible) {
+        if (gameOptions.visible || hostSettingsMenu.visible) {
             return
         }
         root.forceActiveFocus()
+    }
+
+    // --- host settings -----------------------------------------------------
+    // SELECT's destination (client decision, 2 August 2026 -- ROADMAP.md's
+    // "second Phase B gap"; see Keys.onContext1Pressed below). Reuses
+    // HostSettingsOverlay.qml exactly as HostCarousel.qml does, fed from the
+    // identifiers this screen was already opened with (hostUuid/hostName)
+    // rather than a second lookup path.
+    function actHostSettings() {
+        if (root.hostUuid.length === 0) {
+            // Review path with no real host behind this screen at all
+            // (MOONLIGHT_INITIAL_VIEW with neither fakeHosts nor a real
+            // pair) -- nothing to show settings for.
+            return
+        }
+        var row = root.useFakeGames ? null : root.findHostSettingsRow(root.hostUuid)
+        // "View all apps" is withheld only when this grid IS the all-apps
+        // list already (root.showHiddenGames) -- opening it again would
+        // push a second AppView showing the exact list already on screen,
+        // the "app list you are already in" case the brief calls out. It
+        // stays offered from the ordinary filtered grid, where it opens a
+        // genuinely different, superset list -- including the one way back
+        // into a library that looks empty only because everything in it is
+        // hidden (see the empty-library text below).
+        hostSettingsMenu.suppressActionIds = root.showHiddenGames ? ["apps"] : []
+        hostSettingsMenu.showForHost({
+            uuid: root.hostUuid,
+            name: root.hostName,
+            address: row ? row.address : "",
+            details: row ? row.details : "",
+            // This screen only stays open while its host is online and
+            // paired -- AppModel::handleComputerStateChanged emits
+            // computerLost() the instant either flips, and computerLost()
+            // below pops back to the carousel -- so true is the correct
+            // default even on the one frame before the mirror above has a
+            // row for a freshly-opened real host.
+            online: row ? row.online : true,
+            paired: row ? row.paired : true,
+            wakeable: row ? row.wakeable : false,
+            statusUnknown: row ? row.statusUnknown : false,
+            reviewMode: root.useFakeGames,
+            // Never busy from here: this screen tracks no wake of its own,
+            // and (per the comment above) cannot even be showing an offline
+            // host for Wake to apply to.
+            wakePending: false
+        })
+    }
+
+    // A fresh AppView for the same host, showing every app including hidden
+    // ones -- HostCarousel.openAppView()'s "apps" branch, reproduced here
+    // because this screen cannot reach that instance: the carousel may not
+    // even be the item directly below this one (SELECT can be pressed again
+    // from inside the all-apps view this same function opened). Pushed on
+    // top rather than replacing this screen, so B returns to exactly the
+    // list the player was looking at.
+    //
+    // Deliberately does not connect contextSaved -- that signal feeds
+    // HostCarousel.appViewContextByHostUuid, which this screen has no
+    // access to and does not own. It fires to nothing, harmlessly.
+    function openAppViewForHost(computerIndex, hostUuid, hostName) {
+        var component = Qt.createComponent("AppView.qml")
+        if (component.status !== Component.Ready) {
+            console.error("AppView.qml failed to load:", component.errorString())
+            hostSettingsMenu.showFeedback(qsTr("Can't open %1").arg(hostName),
+                              qsTr("Something went wrong loading the game list."))
+            return
+        }
+        var view = component.createObject(stackView, {
+            "computerIndex": computerIndex,
+            "objectName": hostName,
+            "hostUuid": hostUuid,
+            "showHiddenGames": true
+        })
+        if (view === null) {
+            console.error("AppView.qml loaded but could not be created")
+            hostSettingsMenu.showFeedback(qsTr("Can't open %1").arg(hostName),
+                              qsTr("Something went wrong loading the game list."))
+            return
+        }
+        hostSettingsMenu.close()
+        stackView.push(view)
+    }
+
+    // What each action MEANS. Mirrors HostCarousel.handleHostMenuAction()'s
+    // own identity rule: the UUID captured when the overlay opened is
+    // resolved again here, not trusted, because discovery can still reorder
+    // or remove hosts while the menu is open.
+    //
+    // Actions allowed from this screen and what each does:
+    //   apps        -- opens the all-apps view for this host (see
+    //                  openAppViewForHost() above); withheld when this
+    //                  screen already IS that view (see actHostSettings()).
+    //   wake        -- sends the same magic packet HostCarousel's Wake does.
+    //                  Not reachable in practice: see actHostSettings()'s
+    //                  comment on why this screen cannot be showing an
+    //                  offline host. Handled anyway rather than left silent.
+    //   testNetwork -- identical to HostCarousel's own testNetwork.
+    //   forget      -- deletes the host this grid is showing. Because that
+    //                  destroys the very thing this screen exists to show,
+    //                  it leaves for the carousel via computerLost() --
+    //                  the same route a real disconnect already uses --
+    //                  rather than continuing to show a PC that no longer
+    //                  exists.
+    function handleHostSettingsAction(actionId, hostUuid, hostName) {
+        if (root.useFakeGames) {
+            hostSettingsMenu.showFeedback(
+                        qsTr("Review mode"),
+                        qsTr("%1 isn't a real PC, so nothing was changed.")
+                            .arg(hostName))
+            return
+        }
+
+        var computerIndex = root.hostSettingsModel.computerIndexForUuid(hostUuid)
+        if (computerIndex < 0) {
+            hostSettingsMenu.showFeedback(
+                        qsTr("PC no longer available"),
+                        qsTr("%1 changed while this menu was open. Close it and try again.")
+                            .arg(hostName))
+            return
+        }
+
+        if (actionId === "apps") {
+            root.openAppViewForHost(computerIndex, hostUuid, hostName)
+        } else if (actionId === "wake") {
+            hostSettingsMenu.close()
+            root.hostSettingsModel.wakeComputer(computerIndex)
+        } else if (actionId === "testNetwork") {
+            hostSettingsMenu.showNetworkTestPending()
+            root.hostSettingsModel.testConnectionForComputer(computerIndex)
+        } else if (actionId === "forget") {
+            hostSettingsMenu.close()
+            root.hostSettingsModel.deleteComputer(computerIndex)
+            root.computerLost()
+        }
     }
 
     // --- game actions ----------------------------------------------------------
@@ -2467,6 +2711,8 @@ FocusScope {
     // --- header ----------------------------------------------------------------
     Item {
         id: header
+        layer.enabled: root.popupBackdropActive
+        layer.effect: popupBackdropEffect
         anchors.left: parent.left
         anchors.leftMargin: Bulan.layoutScreenMarginX
         anchors.top: parent.top
@@ -2572,6 +2818,9 @@ FocusScope {
     // this remains display-only until the C++ side is changed.
     Row {
         id: tabStrip
+        layer.enabled: root.popupBackdropActive
+        layer.effect: popupBackdropEffect
+
         anchors.left: parent.left
         anchors.leftMargin: Bulan.layoutScreenMarginX
         anchors.top: header.bottom
@@ -2585,41 +2834,47 @@ FocusScope {
             glyphSize: Bulan.sizeBodyLg
         }
 
-        Column {
+        // The selected tab is marked by a warm glow around the word itself
+        // rather than a rule under it (client decision, 3 August 2026). The
+        // underline sat below the text and only as wide as it, which read as
+        // left-aligned against the pair; a glow is centred on the word by
+        // nature and needs no alignment of its own.
+        //
+        // Same treatment as the focused element everywhere else in the app --
+        // warm light on cool ground, carried by bloom rather than by a rule.
+        Text {
             anchors.verticalCenter: parent.verticalCenter
-            spacing: Bulan.space2xs
+            text: qsTr("Recent")
+            color: root.activeTab === "recent" ? Bulan.textPrimary : Bulan.secondary
+            font.family: Bulan.familyDisplay
+            font.pixelSize: Bulan.sizeTitle
 
-            Text {
-                text: qsTr("Recent")
-                color: root.activeTab === "recent" ? Bulan.textPrimary : Bulan.secondary
-                font.family: Bulan.familyDisplay
-                font.pixelSize: Bulan.sizeTitle
-            }
-
-            Rectangle {
-                width: parent.width
-                height: 2
-                color: Bulan.accentPrimary
-                visible: root.activeTab === "recent"
+            layer.enabled: root.activeTab === "recent"
+            layer.effect: MultiEffect {
+                shadowEnabled: true
+                shadowColor: Bulan.accentGlow
+                shadowBlur: Bulan.buttonGlowBlur
+                shadowOpacity: Bulan.buttonGlowOpacity
+                shadowHorizontalOffset: 0
+                shadowVerticalOffset: 0
             }
         }
 
-        Column {
+        Text {
             anchors.verticalCenter: parent.verticalCenter
-            spacing: Bulan.space2xs
+            text: qsTr("Library")
+            color: root.activeTab === "library" ? Bulan.textPrimary : Bulan.secondary
+            font.family: Bulan.familyDisplay
+            font.pixelSize: Bulan.sizeTitle
 
-            Text {
-                text: qsTr("Library")
-                color: root.activeTab === "library" ? Bulan.textPrimary : Bulan.secondary
-                font.family: Bulan.familyDisplay
-                font.pixelSize: Bulan.sizeTitle
-            }
-
-            Rectangle {
-                width: parent.width
-                height: 2
-                color: Bulan.accentPrimary
-                visible: root.activeTab === "library"
+            layer.enabled: root.activeTab === "library"
+            layer.effect: MultiEffect {
+                shadowEnabled: true
+                shadowColor: Bulan.accentGlow
+                shadowBlur: Bulan.buttonGlowBlur
+                shadowOpacity: Bulan.buttonGlowOpacity
+                shadowHorizontalOffset: 0
+                shadowVerticalOffset: 0
             }
         }
 
@@ -2640,6 +2895,8 @@ FocusScope {
     // HostCarousel.qml's header comment for why.
     Item {
         id: recentView
+        layer.enabled: root.popupBackdropActive
+        layer.effect: popupBackdropEffect
         anchors.left: parent.left
         anchors.right: parent.right
         anchors.top: tabStrip.bottom
@@ -2689,6 +2946,52 @@ FocusScope {
         readonly property real focusCenterY: Math.max(
             Bulan.gameRecentTileHeight * Bulan.motionFocusScale / 2,
             (height - labelReserve) / 2)
+
+        // --- warm halo behind the focused tile -------------------------------
+        // Recent had none (client review, 3 August 2026). The Library grid and
+        // the host carousel both carry one, so the focused game lost its glow
+        // on exactly the view the app opens on -- the halo appeared only after
+        // switching to Library, which read as the effect being broken rather
+        // than absent.
+        //
+        // Centred and stationary like the carousel's, not moved like the
+        // Library's: the focused tile in this view is always the centre one,
+        // so there is nothing for the halo to follow. Declared before the
+        // Repeater below so it paints behind every tile.
+        Canvas {
+            id: recentFocusBloom
+            width: Bulan.gameRecentTileWidth * 2.2
+            height: Bulan.gameRecentTileHeight * 2.2
+            x: recentView.width / 2 - width / 2
+            y: recentView.focusCenterY - height / 2
+            visible: root.recentOrder.length > 0
+
+            onWidthChanged: requestPaint()
+            onHeightChanged: requestPaint()
+            onPaint: {
+                var ctx = getContext("2d")
+                ctx.clearRect(0, 0, width, height)
+                var rx = width / 2
+                var ry = height / 2
+                // Stretched to the tile's portrait shape rather than drawn as
+                // a circle, exactly as the Library's own bloom does it.
+                ctx.save()
+                ctx.translate(rx, ry)
+                ctx.scale(1, ry / rx)
+                var g = ctx.createRadialGradient(0, 0, 0, 0, 0, rx)
+                var a = Bulan.focusBloomOpacity
+                g.addColorStop(0.00, Qt.rgba(1, 0.85, 0.63, a))
+                g.addColorStop(0.30, Qt.rgba(1, 0.85, 0.63, a * 0.45))
+                g.addColorStop(0.55, Qt.rgba(1, 0.85, 0.63, a * 0.16))
+                g.addColorStop(0.78, Qt.rgba(1, 0.85, 0.63, a * 0.04))
+                g.addColorStop(1.00, Qt.rgba(1, 0.85, 0.63, 0.0))
+                ctx.fillStyle = g
+                ctx.beginPath()
+                ctx.arc(0, 0, rx, 0, Math.PI * 2)
+                ctx.fill()
+                ctx.restore()
+            }
+        }
 
         // How many neighbour slots fit on each side of the focused tile,
         // worked out from the space actually on screen rather than the fixed
@@ -3071,38 +3374,29 @@ FocusScope {
                             elide: Text.ElideRight
                         }
 
-                        // Baseline-aligned against the title -- a Row aligns
-                        // its children's TOPS, which is why "Running" used to
-                        // ride high above the title's own baseline at a
-                        // smaller point size. This is a sibling anchored
-                        // directly to titleText's baseline instead.
-                        //
-                        // Positioned off titleText's actual PAINTED width,
-                        // not its bound width: the title elides/centres
-                        // within a fixed-width box, so "Running" has to hang
-                        // off the true right-hand edge of the glyphs, not the
-                        // edge of the box. Centring the pair as a whole (the
-                        // old Row) shifted the title left by half of this
-                        // label's width; anchoring it as a sibling like this
-                        // leaves the title itself centred on the tile.
-                        Text {
-                            id: runningLabel
-                            visible: recentSlot.isFocused && model.running
-                            anchors.baseline: titleText.baseline
-                            x: titleText.x + titleText.width / 2
-                               + titleText.paintedWidth / 2 + Bulan.spaceXs
-                            text: qsTr("Running")
-                            color: Bulan.statusSuccess
-                            font.family: Bulan.familyUi
-                            font.pixelSize: Bulan.sizeLabel
-                        }
                     }
 
+                    // "Running" sits on its own line under the game's name,
+                    // centred with it (client review, 3 August 2026). It used
+                    // to hang off the right-hand edge of the title's painted
+                    // glyphs on the same baseline, which read as misaligned
+                    // rather than as a status: at the focused title's size the
+                    // pair was visibly lopsided, and a long name pushed the
+                    // label off the tile entirely.
+                    //
+                    // This replaces the "Pick up where you left off." line
+                    // rather than being added above it. Stacking name,
+                    // "Running" AND a tagline put three lines under the tile,
+                    // which is what crowded the hint bar; the client's call was
+                    // to drop the tagline if the status could not otherwise
+                    // fit. "Running" is the load-bearing half -- it says the
+                    // game is live, which is also what changes A from Play to
+                    // Resume.
                     Text {
                         visible: recentSlot.isFocused && model.running
                         anchors.horizontalCenter: parent.horizontalCenter
-                        text: qsTr("Pick up where you left off.")
-                        color: Bulan.accentPrimary
+                        text: qsTr("Running")
+                        color: Bulan.statusSuccess
                         font.family: Bulan.familyUi
                         font.pixelSize: Bulan.sizeBody
                     }
@@ -3227,6 +3521,8 @@ FocusScope {
 
     Flickable {
         id: libraryFlickable
+        layer.enabled: root.popupBackdropActive
+        layer.effect: popupBackdropEffect
         anchors.left: parent.left
         anchors.leftMargin: Bulan.layoutScreenMarginX - root.libraryFocusInset
         anchors.top: tabStrip.bottom
@@ -3424,18 +3720,100 @@ FocusScope {
         }
     }
 
-    // --- empty library ---------------------------------------------------------
-    // Minimal placeholder only. TASK-BRIEF.md: the designed empty-library
-    // treatment is Phase D and FLOW.md records it as unresolved flow design --
-    // this is deliberately one line and nothing else. Shown regardless of
-    // which tab is active: with no games at all, Recent is empty too.
-    Text {
+    // --- empty library -----------------------------------------------------
+    // Replaces the one-line placeholder FLOW.md's "Unresolved flow design"
+    // section named directly. Same composition as HostCarousel's zero-hosts
+    // state and FirstRun.qml before it: crescent, display headline,
+    // secondary supporting line. Shown regardless of which tab is active --
+    // with no games at all, Recent is empty too.
+    //
+    // There are two different reasons this grid can be empty, and
+    // root.showHiddenGames is what tells them apart. This screen's own
+    // model only ever contains what its OWN showHiddenGames flag lets
+    // through -- see appmodel.cpp's filter -- so the ordinary (false) grid
+    // cannot itself distinguish "this host truly has nothing" from "this
+    // host has games, but every one of them is hidden": both look like zero
+    // rows from here. Rather than guess, or claim a host has no games when
+    // it might just have none SHOWING, the copy for that case names the real
+    // way to check -- SELECT still opens Host Settings even on an empty
+    // grid (see actHostSettings() above), and "View all apps" from there
+    // opens the superset list that would prove it either way. Only the
+    // all-apps view itself (showHiddenGames true) is in a position to say
+    // "nothing at all" with certainty, because it already includes hidden
+    // games and is still empty.
+    Column {
+        id: emptyLibraryContent
+        layer.enabled: root.popupBackdropActive
+        layer.effect: popupBackdropEffect
         anchors.centerIn: parent
+        // Motion rule: rides the same gridEntranceStarted settle-then-rise
+        // gate the Recent/Library tiles use, rather than a second timer.
+        anchors.verticalCenterOffset: -Bulan.space2xl
+                + (1 - root.emptyLibraryEntranceProgress) * Bulan.motionGridEntranceRise
+        spacing: Bulan.spaceLg
+        width: Math.min(parent.width - Bulan.layoutScreenMarginX * 2,
+                         Bulan.hostTileSize * 2.4)
         visible: root.gameCount === 0
-        text: qsTr("No games here yet.")
-        color: Bulan.textSecondary
-        font.family: Bulan.familyUi
-        font.pixelSize: Bulan.sizeBodyLg
+        opacity: Math.min(1, root.emptyLibraryEntranceProgress)
+
+        Image {
+            anchors.horizontalCenter: parent.horizontalCenter
+            source: "qrc:/res/bulan_logomark.svg"
+            width: Bulan.onboardingMarkSize
+            height: width
+            fillMode: Image.PreserveAspectFit
+            sourceSize.width: width * 2
+            sourceSize.height: width * 2
+            smooth: true
+        }
+
+        Text {
+            anchors.horizontalCenter: parent.horizontalCenter
+            text: root.showHiddenGames
+                  ? qsTr("Nothing here, hidden or not.")
+                  : qsTr("Nothing to play here yet.")
+            color: Bulan.textPrimary
+            font.family: Bulan.familyDisplay
+            font.pixelSize: Bulan.sizeDisplay
+            horizontalAlignment: Text.AlignHCenter
+        }
+
+        Text {
+            anchors.horizontalCenter: parent.horizontalCenter
+            width: parent.width
+            horizontalAlignment: Text.AlignHCenter
+            wrapMode: Text.Wrap
+            text: root.showHiddenGames
+                  ? qsTr("%1 has no games installed.").arg(root.hostName)
+                  : qsTr("%1 isn't showing any games. If you've hidden them all, Host Settings can show everything.").arg(root.hostName)
+            color: Bulan.textSecondary
+            font.family: Bulan.familyUi
+            font.pixelSize: Bulan.sizeBody
+        }
+    }
+
+    // Entrance state for the block above. A plain real/bool pair rather than
+    // GameTile's per-delegate shape, because there is exactly one of these
+    // per screen instance, not one per row -- no stagger order to derive.
+    // Gated on root.gridEntranceStarted (the same "screen has settled" timer
+    // the Recent/Library tiles already wait on) rather than a second timer,
+    // per the motion rule's call to centralise cadence.
+    property real emptyLibraryEntranceProgress: 0
+    property bool emptyLibraryEntranceSettled: false
+    SequentialAnimation {
+        id: emptyLibraryEntranceAnimation
+        running: root.gameCount === 0 && root.gridEntranceStarted
+                 && !root.emptyLibraryEntranceSettled
+        onStopped: root.emptyLibraryEntranceSettled = true
+        NumberAnimation {
+            target: root
+            property: "emptyLibraryEntranceProgress"
+            to: 1
+            duration: Bulan.motionGridEntranceRiseMs
+            // One restrained overshoot, one bounce -- brief §6 rule 1.
+            easing.type: Easing.OutBack
+            easing.overshoot: Bulan.motionEntranceOvershoot
+        }
     }
 
     // --- hint bar ------------------------------------------------------------
@@ -3447,27 +3825,23 @@ FocusScope {
     // single window-level HintBar reads these three properties off
     // whichever screen is current instead of this screen drawing its own.
     //
-    // Content unchanged from the previous local instance: withholds
-    // Play/Options entirely when the library is empty (nothing to act on,
-    // and X would open options on nothing), reads Resume instead of Play for
-    // the running game, and withholds two of the mockup's promised
-    // right-hand hints because they cannot currently do anything -- see the
-    // stage 3 report:
-    //
-    //   Switch tab (L1/R1): no keycode reaches this file at all right now.
-    //   Host Settings (SELECT): this screen has no host-settings overlay.
+    // Withholds Play/Options entirely when the library is empty (nothing to
+    // act on, and X would open options on nothing) and reads Resume instead
+    // of Play for the running game. B still returns to the carousel either
+    // way -- the empty-library text above names Host Settings as the way to
+    // check for hidden games rather than promising a second route out.
     //
     // HintBar.qml's own comment is explicit that a hint promising an action
     // that does nothing is worse than showing fewer hints.
 
-    // Hidden while the options popup is up, because the popup brings its own
-    // bar and the two land in exactly the same place. The scrim is
-    // translucent by design, so this screen's bar was reading straight
-    // through it and the two sets of hints drew over each other -- "Select"
-    // on top of "Play", "Close" on top of "Client Settings". Two bars also
-    // contradict each other: only one of them describes what the buttons do
-    // while a popup owns the input.
-    readonly property bool hintBarVisible: !gameOptions.visible
+    // Hidden while the options popup or the host-settings overlay is up,
+    // because each brings its own bar and the two land in exactly the same
+    // place. The scrim is translucent by design, so this screen's bar was
+    // reading straight through it and the two sets of hints drew over each
+    // other -- "Select" on top of "Play", "Close" on top of "Client
+    // Settings". Two bars also contradict each other: only one of them
+    // describes what the buttons do while an overlay owns the input.
+    readonly property bool hintBarVisible: !gameOptions.visible && !hostSettingsMenu.visible
 
     readonly property var hintLeftHints: root.gameCount > 0
         ? [
@@ -3479,18 +3853,19 @@ FocusScope {
               { action: "back", label: qsTr("Back") }
           ]
 
-    // Switch tab is back: L1/R1 now carry a keycode (Key_Context2 /
-    // Key_Context3, added to sdlgamepadkeynavigation.cpp in this task), so
-    // the hint is no longer promising a button that does nothing.
+    // Switch tab: L1/R1 carry a keycode (Key_Context2 / Key_Context3, added
+    // to sdlgamepadkeynavigation.cpp in stage 3), so the hint is not
+    // promising a button that does nothing.
     //
-    // Host Settings is still absent, and deliberately. The client's mockup
-    // shows it on this screen, but this screen has no host-settings surface
-    // and building a second one is not in this task. Advertising it would be
-    // exactly the failure HintBar.qml exists to prevent. Recorded as a gap
-    // in TASK-BRIEF.md rather than papered over with a dead hint.
+    // Host Settings (SELECT) is no longer a gap -- see actHostSettings()
+    // above and TASK-BRIEF.md stage 4 / ROADMAP.md's "second Phase B gap".
+    // Offered unconditionally, including on an empty library: that is
+    // exactly where a player checking "did I hide everything?" needs it
+    // most.
     readonly property var hintRightHints: [
-        { action: "l1",    label: qsTr("Switch tab") },
-        { action: "start", label: qsTr("Client Settings") }
+        { action: "l1",     label: qsTr("Switch tab") },
+        { action: "start",  label: qsTr("Client Settings") },
+        { action: "select", label: qsTr("Host Settings") }
     ]
 
     // --- input ---------------------------------------------------------------
@@ -3607,24 +3982,29 @@ FocusScope {
     // START.
     Keys.onHangupPressed: function(event) {
         if (!root.consumeLaunchInput()) {
-            navigateTo("qrc:/gui/SettingsView.qml", SettingsView)
+            navigateTo("qrc:/gui/SettingsShell.qml", SettingsShell)
         }
         event.accepted = true
     }
 
-    // Y and SELECT keep their existing window-level/unused behavior outside a
-    // launch, while still obeying the launch interruption rule.
+    // Y keeps its existing window-level/unused behavior outside a launch,
+    // while still obeying the launch interruption rule.
     Keys.onCallPressed: function(event) {
         event.accepted = root.consumeLaunchInput()
     }
-    Keys.onContext1Pressed: function(event) {
-        event.accepted = root.consumeLaunchInput()
-    }
 
-    // SELECT (Key_Context1) is deliberately NOT bound. This screen has no
-    // host-settings overlay to open -- see the stage 3 report -- and binding
-    // it to nothing would be exactly the failure HintBar.qml exists to
-    // prevent: a live keycode whose action does nothing.
+    // SELECT opens this host's own settings (client decision, 2 August 2026
+    // -- ROADMAP.md's "second Phase B gap", closed by TASK-BRIEF.md stage 4).
+    // This screen previously left Context1 deliberately unbound because it
+    // had no host-settings surface of its own; see actHostSettings() and
+    // handleHostSettingsAction() above for what opens now and which of the
+    // overlay's actions this screen allows.
+    Keys.onContext1Pressed: function(event) {
+        if (!root.consumeLaunchInput()) {
+            root.actHostSettings()
+        }
+        event.accepted = true
+    }
 
     // L1 / R1. Both shoulder buttons were unmapped in
     // sdlgamepadkeynavigation.cpp until this task -- they fell through to
@@ -3660,6 +4040,21 @@ FocusScope {
             root.handleGameAction(actionId)
         }
         onDismissed: Qt.callLater(root.reclaimFocus)
+    }
+
+    // --- host settings -------------------------------------------------------
+    // SELECT's destination. Instantiated exactly the way HostCarousel.qml
+    // does; onActionRequested is this screen's own dispatcher, not a shared
+    // one, because the set of actions that make sense from a game grid
+    // differs from the carousel's -- see handleHostSettingsAction() above
+    // for which do and why.
+    HostSettingsOverlay {
+        id: hostSettingsMenu
+        anchors.fill: parent
+        onActionRequested: function(actionId, hostUuid, hostName) {
+            root.handleHostSettingsAction(actionId, hostUuid, hostName)
+        }
+        onVisibleChanged: if (!visible) Qt.callLater(root.reclaimFocus)
     }
 
     // Mouse/touch equivalent of the launch key barrier. The top-level proxy

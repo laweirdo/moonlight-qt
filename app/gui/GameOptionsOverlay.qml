@@ -42,8 +42,14 @@ FocusScope {
     signal actionRequested(string actionId)
     signal dismissed()
 
-    visible: false
-    enabled: visible
+    // `opened` is the intent, `visible` trails it: the panel stays on screen
+    // until PopupMotion's exit animation has finished, which is what lets a
+    // popup animate out instead of vanishing on the frame it was closed.
+    // `enabled` follows the intent, not the presence, so a closing popup stops
+    // taking input immediately.
+    property bool opened: false
+    visible: opened || popupMotion.progress > 0.001
+    enabled: opened
     z: 200
 
     // --- opening -------------------------------------------------------------
@@ -55,7 +61,7 @@ FocusScope {
         quitConfirmIndex = 0
         page = "menu"
         enteredAtConfirmation = false
-        visible = true
+        opened = true
         forceActiveFocus()
     }
 
@@ -69,7 +75,7 @@ FocusScope {
         switchConfirmIndex = 0
         page = "switchConfirm"
         enteredAtConfirmation = true
-        visible = true
+        opened = true
         forceActiveFocus()
     }
 
@@ -94,7 +100,7 @@ FocusScope {
 
     function close() {
         focus = false
-        visible = false
+        opened = false
         dismissed()
     }
 
@@ -284,9 +290,17 @@ FocusScope {
         actionRequested(actionId)
     }
 
+    // The shared popup entrance -- see PopupMotion.qml. Every Bulan popup uses
+    // this one object rather than its own copy of the animation.
+    PopupMotion {
+        id: popupMotion
+        open: overlay.opened
+    }
+
     Rectangle {
         anchors.fill: parent
         color: Bulan.popupScrim
+        opacity: popupMotion.scrimOpacity
 
         MouseArea {
             anchors.fill: parent
@@ -297,6 +311,12 @@ FocusScope {
 
     Rectangle {
         id: surface
+
+        // Grows from motionPopupEnterScale past its resting size and settles
+        // back once. Opacity is clamped in PopupMotion so only the scale
+        // carries the overshoot.
+        scale: popupMotion.surfaceScale
+        opacity: popupMotion.surfaceOpacity
 
         anchors.horizontalCenter: parent.horizontalCenter
         anchors.verticalCenter: parent.verticalCenter
@@ -398,7 +418,7 @@ FocusScope {
                                        ? Bulan.statusError : Bulan.textPrimary
                                 font.family: Bulan.familyUi
                                 font.pixelSize: Bulan.sizeBody
-                                font.bold: index === overlay.selectedAction
+                                font.weight: Bulan.weightBody
                             }
 
                             Text {
@@ -504,7 +524,7 @@ FocusScope {
                                        ? Bulan.statusError : Bulan.textPrimary
                                 font.family: Bulan.familyUi
                                 font.pixelSize: Bulan.sizeBody
-                                font.bold: quitChoiceButton.index === overlay.quitConfirmIndex
+                                font.weight: Bulan.weightBody
                             }
 
                             MouseArea {
@@ -578,7 +598,7 @@ FocusScope {
                                        ? Bulan.statusError : Bulan.textPrimary
                                 font.family: Bulan.familyUi
                                 font.pixelSize: Bulan.sizeBody
-                                font.bold: switchChoiceButton.index === overlay.switchConfirmIndex
+                                font.weight: Bulan.weightBody
                             }
 
                             MouseArea {

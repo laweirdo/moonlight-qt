@@ -36,6 +36,16 @@ FocusScope {
     // would not actually start.
     property bool wakePending: false
 
+    // Action IDs to leave out of the menu this call builds, even where they
+    // would otherwise qualify -- e.g. AppView.qml withholds "apps" when the
+    // grid open behind this overlay is already the all-apps list, so the
+    // menu is not offering to open the exact list already on screen. Read
+    // once per showForHost() call, not bound continuously: the caller sets
+    // it immediately before calling showForHost(), matching how every other
+    // snapshot field here is a one-shot value rather than a live binding.
+    // Empty by default, so HostCarousel.qml's own call site is unaffected.
+    property var suppressActionIds: []
+
     property string page: "menu"
     property var menuActions: []
     property int selectedAction: 0
@@ -47,8 +57,14 @@ FocusScope {
     signal actionRequested(string actionId, string hostUuid, string hostName)
     signal dismissed()
 
-    visible: false
-    enabled: visible
+    // `opened` is the intent, `visible` trails it: the panel stays on screen
+    // until PopupMotion's exit animation has finished, which is what lets a
+    // popup animate out instead of vanishing on the frame it was closed.
+    // `enabled` follows the intent, not the presence, so a closing popup stops
+    // taking input immediately.
+    property bool opened: false
+    visible: opened || popupMotion.progress > 0.001
+    enabled: opened
     z: 200
 
     function showForHost(snapshot) {
@@ -64,7 +80,7 @@ FocusScope {
         wakePending = snapshot.wakePending
 
         var actions = []
-        if (hostOnline && hostPaired) {
+        if (hostOnline && hostPaired && overlay.suppressActionIds.indexOf("apps") < 0) {
             actions.push({
                 actionId: "apps",
                 label: qsTr("View all apps"),
@@ -104,14 +120,14 @@ FocusScope {
         confirmIndex = 0
         networkTestPending = false
         page = "menu"
-        visible = true
+        opened = true
         forceActiveFocus()
     }
 
     function close() {
         networkTestPending = false
         focus = false
-        visible = false
+        opened = false
         dismissed()
     }
 
@@ -191,9 +207,17 @@ FocusScope {
                                                     detailsFlick.contentY + amount))
     }
 
+    // The shared popup entrance -- see PopupMotion.qml. Every Bulan popup uses
+    // this one object rather than its own copy of the animation.
+    PopupMotion {
+        id: popupMotion
+        open: overlay.opened
+    }
+
     Rectangle {
         anchors.fill: parent
         color: Bulan.popupScrim
+        opacity: popupMotion.scrimOpacity
 
         MouseArea {
             anchors.fill: parent
@@ -204,6 +228,12 @@ FocusScope {
 
     Rectangle {
         id: surface
+
+        // Grows from motionPopupEnterScale past its resting size and settles
+        // back once. Opacity is clamped in PopupMotion so only the scale
+        // carries the overshoot.
+        scale: popupMotion.surfaceScale
+        opacity: popupMotion.surfaceOpacity
 
         anchors.horizontalCenter: parent.horizontalCenter
         anchors.verticalCenter: parent.verticalCenter
@@ -373,7 +403,7 @@ FocusScope {
                                        ? Bulan.statusError : Bulan.textPrimary
                                 font.family: Bulan.familyUi
                                 font.pixelSize: Bulan.sizeBody
-                                font.bold: index === overlay.selectedAction
+                                font.weight: Bulan.weightBody
                             }
 
                             Text {
@@ -495,7 +525,7 @@ FocusScope {
                                        ? Bulan.statusError : Bulan.textPrimary
                                 font.family: Bulan.familyUi
                                 font.pixelSize: Bulan.sizeBody
-                                font.bold: index === overlay.confirmIndex
+                                font.weight: Bulan.weightBody
                             }
 
                             MouseArea {

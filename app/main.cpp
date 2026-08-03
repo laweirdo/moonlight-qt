@@ -1030,10 +1030,15 @@ int main(int argc, char *argv[])
             tokenProofMode = true;
         }
         else {
-            // The host carousel replaces PcView's grid. PcView is left in the
-            // tree because it still owns the rename/delete/network-test flows
-            // that the carousel has no designed home for yet.
-            initialView = "qrc:/gui/HostCarousel.qml";
+            // Splash decides, once it has held briefly, whether the app
+            // continues to the host carousel (a host is already known and
+            // paired) or to first run. It always replaces itself rather than
+            // being pushed under either, so it is never left on the stack --
+            // see Splash.qml's proceed(). The host carousel itself still
+            // replaces PcView's grid; PcView is left in the tree because it
+            // still owns the rename/delete/network-test flows that the
+            // carousel has no designed home for yet.
+            initialView = "qrc:/gui/Splash.qml";
         }
 
         // Debug hook: MOONLIGHT_INITIAL_VIEW=qrc:/gui/SettingsView.qml boots
@@ -1150,6 +1155,21 @@ int main(int argc, char *argv[])
         // changes nothing.
         engine.rootContext()->setContextProperty("fakeConnectHoldMs",
                                                  qEnvironmentVariableIntValue("MOONLIGHT_FAKE_CONNECT_HOLD_MS"));
+        // Review hook: MOONLIGHT_FORCE_FIRST_RUN=1 sends Splash to FirstRun
+        // even when a host is already paired on this machine. Without this,
+        // first run could only ever be reached once per review station --
+        // the first real pairing would close the door on looking at
+        // S1-S3 again.
+        engine.rootContext()->setContextProperty("forceFirstRunReview",
+                                                 qEnvironmentVariableIsSet("MOONLIGHT_FORCE_FIRST_RUN"));
+        // Review hook: MOONLIGHT_FAKE_PAIR_PIN=<pin> fixes the PIN PairView
+        // shows for a fake host (HostDiscovery.actSelect()'s fake-host
+        // branch), so a screenshot capture is reproducible run to run instead
+        // of showing whatever generatePinString() happened to return. Unset
+        // leaves that branch generating a real, if unusable, PIN exactly as
+        // it would for a review of any other fake-host state.
+        engine.rootContext()->setContextProperty("fakePairPin",
+                                                 QString::fromUtf8(qgetenv("MOONLIGHT_FAKE_PAIR_PIN")));
         // Review hook: starts a wake on the focused fake host once the carousel
         // has settled, the same way MOONLIGHT_OPEN_HOST_SETTINGS opens the host
         // menu. Without it the busy state cannot be captured at all, because the
@@ -1190,6 +1210,20 @@ int main(int argc, char *argv[])
         // is not on screen yet at the default four seconds. Zero unless set.
         engine.rootContext()->setContextProperty("screenshotDelayMs",
                                                  qEnvironmentVariableIntValue("MOONLIGHT_SCREENSHOT_DELAY_MS"));
+        // Review hooks for SettingsShell.qml (private v1 finalisation, stage 5).
+        // MOONLIGHT_SETTINGS_REVIEW_CATEGORY=<id> selects a rail category (e.g.
+        // "basic", "about") once the screen settles, and the companion
+        // MOONLIGHT_SETTINGS_REVIEW_ROW=<id> additionally opens that row's list
+        // or slider popup -- the same reasoning as MOONLIGHT_OPEN_HOST_SETTINGS:
+        // the screenshot hook grabs the window on a timer and cannot press A, so
+        // without this the popups could be built and shipped having only ever
+        // been reasoned about. Both are inert unless set; reaching the screen
+        // itself needs no new hook, since MOONLIGHT_INITIAL_VIEW already boots
+        // straight to any qrc:/gui/*.qml path.
+        engine.rootContext()->setContextProperty("settingsReviewCategory",
+                                                 QString::fromUtf8(qgetenv("MOONLIGHT_SETTINGS_REVIEW_CATEGORY")));
+        engine.rootContext()->setContextProperty("settingsReviewRow",
+                                                 QString::fromUtf8(qgetenv("MOONLIGHT_SETTINGS_REVIEW_ROW")));
         // Suppress the startup warning dialogs in token proof mode -- they would
         // otherwise open modally on top of the sheet.
         engine.rootContext()->setContextProperty("runConfigChecks",

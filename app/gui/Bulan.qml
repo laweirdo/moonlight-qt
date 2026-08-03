@@ -48,6 +48,17 @@ QtObject {
 
     // --- Type (figma: type/base) ---------------------------------------------
     readonly property string familyUi: "Inter"
+
+    // The one body weight. Client review, 3 August 2026: selected rows were
+    // drawn semibold against medium neighbours, and the weight jumping as
+    // focus moved read as the text itself changing rather than the selection
+    // moving. Focus is carried by colour, the amber ring and the left bar --
+    // it does not also need to reflow the glyphs.
+    //
+    // Set as the window-wide default in main.qml, so a Text that says nothing
+    // about weight already gets this; the token exists for the places that
+    // used to say `font.bold` and now have to say something.
+    readonly property int weightBody: Font.Medium
     // From the mockup, not the variables file. See header.
     readonly property string familyDisplay: "Fraunces"
 
@@ -120,10 +131,12 @@ QtObject {
     readonly property real atmosphereVignetteOpacity: 0.08
 
     // Per-effect kill switches. The brief makes "every background effect must be
-    // individually disableable" a non-negotiable. There is no settings UI to
-    // bind these to yet, so they are the defaults each Atmosphere starts from;
-    // any instance can override them, and they can later be bound to real
-    // preferences without touching the component.
+    // individually disableable" a non-negotiable. Settings > UI now exposes real,
+    // persisted toggles for all three (StreamingPreferences.atmosphere*Enabled,
+    // private v1 finalisation stage 5) and Atmosphere.qml reads those instead of
+    // these tokens. Kept here only as the documented out-of-the-box default that
+    // StreamingPreferences::reload() mirrors -- nothing at runtime reads these
+    // three properties any more.
     readonly property bool atmosphereGradientEnabled: true
     readonly property bool atmosphereVignetteEnabled: true
     readonly property bool atmosphereGrainEnabled:    true
@@ -239,6 +252,23 @@ QtObject {
     // it. Client decision, 2 August 2026: newly arriving elements settle with
     // a restrained overshoot and a single soft bounce.
     readonly property real motionEntranceOvershoot: 1.7
+
+    // How small a popup starts before it settles into place. Popups used to
+    // appear instantly, with no motion at all, which the client called out on
+    // 3 August 2026 -- every other arrival in the app moves, so a menu simply
+    // existing read as a missing frame.
+    //
+    // Deliberately near 1: this is the same restrained register as
+    // motionPressScale's 0.97, scaled up a little because a whole panel
+    // travelling reads as more movement than a tile does. Combined with
+    // motionEntranceOvershoot above, a popup grows past its resting size once
+    // and settles back -- one bounce, never two.
+    readonly property real motionPopupEnterScale: 0.92
+
+    // How long that takes. motionFocusMs, the clock every other reactive
+    // motion in the app already runs on, so a popup does not introduce a
+    // timing feel of its own.
+    readonly property int  motionPopupEnterMs: motionFocusMs
 
     // Waiting motion: the three bouncing dots drawn over a busy host tile.
     //
@@ -420,4 +450,50 @@ QtObject {
     // Deterministic review replay cadence; long enough for the transition to
     // finish and rest before the next captured cycle begins.
     readonly property int launchReviewCycleMs: motionTransitionMs * 4
+
+    // --- First-run onboarding (private v1 finalisation, stage 3) -------------
+    // S0-S3 introduce no new colours or type -- the mockups reuse the palette
+    // and faces already declared above -- so this section is geometry and
+    // timing only, following the established precedent of hostTileSpread,
+    // gameTileWidth and launchDestinationWidth: screen-specific measurements
+    // rather than steps on the generic spacing scale.
+
+    // How long the splash holds before moving on, skippable by any press. Not
+    // in the creative brief -- there is no splash screen there at all -- so
+    // this is a judgement call rather than a transcription. Shorter than
+    // every other held state in this file (hostTileBusyResultHoldMs 3000,
+    // launchWarningDurationMs 3500): those hold a VERDICT that needs reading,
+    // this holds a logo with nothing to read, so it only has to register as a
+    // deliberate beat rather than flash past unseen.
+    readonly property int onboardingSplashHoldMs: 1200
+
+    // The crescent alone (bulan_logomark.svg), as it appears on S1 and S2.
+    // Measured off S1's mockup at its 1707px reference width, normalized to
+    // the 1280x800 layout every other measurement in this file targets.
+    readonly property int onboardingMarkSize: 112
+
+    // The S1 primary button's warm glow and the S2 focused row's glow, both
+    // applied via MultiEffect's shadow* properties rather than a second
+    // Canvas radial gradient copied from focusBloom -- that technique is
+    // built for a fixed circular halo behind a stationary host tile; a button
+    // and a list row are rectangular and can appear anywhere in a layout, so
+    // a drop-shadow-shaped glow suits them better than reproducing the halo.
+    // Grounded in focusBloomOpacity's own role -- a warm halo behind the one
+    // focused or primary element -- rather than invented fresh.
+    readonly property real buttonGlowOpacity: 0.5
+    readonly property real buttonGlowBlur:    0.6
+
+    // S3's four PIN tiles, measured off its mockup at the same 1707px
+    // reference width.
+    readonly property int pairPinTileWidth:  104
+    readonly property int pairPinTileHeight: 120
+
+    // --- Settings shell (private v1 finalisation, stage 5) --------------------
+    // Read off the client's settings mockups the same way hostTileSpread and
+    // gameTileWidth were: a screen-specific measurement, not a step on the
+    // generic spacing scale. Unlike those, no pixel ruler was available for
+    // this task -- this is an estimate from the rendered mockup rather than a
+    // transcription, following the same caveat as the "Game grid (PROPOSED)"
+    // section above, and has not yet been seen on a real screen.
+    readonly property int settingsRailWidth: 260
 }

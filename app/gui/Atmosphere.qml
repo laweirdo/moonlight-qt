@@ -1,6 +1,7 @@
 import QtQuick 2.9
 
 import Bulan 1.0
+import StreamingPreferences 1.0
 
 // -----------------------------------------------------------------------------
 // The shared ground every Bulan screen sits on.
@@ -31,10 +32,15 @@ Item {
     id: root
 
     // Each effect is independently switchable, per the brief's non-negotiable.
-    // Defaults come from the design system; override per instance as needed.
-    property bool gradientEnabled: Bulan.atmosphereGradientEnabled
-    property bool vignetteEnabled: Bulan.atmosphereVignetteEnabled
-    property bool grainEnabled:    Bulan.atmosphereGrainEnabled
+    // Defaults come from the real, persisted preference (Settings > UI), added
+    // in private v1 finalisation stage 5. Bulan.qml's own atmosphere*Enabled
+    // tokens now only describe StreamingPreferences' own out-of-the-box
+    // default and are read by nothing at runtime; override per instance as
+    // needed -- main.qml's toolbar instance still forces gradient/vignette off
+    // regardless of the user's preference.
+    property bool gradientEnabled: StreamingPreferences.atmosphereGradientEnabled
+    property bool vignetteEnabled: StreamingPreferences.atmosphereVignetteEnabled
+    property bool grainEnabled:    StreamingPreferences.atmosphereGrainEnabled
 
     // --- 1. Vertical base gradient -------------------------------------------
     Rectangle {

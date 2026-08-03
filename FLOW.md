@@ -336,10 +336,35 @@ their resolution is not lost.
   node records the intended flow; it does not claim that the binding works or
   that the screen is in v1.
 
-## Unresolved flow design
+- **Launch shows a splash, then decides.** Built 3 August 2026 to board S0. It
+  holds briefly, any press skips it, and it replaces itself rather than being
+  pushed, so B from the screen after it never returns to a splash. The CLI
+  routes and the review hooks bypass it entirely.
+- **The post-pairing destination is the host carousel, not the game grid.** The
+  diagram above sends `Paired` to `Library`, which was drawn before the
+  carousel became the app's home. `ROADMAP.md`'s Phase C exit condition is that
+  a first-time user "arrives in the normal loop", and the normal loop's home is
+  the carousel — the one place every route returns to. Pairing success
+  therefore clears the onboarding screens off the stack and lands on the
+  carousel with the new host selected. **The diagram's `Paired --> Library`
+  edge is stale and should become `Paired --> YourPCs` on the next re-export.**
+  Recorded rather than silently redrawn, because it is a real difference
+  between the board and what is built.
 
-**The library empty state is not drawn.** A paired host can have no games
+- **SELECT on the game grid opens Host Settings.** Client decision, 2 August
+  2026; built 3 August 2026. The grid reuses the same overlay the carousel
+  uses, withholding *View all apps* when the grid already is that list, and
+  leaving for the carousel if the host is forgotten.
+
+## Resolved flow design
+
+**The library empty state is drawn.** ~~A paired host can have no games
 detected, so this is a reachable state and needs a designed route before Phase
 D can exit. The game grid ships a **single line of placeholder copy** there —
 `"No games here yet."` — so the screen is not blank. That is a holding
-treatment, not the designed state, and it does not close this item.
+treatment, not the designed state, and it does not close this item.~~
+**Closed 3 August 2026.** The designed state names the host and points at Host
+Settings, because a library that looks empty is often one where every game has
+been hidden. Only the all-apps view, which already includes hidden games, says
+nothing is there with certainty. The zero-hosts state on the carousel was built
+in the same pass and uses the first-run language.
