@@ -8,19 +8,20 @@
 remains is not implementation: a client review of the whole route, and the
 target-device validation that cannot happen off a Steam Deck.
 
-**Next milestone:** a client review of `v1-review-build`, then a Steam Deck
-session.
+**Next milestone:** a Steam Deck session. The private v1 draft was accepted by the client on 3 August 2026 and merged into `bulan`.
 
-**A complete v1 draft exists.** The route from cold launch through first run,
-pairing, host selection, game selection, launch, quit and return is built, and
-no screen along it still reads as upstream Moonlight. Phases C, D and E and the
-app icon were all built on 3 August 2026 and **no part of that has been seen by
-the client**.
+**A complete v1 draft exists and is accepted.** The route from cold launch
+through first run, pairing, host selection, game selection, launch, quit and
+return is built, and no screen along it still reads as upstream Moonlight.
+Phases C, D and E and the app icon were built on 3 August 2026, reviewed live
+by the client in two rounds, and merged into `bulan`.
 
-That is a draft, not an accepted release. Steam Deck, real-stream,
-physical-controller, real-pairing, Steam on-screen-keyboard and Flatpak
-validation are all outstanding, and the accepted transition blur's cost on the
-Deck is still deliberately unmeasured. See `HANDOFF.md` for the honest list.
+**Accepted is not validated.** Steam Deck, real-stream, physical-controller,
+real-pairing, Steam on-screen-keyboard and Flatpak validation are all
+outstanding, and the transition blur's cost on the Deck is still deliberately
+unmeasured. One client-reported defect — opening the Language list — could not
+be reproduced and remains open in `BUGS.md`. See `HANDOFF.md` for the honest
+list.
 
 This file governs v1 scope, phase order, exit conditions, and the next
 milestone. It does not govern live repository state (`HANDOFF.md`), an active

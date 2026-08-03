@@ -11,12 +11,21 @@ snapshot.
 
 | Item | State |
 |---|---|
-| Integration branch | `bulan` at `5a344145`, carrying the accepted navigation-lifetime and entrance-bounce work. **Five commits ahead of `origin/bulan` and NOT pushed** — no push has been authorised |
-| Task branch | **`v1-review-build`**, cut from `bulan` at `5a344145`. Local only, never pushed, **not merged** |
+| Integration branch | `bulan`, carrying the **accepted private v1 draft**. Ahead of `origin/bulan` and **NOT pushed** — no push has been authorised |
+| Task branch | `v1-review-build` was deleted locally after the accepted merge and never existed on `origin` |
 | Remote | `origin` only, the client's fork |
-| Active task | **`TASK-BRIEF.md`, private v1 finalisation.** Every implementation stage is built. What remains is a client review and target-device validation |
-| Open defects | **None recorded.** See the honest gaps below |
+| Active task | **None.** `TASK-BRIEF.md` was retired on client acceptance |
+| Open defects | **One**, reported by the client and **not reproduced**: opening the Language list. See `BUGS.md` |
 | Working tree | Clean |
+
+## Accepted, 3 August 2026
+
+The client reviewed the build live in two rounds and accepted it. Every
+implementation stage of the private v1 work order is complete and merged.
+
+What was accepted is a **draft that runs correctly on a Windows review
+station**. It is not a validated release: nothing here has run on a Steam Deck,
+against a physical controller, through a real stream, or as a Flatpak.
 
 ## `v1-review-build` — what is on the branch
 
@@ -464,22 +473,20 @@ These are honest validation gaps, not acknowledged product defects.
 
 ## Next action
 
-1. **A client review of `v1-review-build`.** Nothing on it has been seen. It is
-   built to the boards and it runs clean, but "runs clean on a Windows review
-   station" is not the same as accepted. Reviewing before a Deck session is
-   worth it: a change of direction is cheaper to act on now than after the
-   hardware pass.
-2. **A Steam Deck session**, in Desktop Mode and Game Mode, with a physical
-   controller and a real host. That single session clears most of the
-   unperformed list above: real pairing, real streaming, the Steam on-screen
-   keyboard on the manual-address field, the L1/R1 tab switch and the Library
-   half of the grid context restore, how the motion actually feels, OLED
-   appearance, and the transition blur's cost.
-3. **A Flatpak build and a clean install**, which cannot be done from Windows.
+1. **A Steam Deck session**, in Desktop Mode and Game Mode, with a physical
+   controller and a real host. This is now the critical path. That single
+   session clears most of the unperformed list above: real pairing, real
+   streaming, the Steam on-screen keyboard on the manual-address field, the
+   L1/R1 tab switch and the Library half of the grid context restore, how the
+   motion actually feels, OLED appearance, and the transition blur's cost.
+2. **A Flatpak build and a clean install**, which cannot be done from Windows.
+3. **The Language crash in `BUGS.md`**, which needs a reproduction from the
+   client before it can be chased further — four routes were tried and none
+   reproduced it.
 
-Nothing has been pushed. `bulan` is five commits ahead of `origin/bulan` and
-`v1-review-build` is seven ahead of `bulan`, both local only, awaiting the
-client's authorisation.
+**Nothing has been pushed.** `bulan` is ahead of `origin/bulan`, local only,
+awaiting the client's authorisation. The task branch has been deleted after the
+accepted merge, per `AGENTS.md`.
 
 The client mentioned possibly revisiting the screen transition later to push it
 further toward the brief's "whimsical" character. That is a future task, not an
