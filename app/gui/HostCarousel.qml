@@ -377,7 +377,50 @@ FocusScope {
     // Belt and braces. The Repeater's own signals cover every path that populates
     // the list, but a null `host` reads on screen as a completely dead screen --
     // the exact failure this project keeps meeting -- so it is worth one more call.
-    Component.onCompleted: refreshHost()
+    Component.onCompleted: {
+        refreshHost()
+        if (!root.hasHosts) {
+            zeroHostsEntranceDelay.restart()
+        }
+    }
+
+    // --- zero-hosts entrance ---------------------------------------------
+    // Motion rule: the zero-hosts state (below) waits out the screen
+    // transition before it moves, exactly like AppView's own
+    // gridEntranceStarted -- motionTransitionMs is the same "screen has
+    // settled" duration, reused rather than a second raw value.
+    //
+    // Reset on every true->false edge of hasHosts, not just once at
+    // Component.onCompleted: the carousel is a persistent object (only
+    // AppView is destroyed and recreated per visit -- see the file banner),
+    // so losing the last known host while this screen is already open --
+    // Forget PC on the final remaining host, or discovery losing it -- is a
+    // real way to arrive here without the object ever being recreated.
+    property real zeroHostsEntranceProgress: 0
+    onHasHostsChanged: {
+        if (!hasHosts) {
+            zeroHostsEntranceProgress = 0
+            zeroHostsEntranceDelay.restart()
+        }
+    }
+    Timer {
+        id: zeroHostsEntranceDelay
+        interval: Bulan.motionTransitionMs
+        onTriggered: zeroHostsEntranceAnimation.start()
+    }
+    SequentialAnimation {
+        id: zeroHostsEntranceAnimation
+        NumberAnimation {
+            target: root
+            property: "zeroHostsEntranceProgress"
+            to: 1
+            duration: Bulan.motionGridEntranceRiseMs
+            // One restrained overshoot, one bounce -- brief §6 rule 1 --
+            // rather than motionOvershoot's stronger press-release curve.
+            easing.type: Easing.OutBack
+            easing.overshoot: Bulan.motionEntranceOvershoot
+        }
+    }
 
     readonly property bool hostOnline: host !== null && host.online
 
@@ -705,6 +748,15 @@ FocusScope {
 
     function actAddPc() {
         addPcPanel.visible = true
+    }
+
+    // The zero-hosts state's primary action -- the same re-scan FirstRun.qml's
+    // "Look" button starts, reached from the other direction. Pushes straight
+    // to the discovered-hosts list rather than back through FirstRun's own
+    // splash copy, since this screen already implies "look again", not "look
+    // for the first time".
+    function actLookAgain() {
+        stackView.push("HostDiscovery.qml")
     }
 
     function actClientSettings() {
@@ -1194,40 +1246,136 @@ FocusScope {
 
 
     // --- zero hosts ----------------------------------------------------------
-    // Two stacked elements, per spec. The copy is deliberately off-register from
-    // the rest of the app: this is a screen you see once, which makes it the one
-    // place a joke costs nothing.
+    // Reached whenever hostCount is 0: nothing has ever answered, every known
+    // host was forgotten, or discovery lost the last one while this screen
+    // stayed open. This is the same moment as FirstRun.qml's S1 -- "no host
+    // known yet" -- seen from the other direction, so it borrows that
+    // screen's composition (crescent, display headline, secondary supporting
+    // line, one amber primary action) rather than inventing a second
+    // language for an empty carousel. The copy is deliberately NOT FirstRun's
+    // own "Let's find your PC.": the player has been here before, so brief
+    // §8's warm-second-person register is followed with different words for
+    // a different moment.
         Column {
+        id: zeroHostsContent
         anchors.centerIn: parent
+        // Motion rule: rises into place after the screen itself has settled
+        // (see zeroHostsEntranceDelay below), reusing motionGridEntranceRise
+        // rather than a raw per-screen distance.
         anchors.verticalCenterOffset: -Bulan.space2xl
+                + (1 - root.zeroHostsEntranceProgress) * Bulan.motionGridEntranceRise
         spacing: Bulan.spaceLg
+        width: Math.min(parent.width - Bulan.layoutScreenMarginX * 2,
+                         Bulan.hostTileSize * 2.4)
         visible: !root.hasHosts
+        opacity: Math.min(1, root.zeroHostsEntranceProgress)
+
+        Image {
+            anchors.horizontalCenter: parent.horizontalCenter
+            source: "qrc:/res/bulan_logomark.svg"
+            width: Bulan.onboardingMarkSize
+            height: width
+            fillMode: Image.PreserveAspectFit
+            sourceSize.width: width * 2
+            sourceSize.height: width * 2
+            smooth: true
+        }
 
         Text {
             anchors.horizontalCenter: parent.horizontalCenter
-            text: qsTr("you have no pc's lol")
+            text: qsTr("No PC to play on right now.")
             color: Bulan.textPrimary
             font.family: Bulan.familyDisplay
             font.pixelSize: Bulan.sizeDisplay
+            horizontalAlignment: Text.AlignHCenter
         }
 
-        Row {
+        Text {
             anchors.horizontalCenter: parent.horizontalCenter
-            spacing: Bulan.spaceXs
+            width: parent.width
+            horizontalAlignment: Text.AlignHCenter
+            wrapMode: Text.Wrap
+            text: qsTr("Make sure it's awake and on the same network.")
+            color: Bulan.textSecondary
+            font.family: Bulan.familyUi
+            font.pixelSize: Bulan.sizeBody
+        }
 
-            ControllerGlyph {
-                anchors.verticalCenter: parent.verticalCenter
-                action: "options"
-                tone: "focus"
-                glyphSize: Bulan.sizeBodyLg
+        // --- primary button: FirstRun.qml's own "Look" treatment ------------
+        Item {
+            id: lookAgainButton
+            anchors.horizontalCenter: parent.horizontalCenter
+            width: Math.max(Bulan.hostTileSize * 0.7,
+                             lookAgainLabel.implicitWidth + Bulan.space2xl * 2)
+            height: Math.max(Bulan.targetMin,
+                              lookAgainLabel.implicitHeight + Bulan.spaceLg * 2)
+
+            // Press feedback for controller input, which has no release event
+            // to hang a state off -- HostTile.flashPress()'s own pattern.
+            property bool pressed: lookAgainMouse.pressed || lookAgainPressFlash.running
+            function flashPress() { lookAgainPressFlash.restart() }
+            Timer { id: lookAgainPressFlash; interval: Bulan.motionPressMs }
+
+            scale: lookAgainButton.pressed ? Bulan.motionPressScale : 1.0
+            Behavior on scale {
+                NumberAnimation {
+                    duration: lookAgainButton.pressed ? Bulan.motionPressMs : Bulan.motionFocusMs
+                    easing.type: lookAgainButton.pressed ? Easing.OutCubic : Easing.OutBack
+                    easing.overshoot: Bulan.motionOvershoot
+                }
             }
 
-            Text {
-                anchors.verticalCenter: parent.verticalCenter
-                text: qsTr("Press to pair a PC")
-                color: Bulan.textSecondary
-                font.family: Bulan.familyUi
-                font.pixelSize: Bulan.sizeBodyLg
+            Rectangle {
+                anchors.fill: parent
+                radius: Bulan.radiusLg
+                color: Bulan.accentPrimary
+
+                layer.enabled: true
+                layer.effect: MultiEffect {
+                    shadowEnabled: true
+                    shadowColor: Bulan.accentGlow
+                    shadowBlur: Bulan.buttonGlowBlur
+                    shadowOpacity: Bulan.buttonGlowOpacity
+                    shadowHorizontalOffset: 0
+                    shadowVerticalOffset: 0
+                }
+
+                Text {
+                    id: lookAgainLabel
+                    anchors.centerIn: parent
+                    text: qsTr("Look again")
+                    // Dark text on the amber fill, matching FirstRun.qml's
+                    // "Look" -- the only place on this screen text sits on a
+                    // light ground rather than the dark atmosphere.
+                    color: Bulan.bgBaseOled
+                    font.family: Bulan.familyUi
+                    font.pixelSize: Bulan.sizeBodyLg
+                    font.bold: true
+                }
+            }
+
+            MouseArea {
+                id: lookAgainMouse
+                anchors.fill: parent
+                onClicked: {
+                    lookAgainButton.flashPress()
+                    root.actLookAgain()
+                }
+            }
+        }
+
+        Text {
+            id: enterAddressLink
+            anchors.horizontalCenter: parent.horizontalCenter
+            text: qsTr("Enter an address instead")
+            color: Bulan.textSecondary
+            font.family: Bulan.familyUi
+            font.pixelSize: Bulan.sizeLabel
+
+            MouseArea {
+                anchors.fill: parent
+                anchors.margins: -Bulan.spaceSm
+                onClicked: root.actAddPc()
             }
         }
     }
@@ -1269,7 +1417,8 @@ FocusScope {
               { action: "options",   label: qsTr("Add a PC") }
           ]
         : [
-              { action: "options", label: qsTr("Add a PC"), emphasis: true }
+              { action: "confirm", label: qsTr("Look again"), emphasis: true },
+              { action: "options", label: qsTr("Enter an address instead") }
           ]
 
     readonly property var hintRightHints: root.hasHosts
@@ -1298,10 +1447,30 @@ FocusScope {
     // Space anyway means a mode that leaks in from elsewhere can no longer make
     // A do nothing at all -- which is the failure defect 1 produced, and the
     // reason it read as a pairing problem rather than a navigation one.
-    Keys.onReturnPressed: actConfirm()
-    Keys.onEnterPressed: actConfirm()
-    Keys.onSpacePressed: {
-        actConfirm()
+    //
+    // With zero hosts there is no host for actConfirm() to act on -- it
+    // returns immediately on a null host -- so A instead does what the
+    // zero-hosts state's own primary button does: look again.
+    Keys.onReturnPressed: function(event) {
+        if (root.hasHosts) {
+            actConfirm()
+        } else {
+            actLookAgain()
+        }
+    }
+    Keys.onEnterPressed: function(event) {
+        if (root.hasHosts) {
+            actConfirm()
+        } else {
+            actLookAgain()
+        }
+    }
+    Keys.onSpacePressed: function(event) {
+        if (root.hasHosts) {
+            actConfirm()
+        } else {
+            actLookAgain()
+        }
         event.accepted = true
     }
 

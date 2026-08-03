@@ -36,6 +36,16 @@ FocusScope {
     // would not actually start.
     property bool wakePending: false
 
+    // Action IDs to leave out of the menu this call builds, even where they
+    // would otherwise qualify -- e.g. AppView.qml withholds "apps" when the
+    // grid open behind this overlay is already the all-apps list, so the
+    // menu is not offering to open the exact list already on screen. Read
+    // once per showForHost() call, not bound continuously: the caller sets
+    // it immediately before calling showForHost(), matching how every other
+    // snapshot field here is a one-shot value rather than a live binding.
+    // Empty by default, so HostCarousel.qml's own call site is unaffected.
+    property var suppressActionIds: []
+
     property string page: "menu"
     property var menuActions: []
     property int selectedAction: 0
@@ -64,7 +74,7 @@ FocusScope {
         wakePending = snapshot.wakePending
 
         var actions = []
-        if (hostOnline && hostPaired) {
+        if (hostOnline && hostPaired && overlay.suppressActionIds.indexOf("apps") < 0) {
             actions.push({
                 actionId: "apps",
                 label: qsTr("View all apps"),
