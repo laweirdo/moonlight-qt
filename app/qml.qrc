@@ -32,6 +32,10 @@
         <file>gui/GameOptionsOverlay.qml</file>
         <file>gui/LaunchTransition.qml</file>
         <file>gui/HostCarousel.qml</file>
+        <file>gui/Splash.qml</file>
+        <file>gui/FirstRun.qml</file>
+        <file>gui/HostDiscovery.qml</file>
+        <file>gui/PairView.qml</file>
         <file>gui/TokenProof.qml</file>
         <file>gui/BulanTokens.qml</file>
         <file>gui/SectionHeader.qml</file>

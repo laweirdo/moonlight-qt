@@ -1030,10 +1030,15 @@ int main(int argc, char *argv[])
             tokenProofMode = true;
         }
         else {
-            // The host carousel replaces PcView's grid. PcView is left in the
-            // tree because it still owns the rename/delete/network-test flows
-            // that the carousel has no designed home for yet.
-            initialView = "qrc:/gui/HostCarousel.qml";
+            // Splash decides, once it has held briefly, whether the app
+            // continues to the host carousel (a host is already known and
+            // paired) or to first run. It always replaces itself rather than
+            // being pushed under either, so it is never left on the stack --
+            // see Splash.qml's proceed(). The host carousel itself still
+            // replaces PcView's grid; PcView is left in the tree because it
+            // still owns the rename/delete/network-test flows that the
+            // carousel has no designed home for yet.
+            initialView = "qrc:/gui/Splash.qml";
         }
 
         // Debug hook: MOONLIGHT_INITIAL_VIEW=qrc:/gui/SettingsView.qml boots
@@ -1150,6 +1155,21 @@ int main(int argc, char *argv[])
         // changes nothing.
         engine.rootContext()->setContextProperty("fakeConnectHoldMs",
                                                  qEnvironmentVariableIntValue("MOONLIGHT_FAKE_CONNECT_HOLD_MS"));
+        // Review hook: MOONLIGHT_FORCE_FIRST_RUN=1 sends Splash to FirstRun
+        // even when a host is already paired on this machine. Without this,
+        // first run could only ever be reached once per review station --
+        // the first real pairing would close the door on looking at
+        // S1-S3 again.
+        engine.rootContext()->setContextProperty("forceFirstRunReview",
+                                                 qEnvironmentVariableIsSet("MOONLIGHT_FORCE_FIRST_RUN"));
+        // Review hook: MOONLIGHT_FAKE_PAIR_PIN=<pin> fixes the PIN PairView
+        // shows for a fake host (HostDiscovery.actSelect()'s fake-host
+        // branch), so a screenshot capture is reproducible run to run instead
+        // of showing whatever generatePinString() happened to return. Unset
+        // leaves that branch generating a real, if unusable, PIN exactly as
+        // it would for a review of any other fake-host state.
+        engine.rootContext()->setContextProperty("fakePairPin",
+                                                 QString::fromUtf8(qgetenv("MOONLIGHT_FAKE_PAIR_PIN")));
         // Review hook: starts a wake on the focused fake host once the carousel
         // has settled, the same way MOONLIGHT_OPEN_HOST_SETTINGS opens the host
         // menu. Without it the busy state cannot be captured at all, because the

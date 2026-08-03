@@ -547,7 +547,11 @@ ApplicationWindow {
             id: titleLabel
             visible: toolBar.width > 700
             anchors.fill: parent
-            text: stackView.currentItem.objectName
+            // Null-guarded: Splash.qml hands off with clear() then push(), and
+            // between those two the stack legitimately has no current item.
+            // Without this that one frame throws a TypeError into the log on
+            // every launch.
+            text: stackView.currentItem ? stackView.currentItem.objectName : ""
             // The screen name is the one piece of display typography in the
             // chrome, so it carries the Fraunces face.
             font.family: Bulan.familyDisplay
@@ -594,7 +598,9 @@ ApplicationWindow {
                 // We need this label to always be visible so it can occupy
                 // the remaining space in the RowLayout. To "hide" it, we
                 // just set the text to empty string.
-                text: !titleLabel.visible ? stackView.currentItem.objectName : ""
+                // Null-guarded for the same reason as titleLabel above.
+                text: (!titleLabel.visible && stackView.currentItem)
+                      ? stackView.currentItem.objectName : ""
             }
 
             Label {

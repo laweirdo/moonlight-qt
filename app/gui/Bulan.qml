@@ -420,4 +420,41 @@ QtObject {
     // Deterministic review replay cadence; long enough for the transition to
     // finish and rest before the next captured cycle begins.
     readonly property int launchReviewCycleMs: motionTransitionMs * 4
+
+    // --- First-run onboarding (private v1 finalisation, stage 3) -------------
+    // S0-S3 introduce no new colours or type -- the mockups reuse the palette
+    // and faces already declared above -- so this section is geometry and
+    // timing only, following the established precedent of hostTileSpread,
+    // gameTileWidth and launchDestinationWidth: screen-specific measurements
+    // rather than steps on the generic spacing scale.
+
+    // How long the splash holds before moving on, skippable by any press. Not
+    // in the creative brief -- there is no splash screen there at all -- so
+    // this is a judgement call rather than a transcription. Shorter than
+    // every other held state in this file (hostTileBusyResultHoldMs 3000,
+    // launchWarningDurationMs 3500): those hold a VERDICT that needs reading,
+    // this holds a logo with nothing to read, so it only has to register as a
+    // deliberate beat rather than flash past unseen.
+    readonly property int onboardingSplashHoldMs: 1200
+
+    // The crescent alone (bulan_logomark.svg), as it appears on S1 and S2.
+    // Measured off S1's mockup at its 1707px reference width, normalized to
+    // the 1280x800 layout every other measurement in this file targets.
+    readonly property int onboardingMarkSize: 112
+
+    // The S1 primary button's warm glow and the S2 focused row's glow, both
+    // applied via MultiEffect's shadow* properties rather than a second
+    // Canvas radial gradient copied from focusBloom -- that technique is
+    // built for a fixed circular halo behind a stationary host tile; a button
+    // and a list row are rectangular and can appear anywhere in a layout, so
+    // a drop-shadow-shaped glow suits them better than reproducing the halo.
+    // Grounded in focusBloomOpacity's own role -- a warm halo behind the one
+    // focused or primary element -- rather than invented fresh.
+    readonly property real buttonGlowOpacity: 0.5
+    readonly property real buttonGlowBlur:    0.6
+
+    // S3's four PIN tiles, measured off its mockup at the same 1707px
+    // reference width.
+    readonly property int pairPinTileWidth:  104
+    readonly property int pairPinTileHeight: 120
 }
