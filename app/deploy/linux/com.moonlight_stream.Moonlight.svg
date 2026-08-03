@@ -1,0 +1,38 @@
+<svg width="1024" height="1024" viewBox="0 0 1024 1024" fill="none" xmlns="http://www.w3.org/2000/svg">
+<!-- The client's exported master carried a full-bleed opaque white rect here,
+     beneath the rounded tile. That is the design tool's frame backdrop, not
+     part of the mark, and it left the icon's four corners white instead of
+     transparent, which on the Deck's dark library reads as a white-cornered
+     square behind the tile. Dropped so the rounded shape is the whole icon.
+     Nothing else in the client's file is altered. -->
+<g clip-path="url(#clip0_73_29)">
+<rect width="1024" height="1024" rx="267" fill="url(#paint0_linear_73_29)"/>
+<g filter="url(#filter0_i_73_29)">
+<path fill-rule="evenodd" clip-rule="evenodd" d="M923 705.345C847.522 800.595 730.809 861.742 599.914 861.742C372.575 861.742 188 677.276 188 450.071C188 289.525 280.149 150.323 414.427 82.4573C391.775 136.534 379.261 195.884 379.261 258.131C379.261 509.621 583.558 713.798 835.196 713.798C865.225 713.798 894.581 710.895 923 705.345Z" fill="url(#paint1_linear_73_29)"/>
+</g>
+</g>
+<defs>
+<filter id="filter0_i_73_29" x="188" y="82.4573" width="735" height="799.285" filterUnits="userSpaceOnUse" color-interpolation-filters="sRGB">
+<feFlood flood-opacity="0" result="BackgroundImageFix"/>
+<feBlend mode="normal" in="SourceGraphic" in2="BackgroundImageFix" result="shape"/>
+<feColorMatrix in="SourceAlpha" type="matrix" values="0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 127 0" result="hardAlpha"/>
+<feOffset dy="20"/>
+<feGaussianBlur stdDeviation="25"/>
+<feComposite in2="hardAlpha" operator="arithmetic" k2="-1" k3="1"/>
+<feColorMatrix type="matrix" values="0 0 0 0 0.0901961 0 0 0 0 0.105882 0 0 0 0 0.2 0 0 0 0.4 0"/>
+<feBlend mode="plus-darker" in2="shape" result="effect1_innerShadow_73_29"/>
+</filter>
+<linearGradient id="paint0_linear_73_29" x1="512" y1="0" x2="512" y2="1024" gradientUnits="userSpaceOnUse">
+<stop stop-color="#535B80"/>
+<stop offset="0.793269" stop-color="#0D1024"/>
+<stop offset="1" stop-color="#171B33"/>
+</linearGradient>
+<linearGradient id="paint1_linear_73_29" x1="188" y1="472.101" x2="922.998" y2="472.101" gradientUnits="userSpaceOnUse">
+<stop stop-color="#F4D4A9"/>
+<stop offset="1" stop-color="#EBA35F"/>
+</linearGradient>
+<clipPath id="clip0_73_29">
+<rect width="1024" height="1024" fill="white"/>
+</clipPath>
+</defs>
+</svg>
