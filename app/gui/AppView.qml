@@ -3,6 +3,9 @@ import QtQuick 2.9
 // this screen pushes and pops through the app's existing StackView. No stock
 // control from this module is instantiated anywhere in this file.
 import QtQuick.Controls 2.2
+// MultiEffect only, for the shared popup backdrop blur below. This module has
+// no stock control to instantiate.
+import QtQuick.Effects
 
 import AppModel 1.0
 import ComputerManager 1.0
@@ -71,6 +74,25 @@ FocusScope {
     // AppView instance is created on every push (HostCarousel.openAppView()),
     // so re-entering the grid always replays this from scratch.
     property bool gridEntranceStarted: false
+
+    // One backdrop blur, shared by every visual block on this screen -- see
+    // each layer.effect below. Declared once rather than repeated, per the
+    // motion rule's call to avoid near-identical copies of the same effect.
+    Component {
+        id: popupBackdropEffect
+        MultiEffect {
+            autoPaddingEnabled: false
+            blurEnabled: true
+            blur: Bulan.popupBackdropBlurStrength
+            blurMax: Bulan.popupBackdropBlurRadius
+        }
+    }
+
+    // True while a popup owns the screen. Client review, 3 August 2026: a
+    // popup should blur what is behind it, the same glass treatment the host
+    // carousel and the settings screen already give theirs.
+    readonly property bool popupBackdropActive:
+        gameOptions.visible || hostSettingsMenu.visible
 
     Timer {
         id: gridEntranceTimer
@@ -2689,6 +2711,8 @@ FocusScope {
     // --- header ----------------------------------------------------------------
     Item {
         id: header
+        layer.enabled: root.popupBackdropActive
+        layer.effect: popupBackdropEffect
         anchors.left: parent.left
         anchors.leftMargin: Bulan.layoutScreenMarginX
         anchors.top: parent.top
@@ -2794,6 +2818,9 @@ FocusScope {
     // this remains display-only until the C++ side is changed.
     Row {
         id: tabStrip
+        layer.enabled: root.popupBackdropActive
+        layer.effect: popupBackdropEffect
+
         anchors.left: parent.left
         anchors.leftMargin: Bulan.layoutScreenMarginX
         anchors.top: header.bottom
@@ -2862,6 +2889,8 @@ FocusScope {
     // HostCarousel.qml's header comment for why.
     Item {
         id: recentView
+        layer.enabled: root.popupBackdropActive
+        layer.effect: popupBackdropEffect
         anchors.left: parent.left
         anchors.right: parent.right
         anchors.top: tabStrip.bottom
@@ -3486,6 +3515,8 @@ FocusScope {
 
     Flickable {
         id: libraryFlickable
+        layer.enabled: root.popupBackdropActive
+        layer.effect: popupBackdropEffect
         anchors.left: parent.left
         anchors.leftMargin: Bulan.layoutScreenMarginX - root.libraryFocusInset
         anchors.top: tabStrip.bottom
@@ -3706,6 +3737,8 @@ FocusScope {
     // games and is still empty.
     Column {
         id: emptyLibraryContent
+        layer.enabled: root.popupBackdropActive
+        layer.effect: popupBackdropEffect
         anchors.centerIn: parent
         // Motion rule: rides the same gridEntranceStarted settle-then-rise
         // gate the Recent/Library tiles use, rather than a second timer.
