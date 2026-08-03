@@ -157,6 +157,13 @@ public:
     Q_PROPERTY(bool keepAwake MEMBER keepAwake NOTIFY keepAwakeChanged)
     Q_PROPERTY(CaptureSysKeysMode captureSysKeysMode MEMBER captureSysKeysMode NOTIFY captureSysKeysModeChanged)
     Q_PROPERTY(Language language MEMBER language NOTIFY languageChanged);
+    // Bulan atmosphere kill switches (private v1 finalisation, stage 5). Each
+    // effect defaulted to Bulan.qml's own atmosphere*Enabled token until now;
+    // that comment is stale as of this property existing -- see Atmosphere.qml,
+    // which reads these instead of the token once a real preference exists.
+    Q_PROPERTY(bool atmosphereGradientEnabled MEMBER atmosphereGradientEnabled NOTIFY atmosphereGradientEnabledChanged)
+    Q_PROPERTY(bool atmosphereVignetteEnabled MEMBER atmosphereVignetteEnabled NOTIFY atmosphereVignetteEnabledChanged)
+    Q_PROPERTY(bool atmosphereGrainEnabled MEMBER atmosphereGrainEnabled NOTIFY atmosphereGrainEnabledChanged)
 
     Q_INVOKABLE bool retranslate();
 
@@ -200,6 +207,9 @@ public:
     Language language;
     CaptureSysKeysMode captureSysKeysMode;
     RendererSelection rendererSelection;
+    bool atmosphereGradientEnabled;
+    bool atmosphereVignetteEnabled;
+    bool atmosphereGrainEnabled;
 
 signals:
     void displayModeChanged();
@@ -238,6 +248,9 @@ signals:
     void keepAwakeChanged();
     void languageChanged();
     void rendererSelectionChanged();
+    void atmosphereGradientEnabledChanged();
+    void atmosphereVignetteEnabledChanged();
+    void atmosphereGrainEnabledChanged();
 
 private:
     explicit StreamingPreferences(QQmlEngine *qmlEngine);

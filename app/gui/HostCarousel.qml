@@ -708,7 +708,7 @@ FocusScope {
     }
 
     function actClientSettings() {
-        navigateTo("qrc:/gui/SettingsView.qml", SettingsView)
+        navigateTo("qrc:/gui/SettingsShell.qml", SettingsShell)
     }
 
     function actHostSettings() {

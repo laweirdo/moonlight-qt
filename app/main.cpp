@@ -1210,6 +1210,20 @@ int main(int argc, char *argv[])
         // is not on screen yet at the default four seconds. Zero unless set.
         engine.rootContext()->setContextProperty("screenshotDelayMs",
                                                  qEnvironmentVariableIntValue("MOONLIGHT_SCREENSHOT_DELAY_MS"));
+        // Review hooks for SettingsShell.qml (private v1 finalisation, stage 5).
+        // MOONLIGHT_SETTINGS_REVIEW_CATEGORY=<id> selects a rail category (e.g.
+        // "basic", "about") once the screen settles, and the companion
+        // MOONLIGHT_SETTINGS_REVIEW_ROW=<id> additionally opens that row's list
+        // or slider popup -- the same reasoning as MOONLIGHT_OPEN_HOST_SETTINGS:
+        // the screenshot hook grabs the window on a timer and cannot press A, so
+        // without this the popups could be built and shipped having only ever
+        // been reasoned about. Both are inert unless set; reaching the screen
+        // itself needs no new hook, since MOONLIGHT_INITIAL_VIEW already boots
+        // straight to any qrc:/gui/*.qml path.
+        engine.rootContext()->setContextProperty("settingsReviewCategory",
+                                                 QString::fromUtf8(qgetenv("MOONLIGHT_SETTINGS_REVIEW_CATEGORY")));
+        engine.rootContext()->setContextProperty("settingsReviewRow",
+                                                 QString::fromUtf8(qgetenv("MOONLIGHT_SETTINGS_REVIEW_ROW")));
         // Suppress the startup warning dialogs in token proof mode -- they would
         // otherwise open modally on top of the sheet.
         engine.rootContext()->setContextProperty("runConfigChecks",

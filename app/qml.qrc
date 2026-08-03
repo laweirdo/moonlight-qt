@@ -39,5 +39,8 @@
         <file>gui/TokenProof.qml</file>
         <file>gui/BulanTokens.qml</file>
         <file>gui/SectionHeader.qml</file>
+        <file>gui/SettingsShell.qml</file>
+        <file>gui/SettingsChoicePopup.qml</file>
+        <file>gui/SettingsSliderPopup.qml</file>
     </qresource>
 </RCC>

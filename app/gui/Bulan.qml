@@ -120,10 +120,12 @@ QtObject {
     readonly property real atmosphereVignetteOpacity: 0.08
 
     // Per-effect kill switches. The brief makes "every background effect must be
-    // individually disableable" a non-negotiable. There is no settings UI to
-    // bind these to yet, so they are the defaults each Atmosphere starts from;
-    // any instance can override them, and they can later be bound to real
-    // preferences without touching the component.
+    // individually disableable" a non-negotiable. Settings > UI now exposes real,
+    // persisted toggles for all three (StreamingPreferences.atmosphere*Enabled,
+    // private v1 finalisation stage 5) and Atmosphere.qml reads those instead of
+    // these tokens. Kept here only as the documented out-of-the-box default that
+    // StreamingPreferences::reload() mirrors -- nothing at runtime reads these
+    // three properties any more.
     readonly property bool atmosphereGradientEnabled: true
     readonly property bool atmosphereVignetteEnabled: true
     readonly property bool atmosphereGrainEnabled:    true
@@ -457,4 +459,13 @@ QtObject {
     // reference width.
     readonly property int pairPinTileWidth:  104
     readonly property int pairPinTileHeight: 120
+
+    // --- Settings shell (private v1 finalisation, stage 5) --------------------
+    // Read off the client's settings mockups the same way hostTileSpread and
+    // gameTileWidth were: a screen-specific measurement, not a step on the
+    // generic spacing scale. Unlike those, no pixel ruler was available for
+    // this task -- this is an estimate from the rendered mockup rather than a
+    // transcription, following the same caveat as the "Game grid (PROPOSED)"
+    // section above, and has not yet been seen on a real screen.
+    readonly property int settingsRailWidth: 260
 }

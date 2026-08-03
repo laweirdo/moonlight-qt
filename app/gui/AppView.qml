@@ -3607,7 +3607,7 @@ FocusScope {
     // START.
     Keys.onHangupPressed: function(event) {
         if (!root.consumeLaunchInput()) {
-            navigateTo("qrc:/gui/SettingsView.qml", SettingsView)
+            navigateTo("qrc:/gui/SettingsShell.qml", SettingsShell)
         }
         event.accepted = true
     }
