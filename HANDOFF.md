@@ -11,20 +11,57 @@ snapshot.
 
 | Item | State |
 |---|---|
-| Integration branch | `bulan` at `cbf04a80`, unchanged, pushed to `origin/bulan` |
-| Task branch | **`v1-finalisation`**, cut from `bulan` at `cbf04a80`. Local only, never pushed, **not merged** |
-| Remote | `origin` only, the client's fork. Nothing has been pushed for this task |
-| Active task | **`TASK-BRIEF.md`, private v1 finalisation.** Stages 1 and 2 are complete; stages 3-7 are not started |
-| Open defects | **None.** Both entries in `BUGS.md` were fixed on this branch |
+| Integration branch | `bulan` at `5a344145`, carrying the accepted navigation-lifetime and entrance-bounce work. **Five commits ahead of `origin/bulan` and NOT pushed** — no push has been authorised |
+| Task branch | **`v1-review-build`**, cut from `bulan` at `5a344145`. Local only, never pushed, **not merged** |
+| Remote | `origin` only, the client's fork |
+| Active task | **`TASK-BRIEF.md`, private v1 finalisation.** Stages 1, 2, 3, 5 and the app-icon half of 6 are built. **Stage 4, the edge states, is not started** |
+| Open defects | **None recorded.** See the honest gaps below |
 | Working tree | Clean |
 
-## `v1-finalisation` — what is on the branch
+## `v1-review-build` — what is on the branch
+
+| Commit | What |
+|---|---|
+| `4d22966c` | The vertical logo lockup, composed from the client's two supplied sources |
+| `01bb43ab` | The first-run route: splash, find, discovery, pairing |
+| `2f91a306` | The Bulan settings shell and About, replacing the upstream screen |
+| `2f88565c` | The Bulan app icon and a desktop entry that reads *Bulan* |
+
+**The client's design boards were finally readable.** Every earlier session had
+them attached and could not open them: this machine had no PDF rendering at
+all, so the reads returned a file size and no image. Poppler was installed on
+3 August 2026 and all eight boards were rendered and used. The first-run and
+settings screens are built to those boards rather than inferred, which changed
+them substantially — the amber *Look* button, the focused row's left bar, the
+four separate PIN tiles, the two settings popups and the host-selector row were
+none of them things inference had produced.
+
+**A reported input defect did not exist.** A press was said to be lost after
+the splash handed off. The measurement behind it sent one press while the
+splash was still up — its hold does not begin until QML has loaded, about a
+second after launch — and the splash consumed it exactly as its skip behaviour
+intends. Retested with two presses 400 ms apart, the second landing 400 ms
+after the stack swap: it was acted on. The speculative `requestActivate()`
+mitigation added for it was removed.
+
+**Three real defects were found in review of the settings work and fixed**
+rather than reported: the category rail overflowed its pane so About fell off
+the bottom of the screen entirely and Advanced collided with the hint bar; the
+choice popup opened at the top of its list while the selection sat on the last
+row, so the current value opened half cut off; and unfocused option rows had no
+outline at all. Eighteen key handlers across the new screens took the `event`
+parameter implicitly — the deprecation this project had already corrected once
+— and all now declare it.
+
+## `bulan` — the accepted work merged on 2 August 2026
 
 | Commit | What |
 |---|---|
 | `bca4d86f` | Opened the work order: client decisions, motion rule, stage table, scope exclusions |
 | `783bca16` | Destroyed discarded grids and gave each host its remembered place back |
 | `7f10fe06` | Landed the grid entrance with an overshoot and one soft bounce |
+| `b813bd0e` | Closed both defects and reconciled the private v1 scope correction |
+| `5a344145` | Merge, accepted by the client as the Phase B closeout |
 
 **The two `BUGS.md` defects are fixed.** A discarded `AppView` now publishes
 what it was showing and destroys itself, following the treatment `StreamSegue`
@@ -358,31 +395,70 @@ These are honest validation gaps, not acknowledged product defects.
 8. `SPEC-host-carousel.md` and `SPEC-game-grid.md`
 9. `BUILDING-WINDOWS.md` or the applicable target build guide before a build
 
+## Validation performed for the first-run, settings and packaging work
+
+- `git diff --check` clean throughout; every diff reviewed directly.
+- `qmllint` on every new and changed QML file, exit 0 throughout, with no new
+  warning category beyond the `[import]`/`[missing-property]`/`[unqualified]`/
+  `[unresolved-type]` noise these files already produce because `qmllint`
+  cannot resolve C++-registered singletons.
+- Qt 6.9.3 / MSVC Release builds throughout, linking cleanly. The only link
+  warning was the pre-existing `LNK4291`.
+- **The whole first-run route was driven and captured**: splash → *Let's find
+  your PC* → *Looking for your PC* with two hosts listed → *Almost there* with
+  the PIN in four tiles, and B back out through all of it. Each capture was
+  compared against the client's board.
+- **Settings was driven and captured**: the shell with all eight categories,
+  About, the resolution list popup and the bitrate slider popup.
+- The application log was read after each run. It contains no `Critical`, no
+  `TypeError`, and none of the QML reference errors. Two `TypeError`s that the
+  splash's stack swap introduced in `main.qml`'s toolbar labels were found this
+  way and fixed.
+- The app icon was rendered at 256, 64 and 32 px and the SVG was validated as
+  XML after editing.
+- Input is delivered by posting `WM_KEYDOWN` to the window. `SendKeys` is
+  useless here: this environment refuses a background process the foreground,
+  so scripted keys land in whatever window is in front.
+
+## Not performed — do not report any of these as passed
+
+- **No Steam Deck validation**, in Desktop Mode or Game Mode. Nothing about
+  these screens has been seen on the target device.
+- **No physical controller.** All navigation was controller-equivalent keys.
+  L1/R1 still cannot be synthesised at all, so the Recent↔Library tab switch
+  and the Library-tab half of the grid context restore remain unexercised by
+  input.
+- **No Flatpak build or installation.** This machine is Windows.
+- **Steam Game Mode on-screen keyboard is UNVALIDATED** for the manual address
+  field. It is the one part of the first-run route that cannot work without the
+  OSK, and it has never been tried.
+- **No real pairing against a live host.** Only the fake-host branch and the
+  already-paired branch were exercised. `pairingCompleted` success routing is
+  built and reviewed by reading, not observed.
+- **No real stream** launched, resumed, failed or quit through any of this.
+- **No human judgement of any of it in flight** — the entrance bounce, the
+  first-run stagger, the popups. Settled captures establish end states, not
+  feel.
+- **No OLED or LCD appearance review.**
+- **The blur's cost on the Deck is still unmeasured**, by the client's
+  deliberate deferral.
+
 ## Next action
 
-`v1-finalisation` is **not** review-ready as a whole. Stages 1 and 2 of
-`TASK-BRIEF.md` are done and validated as far as this station allows; stages
-3-7 have not been started. What that means concretely:
+**A client review of `v1-review-build`.** None of the first-run, settings,
+About or app-icon work has been seen. It is built to the boards and it runs
+clean, but "runs clean on a Windows review station" is not the same as
+accepted.
 
-1. **The first-run route does not exist yet.** A user with no paired host still
-   meets the carousel rather than a splash and "Let's find your PC". This is the
-   largest remaining gap between the branch and the definition of private v1.
-2. **The reachable edge states are not built** — zero hosts, unreachable host,
-   empty library beyond its one line of placeholder copy, couldn't start
-   stream, disconnect confirmation, wake presentation.
-3. **Settings and About are still upstream screens.** `SettingsView.qml` is
-   inherited and instantiates stock Qt Quick Controls throughout, and there is
-   no About or "Built on Moonlight" attribution anywhere. SELECT on the game
-   grid still does nothing, though the client has now decided it should reach
-   the existing host-settings surface.
-4. **Packaging is untouched.** No Bulan app icon is installed in the
-   application or Flatpak locations, and no Flatpak build has been attempted.
-5. **The blur's cost on the Deck is still unmeasured**, by the client's
-   deliberate deferral.
-6. **Carry the standing validation debt forward** rather than claiming it: no
-   Steam Deck session, no physical controller, no real stream through the launch
-   and quit paths, no OLED or LCD appearance review, and no human judgement of
-   the new entrance bounce in flight.
+Then **Phase D, the edge states** — the one phase still unbuilt. Several of its
+states already exist from earlier work (unreachable host, couldn't start
+stream, wake success and failure). What is genuinely missing is a designed
+zero-hosts state, a designed empty-library state beyond its single line of
+placeholder copy, and the disconnect confirmation.
+
+Also still owed, and not started: **SELECT on the game grid reaching the
+host-settings surface.** The client took that decision on 2 August 2026 and it
+is recorded in `ROADMAP.md` as decided; it has not been built.
 
 The client mentioned possibly revisiting the screen transition later to push it
 further toward the brief's "whimsical" character. That is a future task, not an
