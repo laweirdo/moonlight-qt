@@ -4,22 +4,23 @@
 
 **Owner:** Lao
 
-**Current phase:** Phase D — Edges. Phases B, C, E and the app-icon part of F
-are built; Phase D is the last unbuilt phase.
+**Current phase:** Phase F — Ship private v1. **Every phase is built.** What
+remains is not implementation: a client review of the whole route, and the
+target-device validation that cannot happen off a Steam Deck.
 
-**Next milestone:** a client review of `v1-review-build`, then Phase D.
+**Next milestone:** a client review of `v1-review-build`, then a Steam Deck
+session.
 
-Phases C and E and the app icon were built on 3 August 2026 and **no part of
-them has been seen by the client**. Phase D — the reachable edge states — is
-the one phase still unbuilt, and several of its states already exist from
-earlier phases (unreachable host, couldn't start stream, wake success and
-failure). What is genuinely missing is a designed zero-hosts state, a designed
-empty-library state beyond its one line of placeholder copy, and the
-disconnect confirmation.
+**A complete v1 draft exists.** The route from cold launch through first run,
+pairing, host selection, game selection, launch, quit and return is built, and
+no screen along it still reads as upstream Moonlight. Phases C, D and E and the
+app icon were all built on 3 August 2026 and **no part of that has been seen by
+the client**.
 
-Steam Deck, real-stream, physical-controller and Flatpak validation remain
-outstanding across every phase, and the accepted transition blur's cost on the
-Deck is still deliberately unmeasured. See `HANDOFF.md`.
+That is a draft, not an accepted release. Steam Deck, real-stream,
+physical-controller, real-pairing, Steam on-screen-keyboard and Flatpak
+validation are all outstanding, and the accepted transition blur's cost on the
+Deck is still deliberately unmeasured. See `HANDOFF.md` for the honest list.
 
 This file governs v1 scope, phase order, exit conditions, and the next
 milestone. It does not govern live repository state (`HANDOFF.md`), an active
@@ -195,12 +196,20 @@ centred treatment depends on vector assets designed and supplied by the client.
 **Exit:** a first-time user can discover or enter a host, pair, and arrive in
 the normal loop without encountering an upstream screen.
 
-### Phase D — Edges
+### Phase D — Edges — built 3 August 2026, not yet client-reviewed
 
-- Couldn't reach PC
-- Couldn't start stream
-- Empty library for a paired host
-- Zero hosts
+- ~~Couldn't reach PC~~ **Already existed** from the carousel work.
+- ~~Couldn't start stream~~ **Already existed** from the launch and quit work.
+- ~~Empty library for a paired host~~ **Done.** Replaces the single line of
+  holding copy `FLOW.md` recorded as not the designed state. Names the host and
+  points at Host Settings, because a library that looks empty is often one
+  where everything has been hidden.
+- ~~Zero hosts~~ **Done.** The carousel with no hosts was the last obviously
+  unfinished surface in the app. It now uses the first-run language and offers
+  both *Look again* and *Enter an address instead*.
+- ~~Disconnect confirmation~~ **Already existed.** `GameOptionsOverlay`'s
+  `quitConfirm` page asks *Quit &lt;game&gt;?* with Cancel and Quit Game, and
+  the quit-and-switch confirmation covers the other case.
 - ~~Waking PC waiting overlay, held until success or failure~~ **Done, pulled
   forward into Phase B on 31 July 2026.** Its designed form changed on the way:
   the client asked for a waiting *overlay* on 28 July and, when the work was

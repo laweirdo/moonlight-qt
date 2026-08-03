@@ -14,7 +14,7 @@ snapshot.
 | Integration branch | `bulan` at `5a344145`, carrying the accepted navigation-lifetime and entrance-bounce work. **Five commits ahead of `origin/bulan` and NOT pushed** — no push has been authorised |
 | Task branch | **`v1-review-build`**, cut from `bulan` at `5a344145`. Local only, never pushed, **not merged** |
 | Remote | `origin` only, the client's fork |
-| Active task | **`TASK-BRIEF.md`, private v1 finalisation.** Stages 1, 2, 3, 5 and the app-icon half of 6 are built. **Stage 4, the edge states, is not started** |
+| Active task | **`TASK-BRIEF.md`, private v1 finalisation.** Every implementation stage is built. What remains is a client review and target-device validation |
 | Open defects | **None recorded.** See the honest gaps below |
 | Working tree | Clean |
 
@@ -26,6 +26,25 @@ snapshot.
 | `01bb43ab` | The first-run route: splash, find, discovery, pairing |
 | `2f91a306` | The Bulan settings shell and About, replacing the upstream screen |
 | `2f88565c` | The Bulan app icon and a desktop entry that reads *Bulan* |
+| `97fcc481` | Reconciled the documents against what was built |
+| `a0384d62` | The remaining edge states, and SELECT's destination on the grid |
+
+## The v1 draft is complete
+
+The route a first-time user takes is built end to end and no screen along it
+still reads as upstream Moonlight:
+
+launch → splash → *Let's find your PC* → *Looking for your PC* → pair →
+host carousel → game grid → launch → stream → quit → back to the grid.
+
+Settings and About are Bulan screens reachable by START from anywhere. The
+reachable edge states are drawn: no hosts, unreachable host, empty library,
+couldn't start stream, quit confirmation, and the wake states. SELECT reaches
+host settings from both the carousel and the grid. The application entry
+carries the Bulan icon and name.
+
+**This is a draft, not an accepted release.** None of it has been seen by the
+client, and none of it has run on a Steam Deck.
 
 **The client's design boards were finally readable.** Every earlier session had
 them attached and could not open them: this machine had no PDF rendering at
@@ -445,20 +464,22 @@ These are honest validation gaps, not acknowledged product defects.
 
 ## Next action
 
-**A client review of `v1-review-build`.** None of the first-run, settings,
-About or app-icon work has been seen. It is built to the boards and it runs
-clean, but "runs clean on a Windows review station" is not the same as
-accepted.
+1. **A client review of `v1-review-build`.** Nothing on it has been seen. It is
+   built to the boards and it runs clean, but "runs clean on a Windows review
+   station" is not the same as accepted. Reviewing before a Deck session is
+   worth it: a change of direction is cheaper to act on now than after the
+   hardware pass.
+2. **A Steam Deck session**, in Desktop Mode and Game Mode, with a physical
+   controller and a real host. That single session clears most of the
+   unperformed list above: real pairing, real streaming, the Steam on-screen
+   keyboard on the manual-address field, the L1/R1 tab switch and the Library
+   half of the grid context restore, how the motion actually feels, OLED
+   appearance, and the transition blur's cost.
+3. **A Flatpak build and a clean install**, which cannot be done from Windows.
 
-Then **Phase D, the edge states** — the one phase still unbuilt. Several of its
-states already exist from earlier work (unreachable host, couldn't start
-stream, wake success and failure). What is genuinely missing is a designed
-zero-hosts state, a designed empty-library state beyond its single line of
-placeholder copy, and the disconnect confirmation.
-
-Also still owed, and not started: **SELECT on the game grid reaching the
-host-settings surface.** The client took that decision on 2 August 2026 and it
-is recorded in `ROADMAP.md` as decided; it has not been built.
+Nothing has been pushed. `bulan` is five commits ahead of `origin/bulan` and
+`v1-review-build` is seven ahead of `bulan`, both local only, awaiting the
+client's authorisation.
 
 The client mentioned possibly revisiting the screen transition later to push it
 further toward the brief's "whimsical" character. That is a future task, not an
