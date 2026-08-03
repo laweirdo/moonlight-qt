@@ -242,6 +242,23 @@ QtObject {
     // a restrained overshoot and a single soft bounce.
     readonly property real motionEntranceOvershoot: 1.7
 
+    // How small a popup starts before it settles into place. Popups used to
+    // appear instantly, with no motion at all, which the client called out on
+    // 3 August 2026 -- every other arrival in the app moves, so a menu simply
+    // existing read as a missing frame.
+    //
+    // Deliberately near 1: this is the same restrained register as
+    // motionPressScale's 0.97, scaled up a little because a whole panel
+    // travelling reads as more movement than a tile does. Combined with
+    // motionEntranceOvershoot above, a popup grows past its resting size once
+    // and settles back -- one bounce, never two.
+    readonly property real motionPopupEnterScale: 0.92
+
+    // How long that takes. motionFocusMs, the clock every other reactive
+    // motion in the app already runs on, so a popup does not introduce a
+    // timing feel of its own.
+    readonly property int  motionPopupEnterMs: motionFocusMs
+
     // Waiting motion: the three bouncing dots drawn over a busy host tile.
     //
     // Brief §6 rule 1 is "never bounce twice", and this loops forever, so it

@@ -746,8 +746,19 @@ FocusScope {
         }
     }
 
+    // Adding a PC opens the onboarding screen, not a popup (client review,
+    // 3 August 2026). This used to raise addPcPanel -- a bare "type an
+    // address" box, which is upstream's Add PC dialog with Bulan paint on it
+    // and skips the discovery step entirely. FLOW.md has always drawn this
+    // edge as "Your PCs --> Add another --> find your PC"; it is the same
+    // destination actLookAgain() uses, because adding a PC and looking again
+    // are the same act from the player's side.
+    //
+    // The manual-address escape hatch is not lost: HostDiscovery.qml carries
+    // "Enter an address instead", which is where a typed address belongs --
+    // after looking has failed, not instead of looking.
     function actAddPc() {
-        addPcPanel.visible = true
+        stackView.push("HostDiscovery.qml")
     }
 
     // The zero-hosts state's primary action -- the same re-scan FirstRun.qml's
@@ -965,7 +976,12 @@ FocusScope {
     Item {
         id: screenContent
         anchors.fill: parent
-        layer.enabled: hostSettingsMenu.visible
+        // Blurred behind ANY panel, not just the host menu (client review,
+        // 3 August 2026). The pairing PIN, the message panel and the
+        // add-a-PC panel all sat on an unblurred screen, so the same glass
+        // treatment appeared or did not depending on which panel you opened.
+        layer.enabled: hostSettingsMenu.visible || messagePanel.visible
+                       || pinPanel.visible || addPcPanel.visible
         layer.effect: MultiEffect {
             autoPaddingEnabled: false
             blurEnabled: true
@@ -1389,7 +1405,14 @@ FocusScope {
     // child cannot opt out of its parent's stack-transition opacity, so the
     // single window-level HintBar reads these three properties off
     // whichever screen is current instead of this screen drawing its own.
-    readonly property bool hintBarVisible: true
+    // Hidden while any overlay owns the input, because the overlay draws its
+    // own hints and the two bars would otherwise print on top of each other --
+    // "A Select" over "A Connect", "B Close" over "Host Settings". AppView.qml
+    // already guards its bar the same way; this screen was missed.
+    readonly property bool hintBarVisible: !hostSettingsMenu.visible
+                                           && !messagePanel.visible
+                                           && !pinPanel.visible
+                                           && !addPcPanel.visible
 
     readonly property var hintLeftHints: root.hasHosts
         ? [
@@ -1438,8 +1461,8 @@ FocusScope {
 
     // Inert, and swallowed. Without accepting them they bubble to the StackView
     // and drag focus into chrome this screen does not have.
-    Keys.onUpPressed: event.accepted = true
-    Keys.onDownPressed: event.accepted = true
+    Keys.onUpPressed: function(event) { event.accepted = true }
+    Keys.onDownPressed: function(event) { event.accepted = true }
 
     // A. Three keycodes for one button: Return and Enter are the same press on
     // different keyboards, and Space is what A becomes while the settings page's
@@ -1475,7 +1498,7 @@ FocusScope {
     }
 
     // X. Menu is also what the toolbar used for settings upstream; consumed here.
-    Keys.onMenuPressed: {
+    Keys.onMenuPressed: function(event) {
         actAddPc()
         event.accepted = true
     }

@@ -79,9 +79,17 @@ FocusScope {
         changed(currentValue, true)
     }
 
+    // The shared popup entrance -- see PopupMotion.qml. Every Bulan popup uses
+    // this one object rather than its own copy of the animation.
+    PopupMotion {
+        id: popupMotion
+        open: popup.visible
+    }
+
     Rectangle {
         anchors.fill: parent
         color: Bulan.popupScrim
+        opacity: popupMotion.scrimOpacity
 
         MouseArea {
             anchors.fill: parent
@@ -92,6 +100,12 @@ FocusScope {
 
     Rectangle {
         id: surface
+
+        // Grows from motionPopupEnterScale past its resting size and settles
+        // back once. Opacity is clamped in PopupMotion so only the scale
+        // carries the overshoot.
+        scale: popupMotion.surfaceScale
+        opacity: popupMotion.surfaceOpacity
 
         anchors.horizontalCenter: parent.horizontalCenter
         anchors.verticalCenter: parent.verticalCenter

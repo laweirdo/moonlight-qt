@@ -243,7 +243,24 @@ FocusScope {
     }
 
     Item {
+        id: screenContent
         anchors.fill: parent
+
+        // Blurred behind either popup, the same glass treatment the host
+        // carousel gives its own panels (client review, 3 August 2026: popups
+        // should blur what is behind them). Safe to blur this whole item
+        // because both popups are declared as SIBLINGS of it further down, not
+        // children -- blurring a popup's own parent would blur the popup too.
+        //
+        // Gated on visibility, so a settled screen with nothing open carries
+        // no layer and no effect at all.
+        layer.enabled: choicePopup.visible || sliderPopup.visible
+        layer.effect: MultiEffect {
+            autoPaddingEnabled: false
+            blurEnabled: true
+            blur: Bulan.popupBackdropBlurStrength
+            blurMax: Bulan.popupBackdropBlurRadius
+        }
 
         Atmosphere {
             anchors.fill: parent
@@ -352,14 +369,22 @@ FocusScope {
                         // The pill only appears while the rail itself holds
                         // focus (mockup 1); once focus moves to the rows pane
                         // the category keeps its amber text and left bar but
-                        // loses the pill (mockup 2). Sized to the label, not
-                        // the rail's full width -- a "chip", not a row.
+                        // loses the pill (mockup 2).
+                        //
+                        // ONE size for every category, not one sized to each
+                        // label (client review, 3 August 2026). Fitting the
+                        // pill to the text made the focus ring change shape as
+                        // it moved -- wide on "Advanced", narrow on "UI" --
+                        // which read as the control resizing rather than the
+                        // selection moving. Focus has to be the same object
+                        // wherever it lands, exactly as the game grid's ring is
+                        // the same ring on every tile.
                         Rectangle {
                             id: pill
                             visible: railRow.isFocusedPane
                             anchors.verticalCenter: parent.verticalCenter
                             anchors.left: parent.left
-                            width: bar.width + labelSpacing.width + label.implicitWidth + Bulan.spaceLg * 2
+                            width: parent.width
                             height: Bulan.targetMin
                             radius: Bulan.radiusFull
                             color: Bulan.transparent

@@ -2912,6 +2912,52 @@ FocusScope {
             Bulan.gameRecentTileHeight * Bulan.motionFocusScale / 2,
             (height - labelReserve) / 2)
 
+        // --- warm halo behind the focused tile -------------------------------
+        // Recent had none (client review, 3 August 2026). The Library grid and
+        // the host carousel both carry one, so the focused game lost its glow
+        // on exactly the view the app opens on -- the halo appeared only after
+        // switching to Library, which read as the effect being broken rather
+        // than absent.
+        //
+        // Centred and stationary like the carousel's, not moved like the
+        // Library's: the focused tile in this view is always the centre one,
+        // so there is nothing for the halo to follow. Declared before the
+        // Repeater below so it paints behind every tile.
+        Canvas {
+            id: recentFocusBloom
+            width: Bulan.gameRecentTileWidth * 2.2
+            height: Bulan.gameRecentTileHeight * 2.2
+            x: recentView.width / 2 - width / 2
+            y: recentView.focusCenterY - height / 2
+            visible: root.recentOrder.length > 0
+
+            onWidthChanged: requestPaint()
+            onHeightChanged: requestPaint()
+            onPaint: {
+                var ctx = getContext("2d")
+                ctx.clearRect(0, 0, width, height)
+                var rx = width / 2
+                var ry = height / 2
+                // Stretched to the tile's portrait shape rather than drawn as
+                // a circle, exactly as the Library's own bloom does it.
+                ctx.save()
+                ctx.translate(rx, ry)
+                ctx.scale(1, ry / rx)
+                var g = ctx.createRadialGradient(0, 0, 0, 0, 0, rx)
+                var a = Bulan.focusBloomOpacity
+                g.addColorStop(0.00, Qt.rgba(1, 0.85, 0.63, a))
+                g.addColorStop(0.30, Qt.rgba(1, 0.85, 0.63, a * 0.45))
+                g.addColorStop(0.55, Qt.rgba(1, 0.85, 0.63, a * 0.16))
+                g.addColorStop(0.78, Qt.rgba(1, 0.85, 0.63, a * 0.04))
+                g.addColorStop(1.00, Qt.rgba(1, 0.85, 0.63, 0.0))
+                ctx.fillStyle = g
+                ctx.beginPath()
+                ctx.arc(0, 0, rx, 0, Math.PI * 2)
+                ctx.fill()
+                ctx.restore()
+            }
+        }
+
         // How many neighbour slots fit on each side of the focused tile,
         // worked out from the space actually on screen rather than the fixed
         // ±2 this was copied from. That clamp is right for HostCarousel.qml,
@@ -3293,38 +3339,29 @@ FocusScope {
                             elide: Text.ElideRight
                         }
 
-                        // Baseline-aligned against the title -- a Row aligns
-                        // its children's TOPS, which is why "Running" used to
-                        // ride high above the title's own baseline at a
-                        // smaller point size. This is a sibling anchored
-                        // directly to titleText's baseline instead.
-                        //
-                        // Positioned off titleText's actual PAINTED width,
-                        // not its bound width: the title elides/centres
-                        // within a fixed-width box, so "Running" has to hang
-                        // off the true right-hand edge of the glyphs, not the
-                        // edge of the box. Centring the pair as a whole (the
-                        // old Row) shifted the title left by half of this
-                        // label's width; anchoring it as a sibling like this
-                        // leaves the title itself centred on the tile.
-                        Text {
-                            id: runningLabel
-                            visible: recentSlot.isFocused && model.running
-                            anchors.baseline: titleText.baseline
-                            x: titleText.x + titleText.width / 2
-                               + titleText.paintedWidth / 2 + Bulan.spaceXs
-                            text: qsTr("Running")
-                            color: Bulan.statusSuccess
-                            font.family: Bulan.familyUi
-                            font.pixelSize: Bulan.sizeLabel
-                        }
                     }
 
+                    // "Running" sits on its own line under the game's name,
+                    // centred with it (client review, 3 August 2026). It used
+                    // to hang off the right-hand edge of the title's painted
+                    // glyphs on the same baseline, which read as misaligned
+                    // rather than as a status: at the focused title's size the
+                    // pair was visibly lopsided, and a long name pushed the
+                    // label off the tile entirely.
+                    //
+                    // This replaces the "Pick up where you left off." line
+                    // rather than being added above it. Stacking name,
+                    // "Running" AND a tagline put three lines under the tile,
+                    // which is what crowded the hint bar; the client's call was
+                    // to drop the tagline if the status could not otherwise
+                    // fit. "Running" is the load-bearing half -- it says the
+                    // game is live, which is also what changes A from Play to
+                    // Resume.
                     Text {
                         visible: recentSlot.isFocused && model.running
                         anchors.horizontalCenter: parent.horizontalCenter
-                        text: qsTr("Pick up where you left off.")
-                        color: Bulan.accentPrimary
+                        text: qsTr("Running")
+                        color: Bulan.statusSuccess
                         font.family: Bulan.familyUi
                         font.pixelSize: Bulan.sizeBody
                     }

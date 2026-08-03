@@ -467,12 +467,23 @@ bool NvComputer::updateAppList(QVector<NvApp> newAppList) {
         return false;
     }
 
-    // Propagate client-side attributes to the new app list
+    // Propagate client-side attributes to the new app list.
+    //
+    // lastPlayed belongs here for exactly the same reason hidden and
+    // directLaunch do: the host has no idea when we last played something, so
+    // every app in newAppList arrives with a null timestamp. Leaving it out
+    // meant a single app-list refetch -- which happens on a timer, and again
+    // whenever the list genuinely changes -- silently wiped the play history
+    // for every game at once, and the Recent view forgot everything.
+    //
+    // It looked like leaving the grid caused it, because a poll usually landed
+    // around then. Client review, 3 August 2026.
     for (const NvApp& existingApp : std::as_const(appList)) {
         for (NvApp& newApp : newAppList) {
             if (existingApp.id == newApp.id) {
                 newApp.hidden = existingApp.hidden;
                 newApp.directLaunch = existingApp.directLaunch;
+                newApp.lastPlayed = existingApp.lastPlayed;
             }
         }
     }
