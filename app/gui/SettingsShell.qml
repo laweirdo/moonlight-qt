@@ -366,42 +366,6 @@ FocusScope {
                         readonly property bool isFocusedPane:
                             isActiveCategory && root.activePane === "rail"
 
-                        // The pill only appears while the rail itself holds
-                        // focus (mockup 1); once focus moves to the rows pane
-                        // the category keeps its amber text and left bar but
-                        // loses the pill (mockup 2).
-                        //
-                        // ONE size for every category, not one sized to each
-                        // label (client review, 3 August 2026). Fitting the
-                        // pill to the text made the focus ring change shape as
-                        // it moved -- wide on "Advanced", narrow on "UI" --
-                        // which read as the control resizing rather than the
-                        // selection moving. Focus has to be the same object
-                        // wherever it lands, exactly as the game grid's ring is
-                        // the same ring on every tile.
-                        Rectangle {
-                            id: pill
-                            visible: railRow.isFocusedPane
-                            anchors.verticalCenter: parent.verticalCenter
-                            anchors.left: parent.left
-                            width: parent.width
-                            height: Bulan.targetMin
-                            radius: Bulan.radiusFull
-                            color: Bulan.transparent
-                            border.width: Bulan.space2xs / 2
-                            border.color: Bulan.accentPrimary
-
-                            layer.enabled: railRow.isFocusedPane
-                            layer.effect: MultiEffect {
-                                shadowEnabled: true
-                                shadowColor: Bulan.accentGlow
-                                shadowBlur: Bulan.buttonGlowBlur
-                                shadowOpacity: Bulan.buttonGlowOpacity
-                                shadowHorizontalOffset: 0
-                                shadowVerticalOffset: 0
-                            }
-                        }
-
                         Rectangle {
                             id: bar
                             visible: railRow.isActiveCategory
@@ -414,10 +378,19 @@ FocusScope {
                             color: Bulan.accentPrimary
                         }
 
+                        // Fixed, and deliberately NOT anchored to the bar's
+                        // visibility. It used to start at bar.right when the
+                        // bar was showing and at parent.left when it was not,
+                        // with different margins, so selecting a category
+                        // shunted its label 16px to the right (client review,
+                        // 3 August 2026). Selection changes colour; it does
+                        // not move the words. This is the bar-visible
+                        // position, held for every row whether the bar is
+                        // drawn or not.
                         Item {
                             id: labelSpacing
-                            anchors.left: bar.visible ? bar.right : parent.left
-                            anchors.leftMargin: bar.visible ? Bulan.spaceMd : Bulan.spaceLg + Bulan.space2xs
+                            anchors.left: parent.left
+                            anchors.leftMargin: Bulan.spaceLg + Bulan.space2xs + Bulan.spaceMd
                             width: Bulan.spaceXs
                             height: 1
                         }
@@ -430,7 +403,7 @@ FocusScope {
                             color: railRow.isActiveCategory ? Bulan.accentPrimary : Bulan.textSecondary
                             font.family: Bulan.familyUi
                             font.pixelSize: Bulan.sizeBodyLg
-                            font.bold: railRow.isActiveCategory
+                            font.weight: Bulan.weightBody
                         }
 
                         MouseArea {
@@ -444,6 +417,53 @@ FocusScope {
                             onDoubleClicked: root.activePane = "rows"
                         }
                     }
+                }
+            }
+
+            // ONE pill for the whole rail, gliding to whichever category is
+            // selected (client review, 3 August 2026). It used to be one pill
+            // per row, appearing and disappearing, so the focus ring blinked
+            // from place to place instead of travelling -- and there was
+            // nothing continuous for the eye to follow between two categories.
+            //
+            // Declared here as a sibling of the column rather than inside a
+            // delegate precisely so it can outlive any single row and move
+            // between them. Same clock and curve as every other focus-follow
+            // motion in the app, so the rail feels like the carousel and the
+            // game grid rather than like a third thing.
+            //
+            // Only visible while the rail itself holds focus (mockup 1); once
+            // focus moves to the rows pane the category keeps its amber text
+            // and left bar but loses the pill (mockup 2).
+            Rectangle {
+                id: railPill
+                visible: root.activePane === "rail"
+                x: 0
+                width: railColumn.width
+                height: Bulan.targetMin
+                y: root.categoryIndex * (railColumn.rowHeight + railColumn.spacing)
+                   + (railColumn.rowHeight - height) / 2
+                radius: Bulan.radiusFull
+                color: Bulan.transparent
+                border.width: Bulan.space2xs / 2
+                border.color: Bulan.accentPrimary
+
+                Behavior on y {
+                    NumberAnimation {
+                        duration: Bulan.motionFocusMs
+                        easing.type: Easing.OutBack
+                        easing.overshoot: Bulan.motionEntranceOvershoot
+                    }
+                }
+
+                layer.enabled: visible
+                layer.effect: MultiEffect {
+                    shadowEnabled: true
+                    shadowColor: Bulan.accentGlow
+                    shadowBlur: Bulan.buttonGlowBlur
+                    shadowOpacity: Bulan.buttonGlowOpacity
+                    shadowHorizontalOffset: 0
+                    shadowVerticalOffset: 0
                 }
             }
         }
@@ -756,11 +776,45 @@ FocusScope {
                                 height: Bulan.spaceXl
                                 radius: height / 2
                                 readonly property bool on: modelData.type === "toggle" && modelData.checked()
-                                color: on ? Bulan.accentPrimary : Bulan.surfacePressed
+
+                                // The track itself stays neutral. The amber
+                                // used to be this Rectangle's own colour, which
+                                // switched on the frame the toggle flipped --
+                                // so the whole control turned amber instantly
+                                // while the knob was still sliding, and the
+                                // fill arrived before the switch it was
+                                // supposed to be following (client review,
+                                // 3 August 2026).
+                                color: Bulan.surfacePressed
                                 border.width: 1
                                 border.color: on ? Bulan.accentPrimary : Bulan.hairline
+                                Behavior on border.color {
+                                    ColorAnimation { duration: Bulan.motionFocusMs }
+                                }
+
+                                // The amber now TRAILS the knob: its width is
+                                // bound to the knob's animated x, so the fill
+                                // is drawn up to wherever the switch currently
+                                // is rather than to where it is going to end
+                                // up. Opacity carries the on/off state so the
+                                // fill is not left as a stub behind a knob
+                                // that is parked at the left.
+                                Rectangle {
+                                    anchors.left: parent.left
+                                    anchors.leftMargin: 1
+                                    anchors.verticalCenter: parent.verticalCenter
+                                    height: parent.height - 2
+                                    width: Math.max(0, knob.x + knob.width + 2)
+                                    radius: height / 2
+                                    color: Bulan.accentPrimary
+                                    opacity: toggleTrack.on ? 1 : 0
+                                    Behavior on opacity {
+                                        NumberAnimation { duration: Bulan.motionFocusMs }
+                                    }
+                                }
 
                                 Rectangle {
+                                    id: knob
                                     width: Bulan.spaceLg
                                     height: Bulan.spaceLg
                                     radius: width / 2

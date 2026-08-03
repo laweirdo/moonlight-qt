@@ -161,8 +161,11 @@ public:
     // effect defaulted to Bulan.qml's own atmosphere*Enabled token until now;
     // that comment is stale as of this property existing -- see Atmosphere.qml,
     // which reads these instead of the token once a real preference exists.
-    Q_PROPERTY(bool atmosphereGradientEnabled MEMBER atmosphereGradientEnabled NOTIFY atmosphereGradientEnabledChanged)
-    Q_PROPERTY(bool atmosphereVignetteEnabled MEMBER atmosphereVignetteEnabled NOTIFY atmosphereVignetteEnabledChanged)
+    // The last host whose game grid was opened, so a relaunch can go straight
+    // back to it instead of stopping at the carousel (client decision,
+    // 3 August 2026). Empty until a grid has been opened at least once.
+    Q_PROPERTY(QString lastHostUuid MEMBER lastHostUuid NOTIFY lastHostUuidChanged)
+    Q_PROPERTY(bool atmosphereGradientEnabled MEMBER atmosphereGradientEnabled NOTIFY atmosphereGradientEnabledChanged)    Q_PROPERTY(bool atmosphereVignetteEnabled MEMBER atmosphereVignetteEnabled NOTIFY atmosphereVignetteEnabledChanged)
     Q_PROPERTY(bool atmosphereGrainEnabled MEMBER atmosphereGrainEnabled NOTIFY atmosphereGrainEnabledChanged)
 
     Q_INVOKABLE bool retranslate();
@@ -207,6 +210,7 @@ public:
     Language language;
     CaptureSysKeysMode captureSysKeysMode;
     RendererSelection rendererSelection;
+    QString lastHostUuid;
     bool atmosphereGradientEnabled;
     bool atmosphereVignetteEnabled;
     bool atmosphereGrainEnabled;
@@ -248,6 +252,7 @@ signals:
     void keepAwakeChanged();
     void languageChanged();
     void rendererSelectionChanged();
+    void lastHostUuidChanged();
     void atmosphereGradientEnabledChanged();
     void atmosphereVignetteEnabledChanged();
     void atmosphereGrainEnabledChanged();

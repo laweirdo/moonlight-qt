@@ -8,6 +8,7 @@ import QtQuick.Controls 2.2
 import ComputerModel 1.0
 
 import ComputerManager 1.0
+import StreamingPreferences 1.0
 import SdlGamepadKeyNavigation 1.0
 
 import Bulan 1.0
@@ -326,7 +327,16 @@ FocusScope {
             root.reviewAppsAttempts++
             for (var i = 0; i < hostRepeater.count; i++) {
                 var tile = hostRepeater.itemAt(i)
-                if (!tile || tile.hostName !== openAppsForHost) {
+                // Matches either the review hook's host NAME or the remembered
+                // last-used host's UUID -- one timer serving both, because the
+                // waiting problem is identical: a saved host loads OFFLINE and
+                // only reports itself reachable once the discovery poll
+                // answers, so neither target exists on the first frame.
+                var wanted = (typeof openAppsForHost !== "undefined"
+                              && openAppsForHost !== "")
+                        ? (tile && tile.hostName === openAppsForHost)
+                        : (tile && tile.uuid === root.autoOpenUuid)
+                if (!wanted) {
                     continue
                 }
                 if (!tile.online || !tile.paired) {
@@ -353,6 +363,10 @@ FocusScope {
     // The selection. This is the whole of the carousel's state: every tile's
     // position, scale and opacity is a function of the distance between its own
     // index and this one, so there is no view offset, no phase and no join.
+    // The remembered last-used host the startup auto-open is waiting for, or
+    // "" when there is nothing to return to. See StackView.onActivated.
+    property string autoOpenUuid: ""
+
     property int currentIndex: 0
 
     readonly property int hostCount: hostRepeater.count
@@ -438,7 +452,7 @@ FocusScope {
     }
 
     function pairingComplete(error) {
-        pinPanel.visible = false
+        pinPanel.opened = false
         if (error !== undefined) {
             messagePanel.show(qsTr("Couldn't pair"), error)
         }
@@ -562,6 +576,16 @@ FocusScope {
             return
         }
 
+        // Remember which PC this was, so the next launch can go straight back
+        // to its games instead of stopping here (client decision, 3 August
+        // 2026). Written for real hosts only -- a fake review row's UUID names
+        // nothing, and persisting it would send the next real launch chasing a
+        // host that does not exist.
+        if (!root.useFakeHosts) {
+            StreamingPreferences.lastHostUuid = hostUuid
+            StreamingPreferences.save()
+        }
+
         var savedContext = root.appViewContextByHostUuid[hostUuid]
         var properties = {
             "computerIndex": computerIndex,
@@ -670,7 +694,7 @@ FocusScope {
             computerModel.pairComputer(root.currentIndex, pin)
             pinPanel.pin = pin
             pinPanel.hostName = host.hostName
-            pinPanel.visible = true
+            pinPanel.opened = true
             return
         }
         if (!host.serverSupported) {
@@ -910,6 +934,23 @@ FocusScope {
         // player backs out of it would make B useless.
         if (!root.useFakeHosts && !reviewAppsOpened &&
                 typeof openAppsForHost !== "undefined" && openAppsForHost !== "") {
+            reviewAppsAttempts = 0
+            openAppsReviewTimer.restart()
+        }
+
+        // Go straight back to the PC whose games you were last in (client
+        // decision, 3 August 2026). Launch stopping at the carousel meant one
+        // extra press every single time for anyone with one PC, which is most
+        // people, and FLOW.md has always drawn a known paired host as going
+        // to the library rather than to the host list.
+        //
+        // Guarded on reviewAppsOpened exactly as the hook above is, so this
+        // runs ONCE per launch rather than once per return: reopening the grid
+        // every time the player backs out of it would make B useless. The
+        // carousel is still underneath, so B still lands where it always did.
+        if (!root.useFakeHosts && !reviewAppsOpened
+                && StreamingPreferences.lastHostUuid !== "") {
+            root.autoOpenUuid = StreamingPreferences.lastHostUuid
             reviewAppsAttempts = 0
             openAppsReviewTimer.restart()
         }

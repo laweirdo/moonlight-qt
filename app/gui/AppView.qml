@@ -2834,41 +2834,47 @@ FocusScope {
             glyphSize: Bulan.sizeBodyLg
         }
 
-        Column {
+        // The selected tab is marked by a warm glow around the word itself
+        // rather than a rule under it (client decision, 3 August 2026). The
+        // underline sat below the text and only as wide as it, which read as
+        // left-aligned against the pair; a glow is centred on the word by
+        // nature and needs no alignment of its own.
+        //
+        // Same treatment as the focused element everywhere else in the app --
+        // warm light on cool ground, carried by bloom rather than by a rule.
+        Text {
             anchors.verticalCenter: parent.verticalCenter
-            spacing: Bulan.space2xs
+            text: qsTr("Recent")
+            color: root.activeTab === "recent" ? Bulan.textPrimary : Bulan.secondary
+            font.family: Bulan.familyDisplay
+            font.pixelSize: Bulan.sizeTitle
 
-            Text {
-                text: qsTr("Recent")
-                color: root.activeTab === "recent" ? Bulan.textPrimary : Bulan.secondary
-                font.family: Bulan.familyDisplay
-                font.pixelSize: Bulan.sizeTitle
-            }
-
-            Rectangle {
-                width: parent.width
-                height: 2
-                color: Bulan.accentPrimary
-                visible: root.activeTab === "recent"
+            layer.enabled: root.activeTab === "recent"
+            layer.effect: MultiEffect {
+                shadowEnabled: true
+                shadowColor: Bulan.accentGlow
+                shadowBlur: Bulan.buttonGlowBlur
+                shadowOpacity: Bulan.buttonGlowOpacity
+                shadowHorizontalOffset: 0
+                shadowVerticalOffset: 0
             }
         }
 
-        Column {
+        Text {
             anchors.verticalCenter: parent.verticalCenter
-            spacing: Bulan.space2xs
+            text: qsTr("Library")
+            color: root.activeTab === "library" ? Bulan.textPrimary : Bulan.secondary
+            font.family: Bulan.familyDisplay
+            font.pixelSize: Bulan.sizeTitle
 
-            Text {
-                text: qsTr("Library")
-                color: root.activeTab === "library" ? Bulan.textPrimary : Bulan.secondary
-                font.family: Bulan.familyDisplay
-                font.pixelSize: Bulan.sizeTitle
-            }
-
-            Rectangle {
-                width: parent.width
-                height: 2
-                color: Bulan.accentPrimary
-                visible: root.activeTab === "library"
+            layer.enabled: root.activeTab === "library"
+            layer.effect: MultiEffect {
+                shadowEnabled: true
+                shadowColor: Bulan.accentGlow
+                shadowBlur: Bulan.buttonGlowBlur
+                shadowOpacity: Bulan.buttonGlowOpacity
+                shadowHorizontalOffset: 0
+                shadowVerticalOffset: 0
             }
         }
 

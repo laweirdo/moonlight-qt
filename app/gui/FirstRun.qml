@@ -33,7 +33,7 @@ FocusScope {
     }
 
     function actAddress() {
-        addressPanel.visible = true
+        addressPanel.opened = true
     }
 
     StackView.onActivated: {

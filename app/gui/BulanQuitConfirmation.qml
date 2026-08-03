@@ -12,20 +12,26 @@ FocusScope {
     signal quitRequested()
     signal dismissed()
 
-    visible: false
-    enabled: visible
+    // `opened` is the intent, `visible` trails it: the panel stays on screen
+    // until PopupMotion's exit animation has finished, which is what lets a
+    // popup animate out instead of vanishing on the frame it was closed.
+    // `enabled` follows the intent, not the presence, so a closing popup stops
+    // taking input immediately.
+    property bool opened: false
+    visible: opened || popupMotion.progress > 0.001
+    enabled: opened
     z: 300
 
     function open() {
         selectedChoice = 0
-        visible = true
+        opened = true
         forceActiveFocus()
         Qt.callLater(forceActiveFocus)
     }
 
     function close() {
         focus = false
-        visible = false
+        opened = false
         dismissed()
     }
 
@@ -49,7 +55,7 @@ FocusScope {
     // this one object rather than its own copy of the animation.
     PopupMotion {
         id: popupMotion
-        open: overlay.visible
+        open: overlay.opened
     }
 
     Rectangle {
@@ -145,7 +151,7 @@ FocusScope {
                                    ? Bulan.statusError : Bulan.textPrimary
                             font.family: Bulan.familyUi
                             font.pixelSize: Bulan.sizeBody
-                            font.bold: choiceButton.index === overlay.selectedChoice
+                            font.weight: Bulan.weightBody
                         }
 
                         MouseArea {

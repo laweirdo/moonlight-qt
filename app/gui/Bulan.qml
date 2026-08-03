@@ -48,6 +48,17 @@ QtObject {
 
     // --- Type (figma: type/base) ---------------------------------------------
     readonly property string familyUi: "Inter"
+
+    // The one body weight. Client review, 3 August 2026: selected rows were
+    // drawn semibold against medium neighbours, and the weight jumping as
+    // focus moved read as the text itself changing rather than the selection
+    // moving. Focus is carried by colour, the amber ring and the left bar --
+    // it does not also need to reflow the glyphs.
+    //
+    // Set as the window-wide default in main.qml, so a Text that says nothing
+    // about weight already gets this; the token exists for the places that
+    // used to say `font.bold` and now have to say something.
+    readonly property int weightBody: Font.Medium
     // From the mockup, not the variables file. See header.
     readonly property string familyDisplay: "Fraunces"
 

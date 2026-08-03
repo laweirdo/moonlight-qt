@@ -35,6 +35,10 @@ ApplicationWindow {
     // Inherited by every child control unless overridden.
     font.family: Bulan.familyUi
     font.pixelSize: Bulan.sizeLabel
+    // Medium is the body weight everywhere -- see Bulan.weightBody. Inherited
+    // by every control unless it overrides, so a Text that says nothing about
+    // weight is already right.
+    font.weight: Bulan.weightBody
 
     // Drive the Material style from the tokens so stock controls (buttons,
     // combo boxes, switches, dialogs, scrollbars) come out in Bulan colours

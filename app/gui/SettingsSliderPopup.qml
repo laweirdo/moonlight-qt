@@ -37,8 +37,14 @@ FocusScope {
     signal changed(real value, bool isReset)
     signal dismissed()
 
-    visible: false
-    enabled: visible
+    // `opened` is the intent, `visible` trails it: the panel stays on screen
+    // until PopupMotion's exit animation has finished, which is what lets a
+    // popup animate out instead of vanishing on the frame it was closed.
+    // `enabled` follows the intent, not the presence, so a closing popup stops
+    // taking input immediately.
+    property bool opened: false
+    visible: opened || popupMotion.progress > 0.001
+    enabled: opened
     z: 200
 
     function open(opts) {
@@ -49,13 +55,13 @@ FocusScope {
         currentValue = opts.value
         formattedValue = opts.formattedValue || ""
         resetTo = opts.resetTo || null
-        visible = true
+        opened = true
         forceActiveFocus()
     }
 
     function close() {
         focus = false
-        visible = false
+        opened = false
         dismissed()
     }
 
@@ -83,7 +89,7 @@ FocusScope {
     // this one object rather than its own copy of the animation.
     PopupMotion {
         id: popupMotion
-        open: popup.visible
+        open: popup.opened
     }
 
     Rectangle {
