@@ -3,7 +3,7 @@
 # Claude Code orchestration
 
 `AGENTS.md` is the project authority, loaded above. This adds Claude Code
-specifics only; every client stop it requires still applies.
+specifics; every client stop it requires still applies.
 
 ## Roles
 
@@ -14,7 +14,7 @@ delegating uncertainty.
 
 **Opus implements directly by default.** Delegation duplicates a context —
 packet, rebuilt state, report, and Opus rereading the diff anyway — so judge
-total tokens across both sessions, not main-session context alone.
+total tokens across both sessions, not the main session's alone.
 
 **Stay in the main session** for a quick targeted change, a small documentation
 or QML edit, a one-to-three-file fix, source Opus has already read, work needing
@@ -36,8 +36,7 @@ authority sections · likely files and symbols · accepted decisions · known ri
 is *not* needed · the verified branch, HEAD and working-tree state.
 
 An agent gets the brief plus an explicit file assignment, never a pasted
-repository document. Whoever implements: find symbols and call sites before
-opening whole files.
+repository document. Find symbols and call sites before opening whole files.
 
 ## Implementation agent
 
@@ -49,13 +48,13 @@ opening whole files.
 - Its report: changed files · checks and results · blockers · risks. Nothing
   else.
 - Structure delegated work as one complete invocation where practical. Resume
-  that agent if this configuration supports it; otherwise continue in the main
+  that agent if the configuration supports it; otherwise continue in the main
   session rather than spawning a replacement to recreate its context.
 
 ## Investigation
 
 Opus answers ordinary engineering questions itself. Basic file, symbol, caller
-and dependency discovery goes to whatever lightweight exploration this
+and dependency discovery goes to whatever lightweight exploration the
 configuration provides. A read-only Sonnet investigation agent is the last
 resort, for one narrow high-risk semantic question Opus cannot resolve
 efficiently — never to find files or symbols, never to summarize the repository.
@@ -70,17 +69,18 @@ security, with the diff scope and a short risk question, not project history.
 Opus verifies every finding before changing code.
 
 Never run parallel editing agents. Parallelize only independent read-only
-investigations, and not two into one broad area without reason.
+investigations, never two into one broad area without reason.
 
 ## Decisions and autonomy
 
 Choose the smallest solution consistent with repository authority and existing
-patterns, and never ask the client to settle routine architecture, naming, test
-or implementation details. An escalation carries the exact unresolved choice,
+patterns; never ask the client to settle routine architecture, naming, test or
+implementation details. An escalation carries the exact unresolved choice,
 two or three options, the visible consequence of each, and a recommendation.
 Pause only the affected work.
 
 ## Completion
 
-Inspect the final diff, run the required checks, and confirm the working tree
-and commit history against Git rather than memory.
+Inspect the final diff, run the required checks, confirm the working tree and
+commit history against Git rather than memory, and separate passed, skipped and
+unavailable checks in the report.

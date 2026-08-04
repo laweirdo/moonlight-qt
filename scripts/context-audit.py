@@ -56,13 +56,26 @@ STARTUP_SET = [
 # Read on top of the startup set, but only while a task is open.
 ACTIVE_TASK_SET = ["TASK-BRIEF.md"]
 
-# Per-file estimated-token ceilings. Exceeding one is a failure.
+# Per-file estimated-token targets.
+#
+# A budget is a target, not a tripwire. Going over one is a WARNING -- visible
+# pressure to trim, on the next edit rather than in six months. Only exceeding
+# it by more than BUDGET_TOLERANCE is a FAILURE.
+#
+# The band exists because a file sitting exactly at its budget turns the next
+# one-word edit into a CI failure, and the cheapest way to clear that failure is
+# to delete a rule. That is precisely the outcome these budgets exist to
+# prevent, so the gate must not reward it. A warning that never becomes a
+# failure is ignored; a failure with no slack corrupts the document. The band
+# gives roughly one paragraph of room and then stops.
 #
 # AGENTS.md is allowed 2150 rather than the 2000 the other entry points get.
 # Compressing it further meant cutting whole safety rules -- the push
 # authorization, the working-tree ownership handover, the validation-honesty
 # clause -- rather than words. The startup package as a whole still fits its
 # budget, which is the number that actually costs context every session.
+BUDGET_TOLERANCE = 1.05
+
 BUDGETS = {
     "AGENTS.md": 2150,
     "CLAUDE.md": 1000,
@@ -206,14 +219,27 @@ def measure(root: Path, paths: list[Path]) -> dict[str, dict]:
     return measurements
 
 
+def hard_limit(budget: int) -> int:
+    """The point at which being over a budget stops being a warning."""
+    return round(budget * BUDGET_TOLERANCE)
+
+
 def check_budgets(measurements: dict[str, dict], report: Report) -> None:
-    for name, ceiling in sorted(BUDGETS.items()):
+    for name, budget in sorted(BUDGETS.items()):
         entry = measurements.get(name)
         if entry is None:
             continue
-        if entry["tokens"] > ceiling:
+        tokens = entry["tokens"]
+        limit = hard_limit(budget)
+        if tokens > limit:
             report.fail(
-                f"{name}: ~{entry['tokens']} est tokens exceeds its {ceiling} budget"
+                f"{name}: ~{tokens} est tokens is over its {budget} budget by "
+                f"more than the {limit} tolerance -- trim it"
+            )
+        elif tokens > budget:
+            report.warn(
+                f"{name}: ~{tokens} est tokens is over its {budget} budget; "
+                f"fails above {limit}"
             )
 
 
@@ -222,10 +248,16 @@ def check_startup(measurements: dict[str, dict], report: Report) -> tuple[int, i
     total = sum(
         measurements[name]["tokens"] for name in STARTUP_SET if name in measurements
     )
-    if total > STARTUP_BUDGET:
+    startup_limit = hard_limit(STARTUP_BUDGET)
+    if total > startup_limit:
         report.fail(
-            f"startup package: ~{total} est tokens exceeds the "
-            f"{STARTUP_BUDGET} budget"
+            f"startup package: ~{total} est tokens is over the "
+            f"{STARTUP_BUDGET} budget by more than the {startup_limit} tolerance"
+        )
+    elif total > STARTUP_BUDGET:
+        report.warn(
+            f"startup package: ~{total} est tokens is over the "
+            f"{STARTUP_BUDGET} budget; fails above {startup_limit}"
         )
 
     task_total = total + sum(
@@ -233,10 +265,17 @@ def check_startup(measurements: dict[str, dict], report: Report) -> tuple[int, i
         for name in ACTIVE_TASK_SET
         if name in measurements
     )
-    if task_total > TASK_PACKAGE_BUDGET:
+    task_limit = hard_limit(TASK_PACKAGE_BUDGET)
+    if task_total > task_limit:
         report.fail(
             f"startup package plus the active task brief: ~{task_total} est "
-            f"tokens exceeds the {TASK_PACKAGE_BUDGET} budget"
+            f"tokens is over the {TASK_PACKAGE_BUDGET} budget by more than the "
+            f"{task_limit} tolerance"
+        )
+    elif task_total > TASK_PACKAGE_BUDGET:
+        report.warn(
+            f"startup package plus the active task brief: ~{task_total} est "
+            f"tokens is over the {TASK_PACKAGE_BUDGET} budget"
         )
     return total, task_total
 
@@ -358,13 +397,15 @@ def print_table(
     total_tokens = 0
     for name, entry in measurements.items():
         total_tokens += entry["tokens"]
-        ceiling = BUDGETS.get(name)
-        if ceiling is None:
+        budget = BUDGETS.get(name)
+        if budget is None:
             note = ""
-        elif entry["tokens"] > ceiling:
-            note = f"OVER {ceiling}"
+        elif entry["tokens"] > hard_limit(budget):
+            note = f"FAIL over {budget}"
+        elif entry["tokens"] > budget:
+            note = f"over {budget}"
         else:
-            note = f"{ceiling} ok"
+            note = f"{budget} ok"
         print(
             f"{name:<44}{entry['lines']:>7}{entry['chars']:>9}"
             f"{entry['tokens']:>9}  {note}"

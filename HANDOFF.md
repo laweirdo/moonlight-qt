@@ -31,11 +31,9 @@ Replaced, never appended to. Past states are in Git history, past evidence in
 
 ## Where the product is
 
-**Phase F — ship private v1.** Every phase is built. The complete v1 draft —
-cold launch through first run, pairing, host selection, game selection, launch,
-quit and return — was reviewed live by the client in two rounds and accepted on
-3 August 2026, merged as `173c0497`. No screen on that route still reads as
-upstream Moonlight.
+**Phase F — ship private v1.** `ROADMAP.md` owns the phase, its exit criteria
+and what v1 means. The accepted baseline is `173c0497`, the private v1 draft the
+client reviewed live in two rounds on 3 August 2026.
 
 **Accepted is not validated.** Nothing has run on a Steam Deck, against a
 physical controller, through a real stream, or as a Flatpak.
