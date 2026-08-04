@@ -1,183 +1,161 @@
 # Bulan — permanent agent instructions
 
-These rules apply to Claude Code, Codex, and any other coding or reviewing
-agent working in this repository. They are project rules, not a description of
-the current branch, task, defects, or session.
+Project rules for every coding or reviewing agent here — Claude Code, Codex, or
+anything else. Not a description of the current branch, task, or defects.
 
 ## Start every session here
 
-Before proposing or changing anything:
-
 1. Read this file.
-2. Inspect the current branch, HEAD, tracking branch, configured remotes, and
-   working-tree status.
-3. Read the recent commits relevant to the work.
-4. Read `bulan-creative-brief.md` for product, brand, voice, visual, and
-   interaction intent.
-5. Read `FLOW.md` for navigation states and transitions.
-6. Read `ROADMAP.md` for scope, phase order, and the next milestone.
-7. Read `HANDOFF.md` for the current repository state and last known validation.
-8. Read the active task brief named by `HANDOFF.md`, if one exists.
-9. Read the relevant `SPEC-*.md`, `BUILDING-*.md`, and `BUGS.md` files for the
-   surface, machine, or defect being worked on.
+2. Inspect Git: branch, HEAD, tracking branch, remotes, working-tree status, and
+   the commits relevant to the work.
+3. Read `HANDOFF.md` — current repository and validation state.
+4. Read the active task brief if `HANDOFF.md` names one.
+5. Load only what the routing table below sends you to.
+6. Inspect the relevant source files and symbols.
 
-Repository documents outrank prior chat context. Objective repository facts
-come from Git and the current source, not from remembered branch names, commit
+**Do not read every project document at startup.** Steps 1–4 are the whole
+default package. Load the rest on demand, and only the sections that bear on the
+task. Do not reread what an accepted task brief already quotes.
+
+Repository documents outrank prior chat context. Objective repository facts come
+from Git and the current source, not from remembered branch names, commit
 hashes, or session summaries.
 
-## Authority
+## Authority and routing
 
-Use each document only for the kind of decision it owns:
+**The client outranks every document** on product, UX, visual design, copy,
+scope, licensing, and acceptable compromises. **Git and the application source
+outrank any document's claim about them.**
 
-| Authority | Governs |
-|---|---|
-| The client | Product, UX, visual design, copy, scope, licensing presentation, and acceptable compromises |
-| `bulan-creative-brief.md` | Durable product and creative intent |
-| `FLOW.md` | Navigation states, transitions, and flow decisions |
-| `ROADMAP.md` | Release scope, phase order, exit conditions, and sequencing |
-| `HANDOFF.md` | Current repository and validation state |
-| The active task brief | The scope and acceptance criteria of one active task |
-| `BUGS.md` | Acknowledged open defects |
-| `SPEC-*.md` | Durable decisions and known unfinished work for a product surface |
-| `BUILDING-*.md` | Reproducible machine-specific build and review procedures |
-| Git and application source | What is objectively present and what the code currently does |
+| Document | Owns | Load when |
+|---|---|---|
+| `HANDOFF.md` | Repository and validation state | Startup, always |
+| `TASK-BRIEF.md` | The one active task's scope | `HANDOFF.md` names one |
+| `FLOW.md` | Navigation states, transitions, flow decisions | Routes or transitions change |
+| `ROADMAP.md` | Release scope, phase order, exit conditions | Scope or sequencing is in question |
+| `DESIGN-SYSTEM.md` | Colour, type, motion, spacing, token values | A visual value is involved |
+| `bulan-creative-brief.md` | Positioning, concept, voice, copy register | A visual or copy call is stuck |
+| `SPEC-*.md` | Durable decisions for one surface | Working on that surface |
+| `BUGS.md` | Open defects | Investigating a defect |
+| `REVIEW-CHECKLIST.md` | The reusable Deck review procedure | Running a hardware review |
+| `BUILDING-*.md` | Machine-specific build procedure | Running a platform build |
+| `UI-AUDIT.md` | What upstream Moonlight does today | Comparing against upstream |
+| `docs/` | Historical evidence | Investigating history |
 
-An active task brief is temporary. It may narrow the work, but it does not
-silently override this file, the creative brief, the flow, or the roadmap.
+`docs/` records previous answers — `decisions/`, `validation/`,
+`design-rationale/`, `history/`, `retrospectives/`. It never overrides a current
+authority and is never startup reading.
+
+An active task brief is temporary. It may narrow the work; it does not silently
+override this file, the flow, the roadmap, or the design system.
 
 ## When authorities disagree
 
-Do not silently choose between contradictory sources.
+Never silently choose between contradictory sources. Settle first whatever Git,
+the working tree, or the source can settle. Resolve what remains in this order:
+current application source, where a document claims to describe it → the latest
+accepted client decision → the latest report in `docs/validation/` → the
+relevant `SPEC-*.md` → `ROADMAP.md`, `FLOW.md`, `DESIGN-SYSTEM.md` → recent Git
+history → older historical prose.
 
-First investigate anything that can be settled objectively from Git history,
-the current branch, the working tree, or the application source. If a real
-authority conflict remains:
+That order is not permission to invent a product decision. If the repository
+cannot settle it: stop before editing, quote both statements and name their
+files and headings, explain in plain English what each reading changes,
+recommend one and say why, then wait for the client.
 
-1. Stop before editing the affected material or implementation.
-2. Quote or precisely identify both statements.
-3. Name the files and headings where they appear.
-4. Explain in plain English what choosing either interpretation changes.
-5. Give a recommended interpretation and why.
-6. Wait for the client to decide.
+Always stop and ask when a product, UX, visual, copy, scope, licensing,
+branching, or platform decision would change meaning; when a permanent rule
+could instead be a temporary task instruction; when a decision appears to have
+changed without an explicit replacement; when a completed item may still be
+operationally relevant; when moving or deleting material could hide useful
+project history; or when more than one structure is defensible.
 
-Always stop and ask when:
-
-- a product, UX, visual, copy, scope, licensing, branching, or platform decision
-  would change meaning;
-- a permanent rule could instead be a temporary task instruction;
-- a decision appears to have changed without an explicit replacement;
-- a completed item may still be operationally relevant;
-- moving or deleting material could hide useful project history;
-- a filename or document purpose is ambiguous; or
-- more than one documentation or implementation structure is reasonably
-  defensible.
-
-Technical recommendations must state their practical consequences and include
-a preferred option. The client is the creative director and does not read code,
-so explain what changes for the product, workflow, or risk rather than only
-describing implementation mechanics.
+The client is the creative director and does not read code. State what a
+recommendation changes for the product, workflow, or risk, not only its
+implementation mechanics.
 
 ## Product and interface invariants
 
-### Controller first
-
-Every user-facing screen must be fully operable with a gamepad alone. If an
-interaction works only with a mouse, touch, or trackpad, it is incomplete.
-Focus must remain visible and navigation must remain recoverable after dialogs,
+**Controller first.** Every user-facing screen must be fully operable with a
+gamepad alone; an interaction that needs a mouse, touch, or trackpad is
+incomplete. Focus must stay visible and navigation recoverable after dialogs,
 overlays, and screen changes.
 
-### Custom components only
+**Custom components only.** Do not instantiate a stock Qt Quick Control in a
+Bulan screen. An import used only for attached infrastructure, such as
+`StackView` attached properties, is allowed when it creates no stock visual
+control and the relevant specification records why.
 
-Do not instantiate stock Qt Quick Controls in a Bulan screen. Bulan controls,
-menus, dialogs, toggles, sliders, and other visible interface elements are
-custom components.
+**Tokens own visual values.** Colours, sizes, spacing, radii, opacity, and
+durations come from the `Bulan` design-token singleton. Never put a raw visual
+value in a product screen because a token is missing — propose the token,
+grounded in the creative brief, and wait for the client. `DESIGN-SYSTEM.md` owns
+the rules, the values, and the runtime/review-copy split.
 
-An import used only for attached infrastructure, such as `StackView` attached
-properties, is allowed when it creates no stock visual control and the relevant
-specification records why it is needed.
-
-### Tokens own visual values
-
-Colours, sizes, spacing, radii, opacity, and durations come from the `Bulan`
-design-token singleton. Do not introduce a raw visual value in a product screen
-because a token is missing.
-
-If a token is missing, explain the need and propose a value grounded in the
-creative brief or an explicit client decision. Wait for the client before
-turning a new visual judgement into a project-wide token.
-
-`app/gui/Bulan.qml` is the live runtime token source. `BulanTokens.qml` is a
-review copy for the token proof sheet; any value duplicated there must remain
-synchronized with the runtime token.
-
-### Minimum focus target
-
-Interactive focus targets are at least 64×64 pixels at the native 1280×800
-Steam Deck layout. Display-only elements are exempt.
+**Minimum focus target.** Interactive focus targets are at least 64×64 pixels at
+the native 1280×800 Steam Deck layout. Display-only elements are exempt.
 
 ## Branches, commits, and remotes
 
-- `master` is the fork's clean mirror of upstream. Never commit Bulan work to
-  it.
-- `bulan` is the Bulan integration branch and known-good baseline.
-- Do work on a short, clearly named task branch cut from `bulan`.
-- Merge a task branch into `bulan` only after the client signs off.
-- Delete the task branch locally and on the fork after the accepted merge.
-- `origin` is the client's fork. Never push to the upstream Moonlight
-  repository. A remote named `upstream` may not be configured on every machine;
-  inspect remotes before using one.
-- Do not push any branch unless the client has authorized the push.
+- `master` is the fork's clean mirror of upstream. Never commit Bulan work to it.
+  `bulan` is the integration branch and known-good baseline.
+- Work on a short, clearly named task branch cut from `bulan`. Merge it only
+  after the client signs off, then delete it locally and on the fork.
+- `origin` is the client's fork. Never push to upstream Moonlight. A remote named
+  `upstream` may not exist on every machine — inspect remotes before using one.
+- **Do not push any branch unless the client has authorized that push.**
 
-Make one logical, independently reviewable change per commit. Stop and show the
-client the result before committing each approved stage and before moving to
-the next stage. Do not combine unrelated changes merely because they were made
-in the same session.
+Make one logical, independently reviewable change per commit. Show the client the
+result before committing each approved stage and before moving to the next. Do
+not combine unrelated changes because they happened in the same session.
 
 ## Working-tree and ownership safety
 
-- Never edit an unexplained dirty working tree.
-- Do not overwrite, discard, reformat, or include unrelated work.
-- Never assume another agent's uncommitted work is complete.
-- One agent owns implementation of the active task at a time.
-- A reviewing agent may report issues but must not silently rewrite the
-  implementation.
-- Transfer ownership only at a clean commit boundary or after explicitly
-  documenting every uncommitted file and its state.
+- Never edit an unexplained dirty working tree. Do not overwrite, discard,
+  reformat, or include unrelated work, and never assume another agent's
+  uncommitted work is complete.
+- One agent owns implementation of the active task at a time. A reviewing agent
+  reports issues; it does not silently rewrite the implementation. Transfer
+  ownership only at a clean commit boundary, or after documenting every
+  uncommitted file and its state.
 - Do not modify discovery, pairing, streaming, or other application behavior
-  unless the active task explicitly requires it and the client has accepted the
-  scope.
+  unless the active task requires it and the client accepted that scope.
 
 ## Build and test honesty
 
-- Read the relevant `BUILDING-*.md` before running a platform build.
-- Confirm which checkout, branch, and source path a build recipe actually uses.
-- Run the smallest meaningful static checks before a build, including
-  `qmllint` for changed QML.
-- Validate controller navigation and all affected states, not only the easiest
-  mouse path.
-- Treat fake-host presets as review inputs, not as real hosts.
-- Read the application log before deciding that a build, screen, or action did
-  not run.
-- Never claim a build, test, screenshot review, Game Mode check, or hardware
-  check passed unless it was actually performed.
-- Report skipped checks and the reason plainly.
+- Read the relevant `BUILDING-*.md` before a platform build, and confirm which
+  checkout, branch, and source path the recipe actually uses.
+- Run the smallest meaningful static checks first, including `qmllint` on
+  changed QML.
+- Validate controller navigation and every affected state, not the easiest mouse
+  path. Treat fake-host presets as review inputs, not as real hosts.
+- Read the application log before deciding a build, screen, or action did not run.
+- **Never claim a build, test, screenshot review, Game Mode check, or hardware
+  check passed unless it was actually performed.** Report skipped checks and the
+  reason plainly.
 
 ## Documentation lifecycle
 
-- Keep permanent operating rules in this file.
-- Keep mutable repository state in `HANDOFF.md`.
-- Keep only one active task brief. Create it at the start of a task and delete
-  or archive it after the task is complete.
-- Keep open defects in `BUGS.md`; move useful closed investigations to a
-  retrospective rather than leaving them in the active list.
-- Preserve deliberate evolution from the creative brief. Label it as an
-  accepted change, compromise, provisional decision, deferral, or superseded
-  direction instead of rewriting history.
-- Prefer links to the appropriate authority over copying mutable facts.
-- Preserve useful historical knowledge through Git-aware moves or a small
-  retrospective set; do not delete it merely to shorten a current document.
-- Update `HANDOFF.md` only after tests and the final repository state are known.
-- Write repository-state documents last, never in anticipation of a merge,
-  test, or cleanup that has not happened.
+Each category of truth has exactly one owner — see the table above. Do not copy a
+mutable fact into a second document; link to its owner.
+
+- `HANDOFF.md` is replaced, never appended to, and keeps no archive of previous
+  handoffs. Update it last, after tests and the final repository state are known.
+- **One active task brief at a time**, `TASK-BRIEF.md`, created at the start of a
+  task and deleted when it is accepted. Move anything durable in it to the owning
+  authority or into `docs/` first.
+- Current documents state the current answer. Do not communicate current truth
+  through a strikethrough or a correction bolted onto a stale claim.
+- Dated results belong in `docs/validation/`, never inside a reusable procedure.
+  `BUGS.md` holds open defects only; a resolved defect's evidence moves to a
+  validation report, a retrospective, or Git history.
+- Move superseded material into `docs/` with its date and reason rather than
+  deleting it or rewriting history, using `git mv` where practical. Rely on Git
+  history for incidental obsolete prose, and do not create an archive file for
+  every status update.
 - Do not claim the documentation is consistent until every relevant Markdown
   file has been checked.
+
+Run `python scripts/context-audit.py` from the repository root after a
+documentation change. It measures the startup package and fails on the patterns
+above.

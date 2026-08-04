@@ -4,9 +4,11 @@
 > **Bulan fork**
 >
 > This repository also carries Bulan, a private Steam Deck-focused interface
-> fork. Its project authorities are the
-> [creative brief](bulan-creative-brief.md), [roadmap](ROADMAP.md), and
-> [current handoff](HANDOFF.md).
+> fork. Start at [AGENTS.md](AGENTS.md), which owns the project rules and routes
+> to everything else: [current state](HANDOFF.md), [roadmap](ROADMAP.md),
+> [navigation flow](FLOW.md), [design system](DESIGN-SYSTEM.md),
+> [creative direction](bulan-creative-brief.md), and the historical record under
+> [docs/](docs/).
 >
 > The upstream Moonlight README continues unchanged below.
 
