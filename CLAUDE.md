@@ -2,75 +2,85 @@
 
 # Claude Code orchestration
 
-`AGENTS.md` is the project authority and is loaded above. This file adds only
-what is specific to running Claude Code here. Where `AGENTS.md` requires a
-client stop — stage sign-off, authority conflicts, product decisions, pushes,
-merges, branch deletion — that requirement still applies. Nothing below
-relaxes it.
+`AGENTS.md` is the project authority, loaded above. This adds Claude Code
+specifics only; every client stop it requires still applies.
 
 ## Roles
 
-- The main session is Opus at medium effort. Opus owns planning, orchestration,
-  product-decision detection, task decomposition, integration, direct diff
-  review, and the final report.
-- Use **one** Sonnet implementation agent at medium effort for a task's related
-  stages, and keep that work in one uninterrupted context. Resume it rather than
-  starting another; never create a replacement agent merely for a fresh context.
-- Opus resolves ordinary engineering questions itself rather than delegating
-  every uncertainty.
+The main session is Opus at medium effort. Opus owns planning, product-decision
+detection, task decomposition, integration, direct diff review and the final
+report, and resolves ordinary engineering questions itself rather than
+delegating uncertainty.
+
+**Opus implements directly by default.** Delegation duplicates a context —
+packet, rebuilt state, report, and Opus rereading the diff anyway — so judge
+total tokens across both sessions, not main-session context alone.
+
+**Stay in the main session** for a quick targeted change, a small documentation
+or QML edit, a one-to-three-file fix, source Opus has already read, work needing
+frequent product decisions or checkpoints, or work whose planning,
+implementation and validation share context.
+
+**Delegate to one Sonnet agent at medium effort** only when the work is
+self-contained and large enough to amortize a separate context: a substantial
+implementation, a bounded multi-file subsystem change, extensive source
+exploration, verbose build or test output, or intermediate context disposable
+once the diff exists. Judgment factors, not thresholds.
 
 ## Context packet
 
-`AGENTS.md` owns the task-brief lifecycle. For multi-stage work Opus writes the
-one active `TASK-BRIEF.md` before delegating, containing only: objective · scope
-· out of scope · relevant authority sections · likely files and symbols ·
-accepted decisions · known risks · validation expectations · completion criteria
-· a context manifest naming what is *not* needed.
+For multi-stage delegation Opus writes the one active `TASK-BRIEF.md`, whose
+lifecycle `AGENTS.md` owns: objective · scope · out of scope · relevant
+authority sections · likely files and symbols · accepted decisions · known risks
+· validation expectations · completion criteria · a context manifest naming what
+is *not* needed · the verified branch, HEAD and working-tree state.
 
-An agent receives the brief plus an explicit file assignment. Do not paste large
-repository documents into a delegation prompt, and do not reread material the
-accepted brief already quotes. Search for symbols and call sites before opening
-whole files, read only the ranges that matter, and never load vendored code,
-build output, or unrelated history.
+An agent gets the brief plus an explicit file assignment, never a pasted
+repository document. Whoever implements: find symbols and call sites before
+opening whole files.
 
 ## Implementation agent
 
-- Give it explicit file ownership and named symbols or call sites. It may
-  inspect related callers, callees, tests, and build definitions, and must
-  request an ownership expansion before editing outside that set.
-- Require minimal coherent changes that preserve existing contracts. No
-  speculative refactoring, no unrelated cleanup.
-- Its report contains only: changed files · checks run and results · blockers ·
-  remaining risks. No task restatement, no project background.
+- Explicit file ownership and named symbols or call sites. It may inspect
+  related callers, callees, tests and build definitions, and must request an
+  expansion before editing outside that set.
+- Minimal coherent changes preserving contracts. No speculative refactoring, no
+  unrelated cleanup.
+- Its report: changed files · checks and results · blockers · risks. Nothing
+  else.
+- Structure delegated work as one complete invocation where practical. Resume
+  that agent if this configuration supports it; otherwise continue in the main
+  session rather than spawning a replacement to recreate its context.
 
-## Investigation agents
+## Investigation
 
-Spawn one only for a narrow, high-risk question Opus cannot resolve efficiently.
-Each must ask exactly one precise question, be read-only, be independent of any
-parallel investigation, and return 3–5 findings in 300–400 words with file paths
-and symbol references. Nothing unrelated.
+Opus answers ordinary engineering questions itself. Basic file, symbol, caller
+and dependency discovery goes to whatever lightweight exploration this
+configuration provides. A read-only Sonnet investigation agent is the last
+resort, for one narrow high-risk semantic question Opus cannot resolve
+efficiently — never to find files or symbols, never to summarize the repository.
+One precise question, independent of any parallel one, 3–5 findings in 300–400
+words with file paths and symbols.
 
-## Review
+## Review and parallelism
 
-Opus reviews diffs directly and does not spawn a reviewer by default. Add one
-read-only Sonnet reviewer only for risky backend contracts, object lifetime,
-concurrency, or security; give it the diff scope and a short risk question, not
-project history. Opus verifies every finding before changing code.
+Opus reviews diffs directly; no reviewer by default. Add one read-only Sonnet
+reviewer only for risky backend contracts, object lifetime, concurrency or
+security, with the diff scope and a short risk question, not project history.
+Opus verifies every finding before changing code.
 
 Never run parallel editing agents. Parallelize only independent read-only
-investigations, and do not send two into the same broad area without a reason.
+investigations, and not two into one broad area without reason.
 
 ## Decisions and autonomy
 
 Choose the smallest solution consistent with repository authority and existing
-patterns. Do not ask the client to settle routine architecture, naming, test, or
-implementation details. Escalate only a materially visible product choice the
-authoritative documents do not settle, with the exact unresolved choice, two or
-three concrete options, the visible consequence of each, and a recommendation.
+patterns, and never ask the client to settle routine architecture, naming, test
+or implementation details. An escalation carries the exact unresolved choice,
+two or three options, the visible consequence of each, and a recommendation.
 Pause only the affected work.
 
 ## Completion
 
-Inspect the final diff directly, run the task's required checks, confirm the
-working tree and commit history against Git rather than memory, and record
-unperformed validation honestly.
+Inspect the final diff, run the required checks, and confirm the working tree
+and commit history against Git rather than memory.

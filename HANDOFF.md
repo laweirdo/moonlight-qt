@@ -14,8 +14,8 @@ last_verified_commit: 173c0497
 only. Inspect Git before relying on this — it is a snapshot, not an authority on
 what Git says.
 
-This file is replaced, never appended to. Past states are in Git history, past
-evidence in `docs/validation/`, past build narrative in
+Replaced, never appended to. Past states are in Git history, past evidence in
+`docs/validation/`, past build narrative in
 `docs/history/private-v1-build-record.md`.
 
 ## Repository
@@ -24,9 +24,9 @@ evidence in `docs/validation/`, past build narrative in
 |---|---|
 | Branch | `bulan`, the integration branch |
 | Remote | `origin` only, the client's fork |
-| Push state | **In sync with `origin/bulan`.** The client authorised the documentation-refactor push on 4 August 2026 |
+| Push state | Documentation work through 4 August 2026 is pushed with the client's authorisation |
 | Working tree | Clean |
-| Task branch | None. The refactor was committed directly to `bulan` at the client's direction |
+| Task branch | None. Documentation work was committed directly to `bulan` at the client's direction |
 | Active task | **None.** No `TASK-BRIEF.md` exists |
 
 ## Where the product is
@@ -38,23 +38,16 @@ quit and return — was reviewed live by the client in two rounds and accepted o
 upstream Moonlight.
 
 **Accepted is not validated.** Nothing has run on a Steam Deck, against a
-physical controller, through a real stream, or as a Flatpak. See
-`docs/validation/2026-08-03-private-v1-draft.md` for the full honest list, and
-`ROADMAP.md` for what still has to be true before private v1 ships.
+physical controller, through a real stream, or as a Flatpak.
 
 ## Validation status
 
-| Area | Status |
-|---|---|
-| Static checks and Windows builds | Passing at every accepted merge |
-| Windows review-station behaviour | Driven and captured across the whole route |
-| Steam Deck, Desktop and Game Mode | **Not performed** since 28 July 2026 |
-| Physical controller | **Not performed** on any current screen |
-| Real pairing and real stream | **Not performed** |
-| Flatpak build and install | **Not attempted** — the review station is Windows |
-| Steam on-screen keyboard, manual address field | **Unvalidated**, and cannot work without it |
-| Transition blur cost on the Deck | **Unmeasured**, by the client's deliberate deferral |
-| LCD panel appearance | **Deferred** until hardware is available |
+**Passed:** static checks and Qt 6.9.3 / MSVC Release builds at every accepted
+merge, and the whole route driven and captured on the Windows review station.
+
+**Not passed:** everything requiring the target device. `ROADMAP.md`'s Phase F
+table owns that list. Nothing has run on a Steam Deck since 28 July 2026, and
+LCD appearance is deferred until that hardware exists.
 
 Latest reports: `docs/validation/2026-08-03-private-v1-draft.md`,
 `docs/validation/2026-08-02-phase-b-closeout.md`,
@@ -62,25 +55,22 @@ Latest reports: `docs/validation/2026-08-03-private-v1-draft.md`,
 
 ## Open blockers
 
-- **One open defect**, client-reported and not reproduced: opening
-  Settings → UI → Language. See `BUGS.md`. It needs a reproduction from the
-  client before it can be chased further.
-- **No Steam Deck hardware session has happened** since 28 July 2026, and every
-  screen built since then is unseen on the target device.
-- **The documentation refactor is pushed but not yet reviewed by the client.**
-  It changed no application source, and it was committed directly to `bulan`
-  rather than to a task branch. `python scripts/context-audit.py` passes.
+- **One open defect**, client-reported and not reproduced: Settings → UI →
+  Language. `BUGS.md` has it; it needs a client reproduction to go further.
+- **No Steam Deck session since 28 July 2026.** Every screen built since is
+  unseen on the target device.
+- **The documentation work is pushed but not client-reviewed.** It changed no
+  application source. `python scripts/context-audit.py` passes.
 
 ## Next action
 
 1. **A Steam Deck session** in Desktop Mode and Game Mode, with a physical
    controller and a real host, following `REVIEW-CHECKLIST.md` — Part 4 is
-   exactly this list. It is the critical path: one session clears most of the
-   table above. Record the result as a new report in `docs/validation/`.
-2. **A Flatpak build and a clean install**, per `BUILDING-DECK.md`. It cannot be
-   done from Windows.
-3. **The Language defect in `BUGS.md`**, once the client can reproduce it.
+   exactly this list. The critical path: one session clears most of it. Record
+   the result as a new report in `docs/validation/`.
+2. **A Flatpak build and clean install**, per `BUILDING-DECK.md`. Not possible
+   from Windows.
+3. **The Language defect**, once the client can reproduce it.
 
-The client mentioned possibly revisiting the screen transition later to push it
-further toward the brief's "whimsical" character. That is a future task, not an
-open item.
+The client may revisit the screen transition later to push it further toward the
+brief's "whimsical" character. A future task, not an open item.
