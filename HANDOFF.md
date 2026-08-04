@@ -4,14 +4,15 @@ authority: repository-state
 read_when:
   - session-start
 history_policy: replace-not-append
-last_verified_commit: e145830f
+last_verified_commit: 173c0497
 ---
 
 # Bulan — current state
 
-**Verified 4 August 2026 against `e145830f`**, the commit before this record.
-Inspect Git before relying on this; it is a snapshot, not an authority on what
-Git says.
+**Verified 4 August 2026.** The application state described here is
+`173c0497`, the accepted private v1 merge; every commit since is documentation
+only. Inspect Git before relying on this — it is a snapshot, not an authority on
+what Git says.
 
 This file is replaced, never appended to. Past states are in Git history, past
 evidence in `docs/validation/`, past build narrative in
@@ -23,7 +24,7 @@ evidence in `docs/validation/`, past build narrative in
 |---|---|
 | Branch | `bulan`, the integration branch |
 | Remote | `origin` only, the client's fork |
-| Push state | **`bulan` is ahead of `origin/bulan` by the documentation refactor and has NOT been pushed.** No push has been authorised. Everything up to `4c482e95` is pushed |
+| Push state | **`bulan` is ahead of `origin/bulan` by the documentation refactor and has NOT been pushed.** No push has been authorised. Everything up to `4c482e95` is pushed. Confirm with `git rev-list --left-right --count origin/bulan...bulan` |
 | Working tree | Clean |
 | Task branch | None. The refactor was committed directly to `bulan` at the client's direction |
 | Active task | **None.** No `TASK-BRIEF.md` exists |
