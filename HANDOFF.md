@@ -9,12 +9,12 @@ last_verified_commit: e145830f
 
 # Bulan — current state
 
-**Verified 4 August 2026 against `e145830f`**, the commit immediately before
-this record. Inspect Git before relying on this; it is a snapshot, not an
-authority on what Git says.
+**Verified 4 August 2026 against `e145830f`**, the commit before this record.
+Inspect Git before relying on this; it is a snapshot, not an authority on what
+Git says.
 
-This file is replaced, never appended to. Past states live in Git history, past
-evidence in `docs/validation/`, and past build narrative in
+This file is replaced, never appended to. Past states are in Git history, past
+evidence in `docs/validation/`, past build narrative in
 `docs/history/private-v1-build-record.md`.
 
 ## Repository
@@ -25,7 +25,7 @@ evidence in `docs/validation/`, and past build narrative in
 | Remote | `origin` only, the client's fork |
 | Push state | **`bulan` is ahead of `origin/bulan` by the documentation refactor and has NOT been pushed.** No push has been authorised. Everything up to `4c482e95` is pushed |
 | Working tree | Clean |
-| Task branch | None. The refactor was committed directly to `bulan` at the client's direction. `v1-review-build` was deleted after its accepted merge |
+| Task branch | None. The refactor was committed directly to `bulan` at the client's direction |
 | Active task | **None.** No `TASK-BRIEF.md` exists |
 
 ## Where the product is
@@ -72,12 +72,9 @@ Latest reports: `docs/validation/2026-08-03-private-v1-draft.md`,
 ## Next action
 
 1. **A Steam Deck session** in Desktop Mode and Game Mode, with a physical
-   controller and a real host, following `REVIEW-CHECKLIST.md`. This is the
-   critical path: one session clears most of the unperformed list above — real
-   pairing, real streaming, the Steam on-screen keyboard on the manual-address
-   field, the L1/R1 tab switch and the Library half of the grid context restore,
-   how the motion actually feels, OLED appearance, and the transition blur's
-   cost. Record the result as a new report in `docs/validation/`.
+   controller and a real host, following `REVIEW-CHECKLIST.md` — Part 4 is
+   exactly this list. It is the critical path: one session clears most of the
+   table above. Record the result as a new report in `docs/validation/`.
 2. **A Flatpak build and a clean install**, per `BUILDING-DECK.md`. It cannot be
    done from Windows.
 3. **The Language defect in `BUGS.md`**, once the client can reproduce it.
