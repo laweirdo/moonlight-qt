@@ -24,7 +24,7 @@ evidence in `docs/validation/`, past build narrative in
 |---|---|
 | Branch | `bulan`, the integration branch |
 | Remote | `origin` only, the client's fork |
-| Push state | **In sync with `origin/bulan`.** The client authorised the documentation-refactor push on 4 August 2026. Confirm with `git rev-list --left-right --count origin/bulan...bulan` |
+| Push state | **In sync with `origin/bulan`.** The client authorised the documentation-refactor push on 4 August 2026 |
 | Working tree | Clean |
 | Task branch | None. The refactor was committed directly to `bulan` at the client's direction |
 | Active task | **None.** No `TASK-BRIEF.md` exists |
