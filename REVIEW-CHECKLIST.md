@@ -1,59 +1,76 @@
+---
+kind: procedure
+authority: review-procedure
+read_when:
+  - running-a-hardware-review
+history_policy: replace-not-append
+---
+
 # Bulan — Deck review checklist
 
-This is the reusable procedure and dated record for review on real Steam Deck
-hardware. It does not own current repository state, open defects, or settled
-token values; use `HANDOFF.md`, `BUGS.md`, and `ROADMAP.md` for those.
+**The reusable procedure for a review on real Steam Deck hardware.** It carries
+no results. Record each session as a dated report in `docs/validation/` using
+the template at the end, and link the latest from `HANDOFF.md`.
 
-The procedure preserves the questions that were taken into the first hardware
-session. The results section records what happened, including later same-day
-follow-up. When reusing the checklist, test the intended branch and commit
-rather than treating the old results as coverage for a new build.
+This file does not own repository state, open defects, or token values — see
+`HANDOFF.md`, `BUGS.md`, and `DESIGN-SYSTEM.md`.
 
-**Work top to bottom.** Part 1 is regression — if a fix did not survive contact
+**Work top to bottom.** Part 1 is regression: if a fix did not survive contact
 with hardware, the judgement calls in Part 2 are being made about a build that is
-already wrong. Part 3 is the one thing that needs a second machine.
+already wrong. Part 3 needs a second machine.
 
 Every check says what **right** looks like and what **wrong** looks like. Where
 "wrong" has a consequence worth knowing before you decide, it says that too.
-**Write the answer down as you go** — the last section is what comes back.
+**Write the answer down as you go.**
 
 ---
 
 ## Part 0 — Before you start
 
 **Build and install.** `BUILDING-DECK.md` has the one command. Two traps it
-warns about, repeated here because they cost a session each:
+warns about, repeated here because they have cost a session each:
 
-- The recipe **hardcodes the source path**. It will happily build a different
+- The recipe **hardcodes the source path.** It will happily build a different
   checkout or branch than the one you have open, without saying so. Confirm the
-  recipe points at the exact checkout, branch, and commit intended for review.
-- The offscreen screenshot hooks need `--filesystem=home` or the file silently
+  recipe points at the exact checkout, branch, and commit intended for review,
+  and write that commit into the report.
+- The offscreen screenshot hooks need `--filesystem=home`, or the file silently
   never appears.
 
-**You need to see the log for the startup glyph check and the Game Mode check.**
-On the Deck, Bulan writes its log to the terminal rather than to a file, so
-launch it from Konsole in Desktop Mode:
+**Then verify three things before handing the Deck over.** Each has invalidated
+a whole session before:
+
+1. **Exactly one instance is running** — `flatpak ps | grep -c MoonlightFork`.
+   An old process in front of you invalidates every observation made against it.
+2. **The interface cache was cleared after installing**, or the app may show a
+   build from days ago. Path in `BUILDING-DECK.md`.
+3. **The log is clean.** A screen that fails to load says so, with file and
+   line, and drops the app back to upstream's interface — which looks exactly
+   like a stale build and is not one. Read the log before concluding anything.
+
+**You need the log for the startup glyph check and the Game Mode check.** On the
+Deck, Bulan writes its log to the terminal rather than to a file, so launch it
+from Konsole in Desktop Mode:
 
 ```bash
 flatpak run io.github.laweirdo.MoonlightFork 2>&1 | tee ~/Documents/bulan.log
 ```
 
 For Game Mode, where there is no terminal, set the launch options to write the
-log instead — see check 9.
+log instead — see check 3.1.
 
 **Have both hosts available.** `Shoebox` and `Steambox`. Several checks need one
 online host and one offline host visible at the same time.
+
+**Fake hosts are review inputs, not action targets.** The guard stops A and Wake
+from touching a real machine and gives visible review-mode feedback. Use a real
+host for any end-to-end action check.
 
 ---
 
 ## Part 1 — Regression: did the fixes survive?
 
-These checks originated as four defects found on the Deck and repaired on the
-Mac. The dated results below record their later hardware outcomes.
-
 ### 1.1 — A still works after visiting Client Settings
-
-The plain version of the defect.
 
 **Do:** On the host carousel, press **START** to open Client Settings, then **B**
 to come back, then **A** on a host that is online and paired.
@@ -65,8 +82,8 @@ button still works, which is what made this look like a pairing problem.
 
 ### 1.2 — A still works after a dropdown in Client Settings
 
-**This is the version that actually reproduced.** 1.1 alone may pass on a build
-that is still broken.
+**This is the version that reproduces.** 1.1 alone may pass on a build that is
+still broken.
 
 **Do:** **START** into Client Settings. Open the **Resolution** dropdown, close
 it again, press **B** to come back, then **A** on an online paired host.
@@ -77,8 +94,7 @@ it again, press **B** to come back, then **A** on an online paired host.
 
 **If wrong:** stop and report it rather than continuing. The rest of Part 1 is
 about buttons, and a build where A dies mid-session makes every later result
-unreliable. It would also mean a third mechanism exists that the diagnosis
-missed.
+unreliable. It would also mean a mechanism exists that the diagnosis missed.
 
 ### 1.3 — Wake appears only where it does something
 
@@ -91,11 +107,11 @@ one. The remaining hints reflow to close the gap.
 **Wrong:** Wake shown on an online host — the old behaviour, where pressing Y did
 nothing and said nothing.
 
-**Also judge, don't just check:** you accepted the reflow when you chose to hide
-Y. Watch it at real speed, scrolling back and forth a few times. Does it read as
-the bar responding to what you are looking at, or as a twitch? If it is the
-second, the alternatives were greying Y out — which costs a whole extra set of
-glyph artwork and a new colour token from you — or keeping Y and relabelling it.
+**Also judge, don't just check:** watch the reflow at real speed, scrolling back
+and forth a few times. Does it read as the bar responding to what you are looking
+at, or as a twitch? If it is the second, the alternatives are greying Y out —
+which costs a set of glyph artwork and a new colour token — or keeping Y and
+relabelling it.
 
 ### 1.4 — Glyphs follow the controller you are actually using
 
@@ -103,19 +119,19 @@ glyph artwork and a new colour token from you — or keeping Y and relabelling i
 it still connected, press a button or push a stick **on the Deck itself**.
 
 **Right:** Glyphs switch to PlayStation shapes when the DualSense arrives, and
-switch **back** when you use the Deck — with the DualSense still plugged in.
+switch **back** when you use the Deck, with the DualSense still plugged in.
 
 **Wrong:** Glyphs stay on PlayStation shapes until the DualSense is physically
-disconnected. That was defect 4.
+disconnected.
 
-**Also answer the question left open last session:** did **every** glyph in the
-hint bar change, or did any stay Xbox? Look along the whole bar, not at one.
+**Still unanswered from every previous session:** does **every** glyph in the
+hint bar change, or does any stay Xbox? Look along the whole bar, not at one.
 
 ### 1.5 — Glyph detection reports itself at startup
 
 **Do:** Read the top of the log from Part 0.
 
-**Right:** Three lines, near the start:
+**Right:** three lines, near the start:
 
 ```
 Controller glyphs: 1 controller(s) attached
@@ -129,53 +145,42 @@ the practical Deck shapes identical to the accepted XInput set, so custom Deck
 art is not required.
 
 **Wrong:** `detected fallback` while a controller is attached. That means the
-hardware was not recognised.
-
-**Note:** this used to be invisible, and the only way to force it was to connect
-a DualSense and unplug it. That trick is no longer needed. If the three lines are
-missing entirely, you are running an old build.
+hardware was not recognised. If the three lines are missing entirely, you are
+running an old build.
 
 ---
 
 ## Part 2 — The judgement calls
 
-These began as client judgement calls rather than pass/fail tests. The first
-hardware session settled the three global token questions; their results remain
-below as validation evidence and as a procedure for later panel checks.
+These are client judgement calls, not pass/fail tests. Re-run them whenever the
+panel, the values, or the surrounding design changes. `DESIGN-SYSTEM.md` records
+the accepted values each one reviews.
 
 ### 2.1 — Grain density → reviews `atmosphereGrainOpacity`
 
-Currently `0.03`, the midpoint of the brief's 2–4%.
-
 **Do:** Look at a flat mid-screen area of the carousel background at normal
-holding distance, roughly 50cm. Then again at about 25cm.
+holding distance, roughly 50 cm. Then again at about 25 cm.
 
-**Expect it to be invisible, not coarse.** The design machine renders at double
-density, so grain looked twice as heavy there as it will here. On this panel each
-speck covers about a tenth of a millimetre, which is at the edge of what an eye
-resolves at arm's length.
+**Expect it to be invisible, not coarse.** A design machine rendering at double
+density makes grain look twice as heavy as it will here.
 
-**The judgement:** if you cannot see it at 50cm, it is not doing its job — grain
+**The judgement:** if you cannot see it at 50 cm it is not doing its job — grain
 exists to break banding, and grain you cannot see cannot break anything. That
-would mean the brief's 2–4% range is wrong for this panel and §4 needs revising
-upward, not that the value needs a nudge.
+would mean the accepted 2–4% range is wrong for this panel, not that the value
+needs a nudge.
 
-**Judge this together with 2.2, not separately.** They are the same question
-asked from two directions.
+**Judge this together with 2.2.** They are the same question from two directions.
 
 ### 2.2 — Colour banding
 
 **Do:** Look at the darkest part of the background gradient, just above the hint
 bar, for stepped bands or a colour cast.
 
-**Important limitation:** the brief's banding concern targets the **LCD** Deck,
-and the one in hand is an **OLED**. The two panels fail differently — LCD shows
-wide steps, OLED tends to crush toward black and tint. **This check cannot be
-completed on this hardware.** LCD validation remains deferred until that
-hardware is available and does not block private v1.
-
-What you *can* answer here is whether the OLED shows crushing or tinting in the
-darkest region, which is a different problem with a different fix.
+**Which panel matters:** the banding concern targets the **LCD** Deck. The two
+panels fail differently — LCD shows wide steps, OLED tends to crush toward black
+and tint. **On an OLED this check cannot be completed**; record it as skipped and
+answer instead whether the OLED shows crushing or tinting in the darkest region,
+which is a different problem with a different fix.
 
 ### 2.3 — Type at arm's length → reviews `sizeCaption`
 
@@ -188,17 +193,12 @@ darkest region, which is a different problem with a different fix.
 
 **Wrong:** you find yourself moving the Deck closer.
 
-**What it costs if wrong:** `sizeCaption` is 16px, which by calculation sits just
-under the comfort threshold at 50cm. It is used across every screen. Changing it
-is a token change touching everything built and everything not yet built — which
-is why this was reviewed before construction rather than after.
-`sizeBody` at 22px and up is not at risk.
+**What it costs if wrong:** `sizeCaption` is used across every screen. Changing
+it touches everything built and everything not yet built — which is why it is
+reviewed before construction rather than after. `sizeBody` at 22 px and up is
+not at risk.
 
-### 2.4 — Motion feel → reviews `motionOvershoot`
-
-The session began with `motionOvershoot` at `0.7`, about 3% overshoot, and a
-140 ms focus transition. The client kept the overshoot and changed the live
-focus duration to 180 ms after this check.
+### 2.4 — Motion feel → reviews `motionOvershoot` and `motionFocusMs`
 
 **Do:** Hold left or right to run the carousel fast, then let go. Then a single
 deliberate tap.
@@ -212,8 +212,8 @@ overshoot. A single tap that feels laggy means the transition is too slow.
 ### 2.5 — Menu battery cost
 
 **Do:** Sit on the carousel, on battery, and watch power draw over a few minutes.
-Baseline with the app closed measured **3.92 W**. The reading is noisy — sample
-repeatedly rather than trusting one number.
+The reading is noisy — sample repeatedly rather than trusting one number, and
+record the app-closed baseline alongside it.
 
 **Worth knowing before you spend time on this:** the atmosphere measured below
 the noise floor on the design machine, and it is structurally zero during a
@@ -227,13 +227,11 @@ change — say so and it gets done.
 
 ---
 
-## Part 3 — Game Mode, and the wake question
+## Part 3 — Game Mode, wake, and the waiting state
 
-### 3.1 — Game Mode (check 9)
+### 3.1 — Game Mode
 
-Before the first review session, **everything had been Desktop Mode.** Game Mode
-is where Steam Input actually sits between the hardware and the app, so this was
-the largest untested assumption in the project.
+Game Mode is where Steam Input actually sits between the hardware and the app.
 
 **Do:** Add Bulan as a non-Steam game (`BUILDING-DECK.md` has the steps), switch
 to Game Mode, and launch it. To capture the log where there is no terminal, set
@@ -257,138 +255,121 @@ Then check, in order:
 be used. A binding that works in Desktop Mode and not in Game Mode is a binding
 that does not work.
 
-### 3.2 — Can Bulan actually wake a sleeping PC?
+### 3.2 — Can Bulan wake a sleeping PC?
 
-This was open when the checklist was written. **The procedure needs a host you
-can genuinely put to sleep** — the online path proves nothing, because waking
-an awake machine correctly does nothing.
+**The procedure needs a host you can genuinely put to sleep.** The online path
+proves nothing, because waking an awake machine correctly does nothing.
 
 **Do:** Put a paired host to sleep properly. On the carousel it should appear
-offline, and the hint bar should now offer **Y Wake**. Press it.
+offline, and the hint bar should offer **Y Wake**. Press it.
 
 **Right:** the machine wakes, and the carousel reflects it coming back.
 
 **Wrong:** nothing happens, or it reports waking and the host never returns.
 
 **If it does not work:** the "Asleep" state shown on hosts is a promise the app
-cannot keep, and the wording has to change — that is a copy decision, and yours.
+cannot keep, and the wording has to change — a copy decision, and the client's.
 
 ### 3.3 — The waiting state, on a real machine and a real panel
 
-Added 1 August 2026. The tile busy state — dimmed disc, three bouncing dots —
-was accepted on the Windows review station with a hardware gamepad, but **every
-number in it was judged against a fake host that came back in three seconds, on
-a scaled desktop monitor.** This is the check that tests it against reality.
+The tile busy state — dimmed disc, three bouncing dots — was accepted on a
+Windows review station with a hardware gamepad, but **every number in it was
+judged against a fake host that came back in three seconds, on a scaled desktop
+monitor.**
 
 **Do:** run 3.2's wake on a genuinely sleeping host and watch the tile rather
 than the outcome.
 
-**Answer these:**
-
 | Item | What is needed |
 |---|---|
-| 30-second give-up | Did the host return inside it? Was the wait too long to sit through, or too short for the machine? |
-| Notice latency | Once the PC was actually up, how long before the dots stopped? Budget is about 3 seconds of discovery poll. Imperceptible, or a visible lag? |
+| 30-second give-up | Did the host return inside it? Too long to sit through, or too short for the machine? |
+| Notice latency | Once the PC was up, how long before the dots stopped? Budget is about 3 seconds of discovery poll. Imperceptible, or a visible lag? |
 | Dot size, gap, bounce | 18 / 20 / 14 px, set on a desktop panel. Right on a 7-inch one at 204 ppi, or wrong the way `sizeCaption` nearly was? |
 | Disc dim | 0.55. Does the monogram still read underneath, and does the tile read as busy rather than disabled? |
 
 **Also see the failure state at least once**, which nobody has yet. Wake a host
 that cannot come back — unplug it, or use a fake host with
-`MOONLIGHT_FAKE_WAKE_OUTCOME=timeout` — and read *"Couldn't wake `<name>`. It
-may still be asleep."* It holds for three seconds and then reverts on its own.
-**Judge whether three seconds is long enough to read it**, since there is
-nothing to press and no second chance to see it.
+`MOONLIGHT_FAKE_WAKE_OUTCOME=timeout` — and read *"Couldn't wake `<name>`. It may
+still be asleep."* It holds for three seconds and then reverts on its own.
+**Judge whether three seconds is long enough to read it**, since there is nothing
+to press and no second chance to see it.
 
 ---
 
-## What comes back from the session
+## Part 4 — The full loop
 
-Answers to these, in whatever form suits you:
+Private v1's exit condition is the whole journey on the target device. None of
+it has ever been run there.
 
-| Item | What is needed |
+1. **Real pairing** against a live host, through the first-run route. Force it
+   with `MOONLIGHT_FORCE_FIRST_RUN=1` if a host is already paired.
+2. **Manual address entry in Game Mode**, with Steam's on-screen keyboard. This
+   is the one part of the first-run route that cannot work without the OSK.
+3. **A real stream** launched, resumed, failed, and quit.
+4. **Recent↔Library tab switching with L1/R1**, and the grid's context restore
+   across a round trip to the carousel and back.
+5. **Screen transitions and entrance motion in flight** — how they actually
+   feel, which no capture can establish.
+6. **The transition blur's cost**, measured rather than assumed.
+7. **OLED appearance**, and LCD appearance if that hardware is present.
+
+---
+
+## Report template
+
+Copy into `docs/validation/YYYY-MM-DD-<what>.md` and fill in. Record skipped
+checks explicitly — a check with no answer is not a pass.
+
+```markdown
+# Validation report — <what>, <date>
+
+| Item | Value |
 |---|---|
-| Part 1, checks 1.1–1.5 | Passed or failed. A failure here outranks everything below. |
-| `atmosphereGrainOpacity` | Keep 0.03, or a new value — and whether grain was visible at all |
-| `sizeCaption` | Keep 16, or raise it |
-| `motionOvershoot` | Keep 0.7, or a new value |
-| Game Mode | `detected deck` or `detected fallback`; which bindings arrived |
-| Wake | Works, or the Asleep wording needs changing |
-| Hint bar reflow | Reads as responsive, or needs one of the alternatives |
-| Every glyph in the hint bar | Did they all change on hot-swap, or did some stay Xbox |
+| Date | |
+| Branch | |
+| Commit | |
+| Hardware | |
+| Environment | Desktop Mode / Game Mode / both |
+| Who | |
 
----
-
-# Results — 28 July 2026
-
-Steam Deck OLED ("Galileo"), Desktop Mode and Game Mode, client pressing the
-buttons, assistant running on the Deck itself and reading the log live.
-
-**Phase A closed on these answers.** `ROADMAP.md` records the settled values.
-
-### Part 1 — regression
-
+## Part 1 — regression
 | Check | Result |
 |---|---|
-| 1.1 A after a plain settings round trip | **Pass** |
-| 1.2 A after opening the Resolution dropdown | **FAIL**, then fixed in `be874bf8` and retested by hand — now passes |
-| 1.3 Wake shown only where it does something | **Pass.** Reflow judged responsive, not twitchy — **accepted as built**, no glyph artwork or new token needed |
-| 1.4 Glyphs follow the pad in use | **Pass** |
-| 1.5 Detection reported at startup | **Pass** — `detected deck` |
+| 1.1 A after a plain settings round trip | |
+| 1.2 A after opening the Resolution dropdown | |
+| 1.3 Wake shown only where it does something | |
+| 1.4 Glyphs follow the pad in use | |
+| 1.5 Detection reported at startup | |
 
-**1.2 was the hard stop and it triggered.** The cause was a *third* mechanism
-behind the same symptom, not a regression: a popup elsewhere in the window
-restores focus to a control that no longer exists on the way back, landing after
-the carousel has already claimed it. Fixed by having the carousel reclaim focus
-whenever it loses it, which cannot be raced.
-
-**Not answered:** whether *every* glyph in the hint bar changes on hot-swap, or
-whether any stay Xbox. Carried forward — it is one look along the bar with a
-DualSense connected.
-
-### Part 2 — the judgement calls
-
+## Part 2 — judgement calls
 | Check | Answer |
 |---|---|
-| 2.1 Grain | **Keep 0.03.** Visible, doing its job. The prediction that it would be invisible on this panel was wrong |
-| 2.2 Banding | **Cannot be completed** — OLED, and the concern targets the LCD. Nothing needing action observed |
-| 2.3 Type | **Keep `sizeCaption: 16`.** Legible without leaning in. The calculation that said it would fail was wrong |
-| 2.4 Motion | **Keep `motionOvershoot: 0.7`.** `motionFocusMs` **140 → 180** — the brief's figure read a touch too fast. "May need fine tuning in future" |
-| 2.5 Battery | **Provisional: 4.31 W** on the carousel vs **3.92 W** app-closed baseline — roughly 0.4 W. Not settled; the app crashed part-way through sampling |
+| 2.1 `atmosphereGrainOpacity` | Keep, or a new value — and whether grain was visible at all |
+| 2.2 Banding | |
+| 2.3 `sizeCaption` | Keep, or raise it |
+| 2.4 `motionOvershoot` / `motionFocusMs` | |
+| 2.5 Battery, against the app-closed baseline | |
 
-2.3 also produced three design corrections to the host status line, now built:
-shorter copy on unreachable hosts, the status swatches carrying reachability
-(red unreachable, green ready), and the redundant status dot removed.
-
-### Part 3 — Game Mode and wake
-
+## Part 3 — Game Mode, wake, waiting state
 | Check | Answer |
 |---|---|
-| 3.1 Game Mode | **PASS.** `detected deck` in Game Mode with `gamescope` confirmed running. All five bindings arrive |
-| 3.2 Wake | **Not answered in the first pass; passed later on 28 July.** A genuinely sleeping, wakeable host returned after Y was pressed |
+| 3.1 Game Mode | `detected deck` or `detected fallback`; which bindings arrived |
+| 3.2 Wake | Works, or the Asleep wording needs changing |
+| 3.3 Waiting state on real hardware | |
+| Every glyph in the hint bar | Did they all change on hot-swap, or did some stay Xbox |
 
-Game Mode was the project's largest untested assumption. Steam Input **does**
-interpose a virtual controller — `Steam Virtual Gamepad`, product `11ff` rather
-than `1205` — but carries Valve's vendor ID `28de` through, and detection keys
-on the vendor ID. So it survives.
+## Part 4 — the full loop
+| Item | Result |
+|---|---|
+| Real pairing | |
+| Manual address entry with the OSK | |
+| Real stream: launch, resume, failure, quit | |
+| L1/R1 tab switch and grid context restore | |
+| Motion in flight | |
+| Blur cost | |
+| Panel appearance | |
 
----
+## Skipped, and why
 
-## For whoever runs this next
-
-Keep this document; it is the template. Four things learned about running the
-session itself, which cost more time than the checks did:
-
-1. **Confirm exactly one instance is running before believing anything on
-   screen.** `flatpak ps | grep -c MoonlightFork`. An old process in front of you
-   invalidates every observation made against it.
-2. **Clear the interface cache after installing**, or the app may show you a
-   build from days ago. Path in `BUILDING-DECK.md`.
-3. **Read the log before concluding a build did not take.** A screen that fails
-   to load says so, with file and line, and drops the app back to upstream's
-   interface — which looks exactly like a stale build and is not one.
-4. **Fake hosts are review inputs, not action targets.** The current guard stops
-   A and Wake from touching a real machine and gives visible review-mode
-   feedback. Use a real host for any end-to-end action check.
-
-Part 0 should gain a step: after installing and before handing the Deck over,
-verify one instance, a cleared cache, and a clean log.
+## Defects or decisions arising
+```
