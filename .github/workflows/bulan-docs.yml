@@ -1,0 +1,53 @@
+---
+# Bulan-only. The other workflows in this directory are upstream Moonlight's
+# build jobs and are not touched by this one.
+#
+# Runs the documentation context audit, which fails when a document exceeds its
+# size budget, when the default startup package grows past its budget, or when a
+# current document falls back into the patterns the layered layout exists to
+# prevent: strikethrough corrections, dated results inside a reusable procedure,
+# a Closed section in the open-defect list, a second startup reading order, or a
+# reference to a document that does not exist.
+#
+# Run the same check locally with:  python scripts/context-audit.py
+name: Bulan docs
+
+permissions:
+  contents: read
+
+on:
+  push:
+    branches:
+      - bulan
+    paths:
+      - '**.md'
+      - 'scripts/context-audit.py'
+      - '.github/workflows/bulan-docs.yml'
+  pull_request:
+    branches:
+      - bulan
+    paths:
+      - '**.md'
+      - 'scripts/context-audit.py'
+      - '.github/workflows/bulan-docs.yml'
+
+concurrency:
+  group: bulan-docs-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  context-audit:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          submodules: false
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.x'
+
+      - name: Context audit
+        run: python scripts/context-audit.py
