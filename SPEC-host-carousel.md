@@ -120,7 +120,7 @@ carousel claims it.
 | **Waking** | Same tile treatment as Connecting (they share one busy state). Short status: `"Waking…"`. Focused copy: `"Waking <name>. Give it a moment."` Resolves the instant the host's model row reports online, or after 30 seconds — see below. |
 | **Wake failed** | Dots stop; tile reverts to its ordinary offline look. Short status: `"Couldn't wake"`. Focused copy, in red: `"Couldn't wake <name>. It may still be asleep."` Holds 3 seconds, then reverts on its own to the ordinary offline copy — no dismissal, no popup. |
 | **Exactly one host** | No flanking neighbours. Verified: the composition holds — the tile remains centred and its own labels remain attached beneath it. |
-| **Zero hosts** | Two stacked elements: `"you have no pc's lol"` in the display face, and an amber X glyph with `"Press to pair a PC"`. The hint bar reduces to *Add a PC* (emphasised) and *Client Settings*. |
+| **Zero hosts** | Rebuilt 3 August 2026 as part of Phase D, replacing the earlier placeholder. It uses the first-run screens' language and offers both *Look again* and *Enter an address instead*, so the last obviously unfinished surface in the app now reads as designed. See `FLOW.md`. |
 
 The focus ring is amber in **every** focused state, online or not. Focus has to
 read identically everywhere or it stops being a reliable signal; reachability is

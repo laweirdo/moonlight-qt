@@ -375,12 +375,18 @@ This table records durable surface gaps, not a current task or branch.
 
 | Thing | Label | Durable state |
 |---|---|---|
-| **SELECT / Host Settings** | **Provisional** | Deliberately unbound; hint withheld. The mockup shows Host Settings on this screen; no host-settings surface exists for it. Not started as a side effect of this task's scope. |
 | **Backdrop blur behind the options popup** | **Accepted compromise** | Absent. `HostCarousel.qml`'s blurred-backdrop pattern was not extended here; the scrim alone separates the popup from the grid. Would require restructuring this screen's content into a wrapping layered `Item`. |
-| **Designed empty-library state** | **Provisional** | One line, `"No games here yet."`, is the whole treatment. The designed version is Phase D per `ROADMAP.md` and `FLOW.md` records it as unresolved flow design. |
-| **Screen transitions (Phase B item 4)** | **Provisional** | The tab cross-fade uses `motionFocusMs`, deliberately not `motionTransitionMs`. Item 3 now uses the 220 ms token for its selected-game launch handoff; wiring it into the rest of the core route remains item 4. |
 | **Tile aspect ratio vs. the client's own artwork** | **Provisional** | 18 of 25 cached box-art files on the review station are 2:3, which the build now matches; the remaining 7 are 3:4 and lose a band top and bottom under crop-to-fill. Raised for client decision at stage 2 review, not settled. |
 | **Rename PC, merged multi-host library** | **Deferred** | Explicitly excluded from the completed game-grid and launch/quit work orders; unrelated to these surfaces. |
+
+Three gaps this table used to carry are closed. **SELECT** now opens the
+carousel's `HostSettingsOverlay` from the grid, and the hint appears. The
+**empty-library** placeholder was replaced by the designed state, which names
+the host and points at Host Settings. **General screen transitions** are wired
+into the whole core route; the tab cross-fade still uses `motionFocusMs`
+deliberately, because switching tabs on one screen is not a screen change. All
+three landed by 3 August 2026 — see `FLOW.md` and
+`docs/history/private-v1-build-record.md`.
 
 ---
 
