@@ -113,9 +113,9 @@ carousel claims it.
 | State | What is shown |
 |---|---|
 | **Focused, online** | Amber focus ring, full-strength halo, `"Ready when you are."` in amber, address beneath. |
-| **Focused, offline** | Same ring, halo at 30%, monogram dimmed, `"Couldn't reach <name>. Still on the same network?"` — brief §8 verbatim. |
+| **Focused, offline** | Same ring, halo at 30%, monogram dimmed, `"Couldn't reach <name>. Still on the same network?"` — the creative brief's voice, verbatim. |
 | **Focused, unpaired** | `"Not paired yet."` A starts pairing and opens the PIN panel. |
-| **Status unknown** | `"Looking for your PC…"` — brief §8 verbatim. |
+| **Status unknown** | `"Looking for your PC…"` — the creative brief's voice, verbatim. |
 | **Connecting** | Tile disc dims, three amber dots bounce over it. `"Connecting…"` in both status lines. Done 31 July 2026 — see "v1 decision — host tile busy state" below. |
 | **Waking** | Same tile treatment as Connecting (they share one busy state). Short status: `"Waking…"`. Focused copy: `"Waking <name>. Give it a moment."` Resolves the instant the host's model row reports online, or after 30 seconds — see below. |
 | **Wake failed** | Dots stop; tile reverts to its ordinary offline look. Short status: `"Couldn't wake"`. Focused copy, in red: `"Couldn't wake <name>. It may still be asleep."` Holds 3 seconds, then reverts on its own to the ordinary offline copy — no dismissal, no popup. |
@@ -130,7 +130,7 @@ carried by the halo, the monogram weight and the status line instead.
 
 ## Motion
 
-All values from `Bulan.qml`, sourced from brief §6.
+All values from `Bulan.qml`, sourced from `DESIGN-SYSTEM.md`'s motion rules.
 
 **Accepted evolution — focus timing.** The brief's original `140 ms` read
 slightly too fast on the OLED Deck. The client accepted `180 ms` after hardware
@@ -425,7 +425,7 @@ the client's to overturn:
 - **The display face is used for every host name**, not only the focused one. One
   text that grows into another cannot change typeface on the way.
 - **The status line is two texts cross-faded**, not one that swaps. The focused
-  copy is brief §8 verbatim and is the app's voice; at neighbour size the full
+  copy is the creative brief's voice verbatim; at neighbour size the full
   offline sentence wraps and shouts louder than the host that is selected. Short
   form for neighbours, full form for focused.
 - **The address stays the focused host's alone.** Under every tile it would

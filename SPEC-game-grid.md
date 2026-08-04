@@ -165,7 +165,7 @@ degrades to exactly that ordering when every timestamp is equal.
 
 ## Motion
 
-All values from `Bulan.qml`, sourced from brief §6 and its motion rules
+All values from `Bulan.qml`, sourced from `DESIGN-SYSTEM.md`'s motion rules
 (never bounce twice; nothing outlasts the next input; input always
 interrupts; ambient motion is separately disableable).
 
@@ -177,7 +177,8 @@ interrupts; ambient motion is separately disableable).
 | Focus-ring border colour | `motionFocusMs` `ColorAnimation` | Rule 1 — one settle on a border-colour change, no re-trigger mid-flight. |
 | Recent tile travel (`x`, `y`, `tileScale`, `opacity`) | `motionFocusMs`, `Easing.InOutQuad`, gated on a `settled` flag | Copies `HostCarousel.qml`'s `HostTile` delegate block exactly: one clock for the whole move, so a tile travels, shrinks and dims as one object. `settled` stops the first frame from animating in from a corner. |
 | Focus bloom glide (Library) | `motionFocusMs`, `Easing.InOutQuad` | Same clock as the tile it follows, so the halo never visibly lags the selection. |
-| Tab cross-fade (Recent ↔ Library) | `motionFocusMs`, `Easing.InOutQuad` | **Deliberately not `motionTransitionMs`** (220 ms). That longer token now drives the selected-game launch handoff and remains intended for Phase B item 4's general screen transitions; switching tabs on one screen is still a focus-scale change. |
+| Tile entrance on arrival | `motionGridEntranceRiseMs`, `Easing.OutBack`, `motionEntranceOvershoot`, capped at `motionGridEntranceMaxSteps` | Accepted 2 August 2026. Tiles rise from below and fade in on a short cascade once the screen has landed, replacing an earlier horizontal slide into rank. Recent radiates outward from the focused tile; Library reads left to right, top to bottom. Opacity is clamped so only the travel bounces, keeping rule 1. A launch pressed during the cascade ends it immediately and captures the settled artwork. |
+| Tab cross-fade (Recent ↔ Library) | `motionFocusMs`, `Easing.InOutQuad` | **Deliberately not `motionTransitionMs`** (220 ms). That longer token drives the selected-game launch handoff and the general screen transitions; switching tabs on one screen is still a focus-scale change. |
 | Library scroll-to-focus | Explicit `NumberAnimation` on `contentY`, `motionFocusMs`, `Easing.OutCubic` | Rule 3, in the harder case. |
 
 **Why the Library scroll is an explicit `NumberAnimation`, not a `Behavior`.**
@@ -252,6 +253,27 @@ the quit path, and quit-and-switch remains a confirmed operation that waits for
 a successful quit before entering launch. A quit or launch failure returns to
 the retained game-grid context rather than discarding its tab, selection, or
 Library scroll.
+
+**v1 decision — a grid remembers its place, per host, for the app session.**
+Accepted and merged 2 August 2026. A fresh `AppView` is still built on every
+entry, but a discarded one now publishes what it was showing and destroys
+itself, following the treatment `StreamSegue` and `QuitSegue` already use.
+`HostCarousel` holds that context in memory keyed by **host UUID**, and the next
+grid opened for the same host restores the tab, the selected game by stable app
+id, and the Library scroll. Without the destroy, repeated carousel↔grid cycles
+accumulated about 9.7 MiB each and never released.
+
+The restore **re-applies on every model change** rather than stopping at its
+first success: `recentFocusedIndex` is a rank in `recentOrder`, and each
+arriving chunk of the host's app list recomputes that order, so a rank restored
+early points at a different game once the list has finished arriving. The
+player's first press retires the restore outright, so a late chunk can never
+override someone already moving. The retained-grid contract under launch and
+quit is unaffected — a segue is pushed on top of the grid without popping it,
+and `StackView.onRemoved` fires only when the item itself leaves the stack.
+
+Evidence, including the A/B memory measurement and what was not exercised, is in
+`docs/validation/2026-08-02-phase-b-closeout.md`.
 
 ### Selected-game launch and quit integration
 
@@ -404,7 +426,7 @@ Existing carousel hooks (`MOONLIGHT_FAKE_HOSTS`, `MOONLIGHT_INITIAL_VIEW`,
   appear: `mDNS is disabled by user preference` (a local machine preference,
   not a code fault) and the `ToolTip attached property`
   line from `main.qml` (the same pre-existing environmental warning
-  `HANDOFF.md` records for the prior task).
+  `docs/validation/2026-08-02-phase-b-closeout.md` records for the prior task).
 - The Library scroll defect: reproduced against the real host, diagnosed, and
   the fix verified across three consecutive runs against the real Steambox
   library.

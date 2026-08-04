@@ -173,7 +173,7 @@ pathspecs. Write the message to a file and use `git commit -F`.
 
 ### Chaining `vcvarsall.bat && set PATH=... && jom` on one line throws away the compiler it just added
 
-`HANDOFF.md` previously recorded that the Windows shell "could not find the MSVC
+An earlier handoff recorded that the Windows shell "could not find the MSVC
 tools through the generated makefiles," and that the generated build-tree
 makefiles under `build\build-x64-release` were patched locally with absolute
 MSVC tool paths plus `/MANIFEST:NO` as a review-build workaround. **That
