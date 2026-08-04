@@ -24,7 +24,7 @@ evidence in `docs/validation/`, past build narrative in
 |---|---|
 | Branch | `bulan`, the integration branch |
 | Remote | `origin` only, the client's fork |
-| Push state | **`bulan` is ahead of `origin/bulan` by the documentation refactor and has NOT been pushed.** No push has been authorised. Everything up to `4c482e95` is pushed. Confirm with `git rev-list --left-right --count origin/bulan...bulan` |
+| Push state | **In sync with `origin/bulan`.** The client authorised the documentation-refactor push on 4 August 2026. Confirm with `git rev-list --left-right --count origin/bulan...bulan` |
 | Working tree | Clean |
 | Task branch | None. The refactor was committed directly to `bulan` at the client's direction |
 | Active task | **None.** No `TASK-BRIEF.md` exists |
@@ -67,8 +67,9 @@ Latest reports: `docs/validation/2026-08-03-private-v1-draft.md`,
   client before it can be chased further.
 - **No Steam Deck hardware session has happened** since 28 July 2026, and every
   screen built since then is unseen on the target device.
-- **The documentation refactor is unpushed and unreviewed by the client.** It
-  changed no application source. `python scripts/context-audit.py` passes.
+- **The documentation refactor is pushed but not yet reviewed by the client.**
+  It changed no application source, and it was committed directly to `bulan`
+  rather than to a task branch. `python scripts/context-audit.py` passes.
 
 ## Next action
 
