@@ -4,13 +4,14 @@ authority: repository-state
 read_when:
   - session-start
 history_policy: replace-not-append
-last_verified_commit: 4c482e95
+last_verified_commit: e145830f
 ---
 
 # Bulan — current state
 
-**Verified 4 August 2026 against `4c482e95`.** Inspect Git before relying on
-this; it is a snapshot, not an authority on what Git says.
+**Verified 4 August 2026 against `e145830f`**, the commit immediately before
+this record. Inspect Git before relying on this; it is a snapshot, not an
+authority on what Git says.
 
 This file is replaced, never appended to. Past states live in Git history, past
 evidence in `docs/validation/`, and past build narrative in
@@ -21,10 +22,10 @@ evidence in `docs/validation/`, and past build narrative in
 | Item | State |
 |---|---|
 | Branch | `bulan`, the integration branch |
-| HEAD | `4c482e95` |
-| Remote | `origin` only, the client's fork. `bulan` is **in sync with `origin/bulan`** — the client authorised that push |
+| Remote | `origin` only, the client's fork |
+| Push state | **`bulan` is ahead of `origin/bulan` by the documentation refactor and has NOT been pushed.** No push has been authorised. Everything up to `4c482e95` is pushed |
 | Working tree | Clean |
-| Task branch | None. `v1-review-build` was deleted after the accepted merge |
+| Task branch | None. The refactor was committed directly to `bulan` at the client's direction. `v1-review-build` was deleted after its accepted merge |
 | Active task | **None.** No `TASK-BRIEF.md` exists |
 
 ## Where the product is
@@ -65,6 +66,8 @@ Latest reports: `docs/validation/2026-08-03-private-v1-draft.md`,
   client before it can be chased further.
 - **No Steam Deck hardware session has happened** since 28 July 2026, and every
   screen built since then is unseen on the target device.
+- **The documentation refactor is unpushed and unreviewed by the client.** It
+  changed no application source. `python scripts/context-audit.py` passes.
 
 ## Next action
 
