@@ -77,17 +77,20 @@ Nothing here is implementation. Each item is a check that has not been made.
 
 | Criterion | State |
 |---|---|
-| A full `REVIEW-CHECKLIST.md` pass on Deck hardware | **Not done.** No Deck session since 28 July 2026 |
-| Real pairing against a live host | **Not done** |
-| A real stream launched, resumed, failed, and quit | **Not done** |
-| Physical controller review of the whole route | **Not done** |
-| Steam Game Mode on-screen keyboard on the manual-address field | **Unvalidated**, and the field cannot work without it |
-| Flatpak builds and installs cleanly | **Not attempted** — the review station is Windows |
-| Screen-transition blur cost measured on the Deck | **Deliberately deferred** by the client |
-| The open Language defect | **Open**, awaiting a client reproduction — see `BUGS.md` |
+| A full `REVIEW-CHECKLIST.md` pass on Deck hardware | **Done, 5 August 2026.** See `docs/validation/2026-08-05-private-v1-deck.md` |
+| Real pairing against a live host | **Done, 5 August 2026** |
+| A real stream launched, resumed, failed, and quit | **Done, 5 August 2026** |
+| Physical controller review of the whole route | **Done, 5 August 2026** |
+| Steam Game Mode on-screen keyboard on the manual-address field | **Failed.** The OSK does not appear; the field cannot be completed controller-only in Game Mode — see `BUGS.md` |
+| Flatpak builds and installs cleanly | **Done, 5 August 2026** — implied by the client running the review session as a Flatpak install |
+| Screen-transition blur cost measured on the Deck | **Deliberately deferred** by the client — no measurement was taken this session |
+| The Language defect | **Closed, 5 August 2026.** Not reproduced on Deck; the client considers it fixed. See `docs/validation/2026-08-05-private-v1-deck.md` |
 
 **Exit:** the private build installs, presents correctly in Steam, completes the
-full loop, and has an honest validation record.
+full loop, and has an honest validation record. **Not yet met:** the manual
+address entry step of the full loop cannot be completed in Game Mode because
+the SteamOS on-screen keyboard is not invoked. Fixing and retesting OSK
+invocation is now the critical path to closing Phase F.
 
 ## Completed phases
 
@@ -126,15 +129,18 @@ further toward the brief's "whimsical" character. Unscheduled.
 
 ## Standing risks
 
-- **Manual address entry.** The onboarding escape hatch still needs a design
-  that works with Steam's on-screen keyboard in Game Mode.
+- **Manual address entry is confirmed broken, not just unvalidated.** The
+  5 August 2026 Deck session found the SteamOS on-screen keyboard does not
+  appear for the field. See `BUGS.md` and
+  `docs/validation/2026-08-05-private-v1-deck.md`.
 - **Stream overlay input.** `Start+Select` remains an unvalidated proposed
   binding. The Bulan overlay is deferred rather than allowed to block v1.
-- **LCD appearance.** LCD-specific visual validation is outstanding until
-  hardware is available. It does not block private v1, but must never be
-  reported as passed.
-- **Everything built since 28 July 2026 is unseen on the target device.** The
-  whole current route has only ever run on a Windows review station.
+- **LCD appearance.** LCD-specific visual validation remains outstanding —
+  the 5 August 2026 session did not record which panel was used, so this must
+  not be reported as passed until an LCD unit is confirmed reviewed.
+- **The rest of the current route has now been seen on the target device**
+  as of 5 August 2026 — see `docs/validation/2026-08-05-private-v1-deck.md`.
+  This replaces the prior risk that everything since 28 July 2026 was unseen.
 
 Retired risks and their reusable lessons are in
 `docs/retrospectives/DEBUGGING-LESSONS.md`.

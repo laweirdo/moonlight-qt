@@ -13,35 +13,24 @@ file: its evidence goes to the validation report, retrospective, or commit that
 closed it. Scope and sequencing belong in `ROADMAP.md`; current repository state
 in `HANDOFF.md`; upstream redesign findings in `UI-AUDIT.md`.
 
-## Opening the Language list is reported to crash the application
+## SteamOS on-screen keyboard does not appear for Bulan text fields
 
 | Field | Value |
 |---|---|
-| Status | **Open — reported, not reproduced, not fixed** |
-| Reported | 3 August 2026, by the client |
-| Affected commit | `173c0497` or earlier |
-| Surface | Settings → UI → Language |
+| Status | **Open — reproduced on Steam Deck, not diagnosed, not fixed** |
+| Reported | 5 August 2026, by the client |
+| Affected commit | `173c0497`, not independently confirmed by this session |
+| Surface | At minimum, first-run manual address entry in Game Mode |
 
-**Symptom.** The client reports the application crashes when the Language option
-is opened.
+**Symptom.** A focused text field in Game Mode should invoke SteamOS text
+entry. Instead the OSK never appears, so it cannot be completed
+controller-only. Blocks the Part 4 full-loop exit condition and the matching
+`ROADMAP.md` Phase F criterion.
 
-**Evidence.** Four routes were tried against the same build and none reproduced
-it:
+**Evidence.** Client-observed, 5 August 2026 Deck session; no log available.
 
-1. The review hook opening the popup directly
-   (`MOONLIGHT_SETTINGS_REVIEW_CATEGORY=ui`, `..._ROW=language`).
-2. Selecting a *different* language, which runs `retranslate()` — it succeeded
-   and loaded French.
-3. The client's own navigation path: normal launch, Menu to open settings, down
-   the rail to UI, right into the rows, A on Language.
-4. Scrolling the full 25-entry list to the bottom and back.
+**Next investigation.** How the field requests focus/text input; whether Steam
+Input sees a valid request; Flatpak/Game Mode context; comparison with
+upstream fields; whether `Steam + X` works (untested).
 
-Every `LANG_*` value the list offers exists in `streamingpreferences.h`'s enum,
-so an undefined enum reaching the C++ property is ruled out. No crash trace,
-`Critical`, or QML error appeared in any log.
-
-**Next investigation.** Needs from the client: whether the application dies when
-the list *opens* or when an entry is *picked*, whether the window vanishes or
-freezes, and the `%TEMP%\Moonlight-*.log` from a run that actually crashed.
-
-**Related.** `docs/validation/2026-08-03-private-v1-draft.md`, `SettingsShell.qml`.
+**Related.** `docs/validation/2026-08-05-private-v1-deck.md`.
