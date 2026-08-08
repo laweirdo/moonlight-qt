@@ -60,6 +60,13 @@ FocusScope {
         panel.forceActiveFocus()
         if (editable) {
             field.forceActiveFocus()
+            // forceActiveFocus() alone does not invoke a platform on-screen
+            // keyboard: Qt Quick only opens one itself in response to a real
+            // mouse/touch press on the TextInput, which gamepad navigation
+            // never generates (SdlGamepadKeyNavigation delivers synthetic key
+            // events, not pointer events). Asking explicitly is what a real
+            // touch tap would have triggered implicitly.
+            Qt.inputMethod.show()
         }
     }
 
@@ -71,6 +78,10 @@ FocusScope {
         // underneath, so every button the screen owns goes dead.
         field.focus = false
         panel.focus = false
+
+        if (editable) {
+            Qt.inputMethod.hide()
+        }
 
         opened = false
         field.text = ""
