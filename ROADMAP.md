@@ -8,7 +8,7 @@ history_policy: replace-not-append
 
 # Bulan — roadmap
 
-**Current as of:** 4 August 2026 · **Owner:** Lao
+**Current as of:** 8 August 2026 · **Owner:** Lao
 
 **Current phase:** F — ship private v1. **Every phase is built.** What remains
 is not implementation: it is the target-device validation that cannot happen off
@@ -81,16 +81,16 @@ Nothing here is implementation. Each item is a check that has not been made.
 | Real pairing against a live host | **Done, 5 August 2026** |
 | A real stream launched, resumed, failed, and quit | **Done, 5 August 2026** |
 | Physical controller review of the whole route | **Done, 5 August 2026** |
-| Steam Game Mode on-screen keyboard on the manual-address field | **Failed.** The OSK does not appear; the field cannot be completed controller-only in Game Mode — see `BUGS.md` |
+| Steam Game Mode on-screen keyboard on the manual-address field | **Resolved, 8 August 2026.** Automatic invocation is a SteamOS/gamescope limitation for non-Steam-game windows, not a Bulan defect (root-caused with evidence, see `docs/validation/2026-08-08-osk-diagnosis-and-resolution.md`). The client's accepted resolution is Steam+X, which completes the field controller-only end to end |
 | Flatpak builds and installs cleanly | **Done, 5 August 2026** — implied by the client running the review session as a Flatpak install |
 | Screen-transition blur cost measured on the Deck | **Deliberately deferred** by the client — no measurement was taken this session |
 | The Language defect | **Closed, 5 August 2026.** Not reproduced on Deck; the client considers it fixed. See `docs/validation/2026-08-05-private-v1-deck.md` |
 
 **Exit:** the private build installs, presents correctly in Steam, completes the
-full loop, and has an honest validation record. **Not yet met:** the manual
-address entry step of the full loop cannot be completed in Game Mode because
-the SteamOS on-screen keyboard is not invoked. Fixing and retesting OSK
-invocation is now the critical path to closing Phase F.
+full loop, and has an honest validation record. **Met, 8 August 2026** for the
+on-screen-keyboard criterion: manual address entry completes controller-only
+in Game Mode via Steam+X, the client's accepted method — see
+`docs/validation/2026-08-08-osk-diagnosis-and-resolution.md`.
 
 ## Completed phases
 
@@ -129,10 +129,6 @@ further toward the brief's "whimsical" character. Unscheduled.
 
 ## Standing risks
 
-- **Manual address entry is confirmed broken, not just unvalidated.** The
-  5 August 2026 Deck session found the SteamOS on-screen keyboard does not
-  appear for the field. See `BUGS.md` and
-  `docs/validation/2026-08-05-private-v1-deck.md`.
 - **Stream overlay input.** `Start+Select` remains an unvalidated proposed
   binding. The Bulan overlay is deferred rather than allowed to block v1.
 - **LCD appearance.** LCD-specific visual validation remains outstanding —

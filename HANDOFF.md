@@ -4,15 +4,14 @@ authority: repository-state
 read_when:
   - session-start
 history_policy: replace-not-append
-last_verified_commit: 173c0497
+last_verified_commit: 54f46db7
 ---
 
 # Bulan — current state
 
-**Verified 5 August 2026.** The application state described here is
-`173c0497`, the accepted private v1 merge; every commit since is documentation
-only. Inspect Git before relying on this — it is a snapshot, not an authority on
-what Git says.
+**Verified 8 August 2026.** State is `54f46db7` plus one uncommitted,
+client-approved change on branch `fix-deck-osk`. Inspect Git before relying
+on this — it is a snapshot, not an authority on what Git says.
 
 Replaced, never appended to. Past states are in Git history, past evidence in
 `docs/validation/`, past build narrative in
@@ -22,58 +21,52 @@ Replaced, never appended to. Past states are in Git history, past evidence in
 
 | Item | State |
 |---|---|
-| Branch | `bulan`, the integration branch |
-| Remote | `origin` only, the client's fork |
-| Push state | This documentation update is accepted by the client and pushed to `origin/bulan` |
-| Working tree | Clean |
-| Task branch | None. `docs/deck-validation-2026-08-05` was merged into `bulan` and deleted |
-| Active task | **None.** No `TASK-BRIEF.md` exists |
+| Branch | `fix-deck-osk`, cut from `bulan` at `54f46db7` |
+| Remote | `origin` only. Not pushed, not merged, no push authorized |
+| Working tree | Uncommitted: `app/gui/HostPanel.qml` (client-approved fix), `BUGS.md`, `ROADMAP.md`, this file, `docs/validation/2026-08-08-osk-diagnosis-and-resolution.md` |
+| Task branch | `fix-deck-osk`. `TASK-BRIEF.md` present — remove on commit/merge acceptance |
+| Active task | SteamOS OSK investigation — diagnosed, resolved by client decision, validated. Awaiting commit/merge instruction |
 
 ## Where the product is
 
-**Phase F — ship private v1.** `ROADMAP.md` owns the phase, its exit criteria
-and what v1 means. The accepted baseline is `173c0497`, the private v1 draft the
-client reviewed live in two rounds on 3 August 2026.
+**Phase F — ship private v1.** `ROADMAP.md` owns the phase and exit criteria.
 
-**A Steam Deck session has now happened.** On 5 August 2026 the client manually
-worked the applicable items in `REVIEW-CHECKLIST.md` on their Deck. Every
-applicable check passed except one: the SteamOS on-screen keyboard does not
-appear for text-entry fields, which blocks manual address entry in Game Mode.
+**SteamOS on-screen keyboard blocker resolved, 8 August 2026.** Full
+diagnosis and validation in
+`docs/validation/2026-08-08-osk-diagnosis-and-resolution.md`. Short version:
+Bulan's field never requested the input panel (fixed in `HostPanel.qml`);
+separately, gamescope gates automatic OSK invocation against non-Steam-game
+windows regardless of correct app behaviour (a platform limit, not a Bulan
+defect). Client's accepted resolution: **Steam+X** remains the supported way
+to bring up the keyboard. Validated end to end on both `HostPanel` entry
+points, controller-only, no focus regression.
+
+This session's checkout was found empty at start and re-cloned from
+`https://github.com/laweirdo/moonlight-qt.git`; the Flatpak recipe was also
+missing and recreated — see `BUILDING-DECK.md` (recipe now needs five patch
+removals, not three, plus a `rename-icon` correction).
 
 ## Validation status
 
-**Passed:** static checks and Qt 6.9.3 / MSVC Release builds at every accepted
-merge; the whole route on the Windows review station; and, as of 5 August 2026,
-the applicable Deck checklist — pairing, streaming, controller navigation,
-Game Mode bindings, wake, waiting state, Part 2 judgement calls — all
-client-observed and passing.
+**Passed:** static checks and builds at every accepted merge; the Windows
+review route; the 5 August 2026 Deck checklist; the 8 August 2026 OSK
+resolution end to end in real Game Mode.
 
-**Not passed / not established:** manual address entry in Game Mode fails, the
-SteamOS OSK does not appear — the primary Phase F blocker now. LCD-specific
-appearance is still unvalidated (panel type not recorded this session).
-Precise measurements the checklist calls for (battery draw, waiting-state
-timings, blur cost) were not part of the reported result.
+**Not established:** LCD-specific appearance (panel type unrecorded either
+Deck session); battery draw, waiting-state timings, blur cost (blur cost
+deliberately deferred by the client).
 
-Latest reports: `docs/validation/2026-08-05-private-v1-deck.md`,
-`docs/validation/2026-08-03-private-v1-draft.md`,
-`docs/validation/2026-08-02-phase-b-closeout.md`.
+Latest reports: `docs/validation/2026-08-08-osk-diagnosis-and-resolution.md`,
+`docs/validation/2026-08-05-private-v1-deck.md`.
 
 ## Open blockers
 
-- **The SteamOS on-screen keyboard does not appear for Bulan text fields** —
-  new, client-reported and reproduced on 5 August 2026. `BUGS.md` has it. This
-  blocks the Phase F full-loop exit condition.
-- None outstanding on the documentation itself. It changed no application
-  source. `python scripts/context-audit.py` passes.
+None on Phase F's mandatory exit criteria — see `ROADMAP.md`. `BUGS.md` is
+empty.
 
 ## Next action
 
-1. **Investigate and fix SteamOS on-screen keyboard invocation** for Bulan's
-   text field, then retest manual address entry — and any other Game Mode
-   text-entry surface it may affect — on the Deck. `BUGS.md` has the
-   investigation starting points.
-2. **An LCD Deck session**, once that hardware is available, to close the
-   remaining panel-appearance gap.
-
-The client may revisit the screen transition later to push it further toward the
-brief's "whimsical" character. A future task, not an open item.
+1. **Client decision needed:** commit this session's change and docs, then
+   merge `fix-deck-osk` into `bulan` or otherwise direct next steps.
+2. An LCD Deck session, once available, for the remaining panel-appearance
+   gap.
