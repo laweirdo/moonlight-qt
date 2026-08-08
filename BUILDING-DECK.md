@@ -232,17 +232,33 @@ is itself a Flatpak, so there's no compiler installed on the system at all.
 Tools, libraries, cache and finished app all sit in `/home`, which SteamOS never
 touches.
 
-The recipe is Flathub's official Moonlight recipe with four changes:
+The recipe is Flathub's official Moonlight recipe with five changes. If the
+recipe folder is ever missing, recreate it by cloning
+`https://github.com/flathub/com.moonlight_stream.Moonlight.git` and reapplying
+these (confirmed working, 8 August 2026):
 
 1. **A different app ID** (`io.github.laweirdo.MoonlightFork` rather than
    `com.moonlight_stream.Moonlight`), so it installs alongside the official app
    instead of replacing it.
-2. **Two rename instructions**, because the app ID appears inside filenames.
+2. **Two rename instructions**, `rename-desktop-file` and
+   `rename-appdata-file`, both set to `com.moonlight_stream.Moonlight`'s
+   original filenames — because the app ID appears inside those filenames.
    Without them the app builds but never appears in your launcher.
-3. **The source points at your local folder** instead of GitHub — see above.
-4. **Three patches removed.** Flathub applies three Qt 6.9 fixes on top of
-   Moonlight v6.1.0. This code is newer and already contains all three, so the
-   patches fail to apply and had to go.
+3. **`rename-icon` must match the source's actual installed icon filename**,
+   not the upstream default of `moonlight`. `app/app.pro` installs the app
+   icon as `com.moonlight_stream.Moonlight.svg` (see the comment there), so
+   `rename-icon` needs the same value — `moonlight` fails the build with
+   `Error: icon moonlight not found`. If a future icon-install change renames
+   that file, update this to match.
+4. **The source points at your local folder** instead of GitHub — see above.
+5. **Stale patches removed.** Flathub's recipe carries Qt 6.9 and FFmpeg 7.x
+   compatibility patches on top of Moonlight v6.1.0. As of 8 August 2026 this
+   was five patches (three Qt, two FFmpeg/Vulkan), and this code already
+   contained all five fixes, so all five failed to apply and had to go. Confirm
+   each patch's fix is actually present in source (grep for a symbol/line the
+   patch touches) before deleting its `sources` entry — see "A patch fails to
+   apply" below. The count may change as Flathub's recipe or this fork's
+   source evolves; don't assume it stays at five.
 
 ### It builds from your folder, not from GitHub
 
