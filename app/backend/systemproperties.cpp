@@ -47,6 +47,7 @@ private:
 SystemProperties::SystemProperties()
 {
     versionString = QString(VERSION_STR);
+    moonlightBaseVersionString = QString(MOONLIGHT_BASE_VERSION_STR);
     hasDesktopEnvironment = WMUtils::isRunningDesktopEnvironment();
     isRunningWayland = WMUtils::isRunningWayland();
     isRunningXWayland = isRunningWayland && QGuiApplication::platformName() == "xcb";

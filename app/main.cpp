@@ -434,15 +434,26 @@ int main(int argc, char *argv[])
 {
     SDL_SetMainReady();
 
-    // Set the app version for the QCommandLineParser's showVersion() command
     QCoreApplication::setApplicationVersion(VERSION_STR);
 
     // Set these here to allow us to use the default QSettings constructor.
     // These also ensure that our cache directory is named correctly. As such,
     // it is critical that these be called before Path::initialize().
+    //
+    // These three are deliberately still Moonlight's. They decide where
+    // settings and the cache live -- on the Deck,
+    // ~/.var/app/<flatpak-id>/cache/Moonlight Game Streaming Project/Moonlight
+    // -- so renaming them for branding would orphan every existing install's
+    // paired hosts and preferences. Bulan's name is carried by
+    // applicationDisplayName below, which is presentation only.
     QCoreApplication::setOrganizationName("Moonlight Game Streaming Project");
     QCoreApplication::setOrganizationDomain("moonlight-stream.com");
     QCoreApplication::setApplicationName("Moonlight");
+
+    // What the window manager shows. Without this, Qt falls back to
+    // applicationName and the window is titled "Moonlight". Display name only:
+    // it touches no path, no setting, and no upgrade identity.
+    QGuiApplication::setApplicationDisplayName("Bulan");
 
     if (QFile(QDir::currentPath() + "/portable.dat").exists()) {
         QSettings::setDefaultFormat(QSettings::IniFormat);

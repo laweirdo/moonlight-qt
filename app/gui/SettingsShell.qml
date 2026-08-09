@@ -537,7 +537,7 @@ FocusScope {
 
                     Text {
                         width: parent.width
-                        text: qsTr("Version %1").arg(SystemProperties.versionString)
+                        text: qsTr("Alpha v%1").arg(SystemProperties.versionString)
                         color: Bulan.textSecondary
                         font.family: Bulan.familyUi
                         font.pixelSize: Bulan.sizeBody
@@ -551,7 +551,7 @@ FocusScope {
 
                     Text {
                         width: parent.width
-                        text: qsTr("Built on Moonlight")
+                        text: qsTr("Built on Moonlight %1").arg(SystemProperties.moonlightBaseVersionString)
                         color: Bulan.accentPrimary
                         font.family: Bulan.familyDisplay
                         font.pixelSize: Bulan.sizeTitle

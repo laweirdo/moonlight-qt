@@ -26,6 +26,7 @@ public:
     Q_PROPERTY(bool hasDiscordIntegration MEMBER hasDiscordIntegration CONSTANT)
     Q_PROPERTY(bool usesMaterial3Theme MEMBER usesMaterial3Theme CONSTANT)
     Q_PROPERTY(QString versionString MEMBER versionString CONSTANT)
+    Q_PROPERTY(QString moonlightBaseVersionString MEMBER moonlightBaseVersionString CONSTANT)
 
     // Properties queried asynchronously (startAsyncLoad() must be called!)
     Q_PROPERTY(bool hasHardwareAcceleration MEMBER hasHardwareAcceleration NOTIFY hasHardwareAccelerationChanged)
@@ -66,6 +67,11 @@ private:
     bool hasBrowser;
     bool hasDiscordIntegration;
     QString versionString;
+
+    // The upstream Moonlight release this fork is built on. Kept separate from
+    // versionString so the About screen can credit Moonlight by version without
+    // Bulan ever presenting Moonlight's release number as its own.
+    QString moonlightBaseVersionString;
     bool usesMaterial3Theme;
     bool isDarwin;
 

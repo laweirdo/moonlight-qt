@@ -46,7 +46,15 @@ public:
             showInfo(helpText());
         }
         if (isSet("version")) {
-            showVersion();
+            // Not QCommandLineParser::showVersion(), which prints
+            // applicationName + applicationVersion. applicationName is
+            // deliberately still "Moonlight" -- it decides the settings and
+            // cache directory, so renaming it would orphan every existing
+            // install's paired hosts and preferences -- and that would have
+            // this print "Moonlight 0.0.1", which names the wrong project and
+            // attaches Bulan's release number to it.
+            showInfo(QString("Bulan %1 (built on Moonlight %2)")
+                         .arg(VERSION_STR, MOONLIGHT_BASE_VERSION_STR));
         }
     }
 

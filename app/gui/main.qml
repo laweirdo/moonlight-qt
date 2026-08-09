@@ -696,10 +696,22 @@ ApplicationWindow {
                     updateButton.visible = true
                 }
 
-                Component.onCompleted: {
-                    AutoUpdateChecker.onUpdateAvailable.connect(updateAvailable)
-                    AutoUpdateChecker.start()
-                }
+                // The update check is deliberately not started. It compares
+                // this build's version against Moonlight's own release feed,
+                // and Bulan's version is its own (0.0.1), not a point on that
+                // feed's timeline -- so the check would report an "update"
+                // to Moonlight 6.1.0 forever, and clicking through would send
+                // the player to a different application's download page.
+                //
+                // The button and its handler are left in place rather than
+                // removed: this is upstream's toolbar, kept intact so the fork
+                // stays easy to rebase, and the button is invisible until a
+                // callback that can no longer arrive makes it visible.
+                //
+                // Already a no-op on the Deck -- AutoUpdateChecker::start()
+                // compiles to nothing outside Windows, macOS, Steam Link and
+                // AppImage builds -- so this only changes the Windows and
+                // macOS builds, where it was live.
 
                 Keys.onDownPressed: {
                     stackView.currentItem.forceActiveFocus(Qt.TabFocus)

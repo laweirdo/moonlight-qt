@@ -597,8 +597,19 @@ macx {
     }
 }
 
+# version.txt is Bulan's own release number, not upstream Moonlight's. It is the
+# single source: qmake's VERSION drives the Windows file version and the macOS
+# bundle version, VERSION_STR is what the app reports at runtime, and every
+# packaging script under scripts/ reads the same file. Nothing else maintains a
+# version string of its own.
 VERSION = "$$cat(version.txt)"
 DEFINES += VERSION_STR=\\\"$$cat(version.txt)\\\"
+
+# The upstream Moonlight release this fork is built on. Provenance, not a
+# version Bulan maintains -- it changes only when the fork is rebased onto a
+# newer upstream, and exists so --version and the About screen can credit
+# Moonlight without the app ever presenting Moonlight's number as its own.
+DEFINES += MOONLIGHT_BASE_VERSION_STR=\\\"6.1.0\\\"
 
 # --- build stamp -------------------------------------------------------------
 # Generates buildstamp.h, naming the branch and commit this binary was built
