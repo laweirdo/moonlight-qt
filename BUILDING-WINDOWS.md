@@ -76,6 +76,46 @@ build\deploy-x64-release\Moonlight.exe
 
 ---
 
+## A portable package to hand someone
+
+`scripts\build-arch.bat` is still the wrong tool: it wants WiX and a signing
+certificate. A portable build is the deploy above, into a **fresh** folder, plus
+two things it does not include.
+
+```
+rmdir /s /q build\Bulan-0.0.1-portable-x64
+mkdir build\Bulan-0.0.1-portable-x64
+copy build\build-x64-release\app\release\Moonlight.exe build\Bulan-0.0.1-portable-x64\
+copy build\build-x64-release\AntiHooking\release\AntiHooking.dll build\Bulan-0.0.1-portable-x64\
+copy libs\windows\lib\x64\*.dll build\Bulan-0.0.1-portable-x64\
+copy app\SDL_GameControllerDB\gamecontrollerdb.txt build\Bulan-0.0.1-portable-x64\
+copy "C:\Program Files (x86)\Microsoft Visual Studio\2022\BuildTools\VC\Redist\MSVC\14.44.35112\x64\Microsoft.VC143.CRT\*.dll" build\Bulan-0.0.1-portable-x64\
+windeployqt --dir build\Bulan-0.0.1-portable-x64 --release --qmldir app\gui --no-opengl-sw --no-compiler-runtime --no-sql build\Bulan-0.0.1-portable-x64\Moonlight.exe
+type nul > build\Bulan-0.0.1-portable-x64\portable.dat
+```
+
+The two additions are the **VC runtime DLLs**, which the deploy step above
+deliberately omits with `--no-compiler-runtime` because a dev machine already
+has them, and **`portable.dat`**, which `main.cpp` looks for to keep settings in
+an INI beside the exe instead of under the user profile.
+
+Three things to get right, all of which bit on 9 August 2026:
+
+- **Build into a fresh folder, not `deploy-x64-release`.** That folder is
+  long-lived and accumulates: it still held a `BulanReview.exe` from 31 July,
+  untracked and referenced nowhere, which would have shipped to a client.
+- **Run it once, then delete what it wrote.** A portable run creates
+  `Moonlight Game Streaming Project\Moonlight.ini` beside the exe containing a
+  freshly generated client certificate, its **private key**, and any hosts
+  discovery found. Never zip that.
+- **Do not use `Compress-Archive`.** It writes `\` as the entry separator, which
+  the ZIP spec forbids; anything unpacking it on Linux gets single files named
+  `platforms\qwindows.dll`. `System.IO.Compression.ZipArchive` with the
+  separator replaced by hand is the fix on PowerShell 5.1, whose
+  `ZipFile.CreateFromDirectory` has the same defect.
+
+---
+
 ## Traps, all of which cost time on 28 July
 
 ### Qt 6.11 and later cannot be installed with `aqtinstall`
