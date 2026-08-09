@@ -72,8 +72,7 @@ ACTIVE_TASK_SET = ["TASK-BRIEF.md"]
 # AGENTS.md is allowed 2300 rather than the 2000 the other entry points get.
 # Compressing it further meant cutting whole safety rules -- the push
 # authorization, the working-tree ownership handover, the validation-honesty
-# clause -- rather than words. The startup package as a whole still fits its
-# budget, which is the number that actually costs context every session.
+# clause -- rather than words.
 #
 # Raised from 2150 on 9 August 2026, when the identifier-rename rule was added:
 # renaming an application ID, settings path or upgrade code for branding strands
@@ -105,7 +104,13 @@ BUDGETS = {
     "REVIEW-CHECKLIST.md": 3800,
 }
 
-STARTUP_BUDGET = 4000
+# Raised from 4000 to 4150 on 9 August 2026, by the same 150 AGENTS.md gained
+# for the identifier-rename rule. The package budget exists to stop the entry
+# documents growing by accretion, not to force the newest of them to pay for an
+# older one's growth -- and with the old number, the only way back under was to
+# delete honest detail from HANDOFF.md about which checks had actually been run,
+# which is the one thing that file exists to say.
+STARTUP_BUDGET = 4150
 
 # Startup plus an open task brief, before any domain authority is loaded.
 TASK_PACKAGE_BUDGET = STARTUP_BUDGET + BUDGETS["TASK-BRIEF.md"]

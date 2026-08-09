@@ -26,31 +26,37 @@ Replaced, never appended to. Past states are in Git history, past evidence in
 | Active task | **None.** No `TASK-BRIEF.md` exists |
 
 **The branch model changed.** `master` was a pristine upstream mirror; it is now
-Bulan's default branch, fast-forwarded to `bulan` with no history rewritten.
-`bulan` is kept until the client retires it. `AGENTS.md` owns the rule.
+Bulan's default branch, fast-forwarded to `bulan`, no history rewritten. `bulan`
+is kept until the client retires it. `AGENTS.md` owns the rule.
 
 ## Where the product is
 
 **Alpha v0.0.1.** The version the app reports is its own `0.0.1`, not the
 inherited Moonlight `6.1.0`. `ROADMAP.md` owns scope and phase.
 
-The 9 August 2026 session did Alpha polish and identity: post-transition
-entrances on `FirstRun`, `HostDiscovery` and `PairView` via a new shared
-`EntranceMotion.qml`; a shorter transition fade so travel leads; the version
-identity; Bulan branding on display-only surfaces; and a Bulan README.
+9 August 2026: entrances on `FirstRun`, `HostDiscovery` and `PairView` via a
+shared `EntranceMotion.qml`; a shorter transition fade so travel leads; the
+version identity; Bulan branding on display-only surfaces; a Bulan README. Then,
+from a client review: Bulan's own app icon, built from
+`app/res/bulan_app_icon.svg` by `scripts/gen-app-icon.*`; the carousel no longer
+showing or sliding at startup, so launch goes straight to the last host's
+library; and the library fading out as the artwork flies to the Connecting
+screen.
 
 ## Validation status
 
-**Passed, this session, on the Windows review station:** Qt 6.9.3 / MSVC Release
-build; `qmllint` on every changed QML file, adding no new warning class; the
-version flag, Win32 resource, window title and About all reporting Bulan and
-`0.0.1`, checked against the built binary; `FirstRun` and `HostDiscovery`
-settling correctly after their entrance; `python scripts/context-audit.py`.
+**Passed, on the Windows review station:** Qt 6.9.3 / MSVC Release build;
+`qmllint` on every changed QML file; the version flag, Win32 resource, window
+title, About and embedded icon checked against the built binary; startup going
+straight to the last host's library; the launch route reaching the Connecting
+screen; `python scripts/context-audit.py`.
 
-**Not established.** No Deck ran this session, so nothing on hardware was
-checked — including the entrances and the shortened fade in Game Mode, and cold
-boot. The macOS bundle and the WiX MSI were not built; their metadata changes
-are statically inspected only. LCD-specific appearance remains unvalidated.
+**Not established.** No Deck ran, so nothing was checked on hardware —
+entrances, the shortened fade, the launch handoff and cold boot in Game Mode.
+The macOS bundle and the WiX MSI were not built; their metadata is inspected
+statically only, and `app/moonlight.icns` is still upstream's because icns needs
+macOS tooling. The launch handoff's mid-flight frames were not captured, only
+that it runs and lands. LCD appearance remains unvalidated.
 
 Latest reports: `docs/validation/2026-08-08-osk-diagnosis-and-resolution.md`,
 `docs/validation/2026-08-05-private-v1-deck.md`.
