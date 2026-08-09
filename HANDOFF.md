@@ -51,6 +51,11 @@ title, About and embedded icon checked against the built binary; startup going
 straight to the last host's library; the launch route reaching the Connecting
 screen; `python scripts/context-audit.py`.
 
+**Passed, in CI:** all five jobs, for the first time on this fork. The three
+unix ones had all been failing on one defect — a build-stamp header generated
+where a shadow build never looks for it. The AppImage artifact is how to get
+Bulan onto a Deck without building it; `BUILDING-DECK.md` says where.
+
 **Not established.** No Deck ran, so nothing was checked on hardware —
 entrances, the shortened fade, the launch handoff and cold boot in Game Mode.
 The macOS bundle and the WiX MSI were not built; their metadata is inspected

@@ -20,6 +20,30 @@ it back off again.
 
 ---
 
+## Not building? Take the AppImage
+
+If you only want to run Bulan on the Deck rather than work on it, you do not
+need any of this. Every push builds one:
+
+1. Open the repository's **Actions** tab and pick the newest green `Build` run.
+2. Download the **`Bulan-LinuxAppImage-…`** artifact. GitHub serves artifacts as
+   a zip, so unzip it to get the `.AppImage` inside.
+3. On the Deck, in Desktop Mode:
+
+```bash
+chmod +x Bulan-*.AppImage
+./Bulan-*.AppImage
+```
+
+The Flatpak below is still the route this project validates on hardware, and the
+one every Deck session so far has used — the AppImage is a convenience, not a
+replacement, and it has not been through the review checklist.
+
+Its filename carries the commit it was built from rather than Bulan's release
+number, because CI stamps artifacts with the short SHA.
+
+---
+
 ## The one command you need
 
 This builds your code, installs it, and launches it. Run it after every change:
