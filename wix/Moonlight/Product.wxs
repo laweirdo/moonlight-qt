@@ -1,8 +1,15 @@
-﻿<?define ShortName = "Moonlight" ?>
-<?define FullName = "Moonlight Game Streaming Client" ?>
+﻿<!-- Display names only: what the installer, the Start menu shortcut and the
+     firewall prompt call this. Bulan's.
+
+     InstallFolder, Manufacturer, UpgradeCode, APPDATAFOLDER and the registry
+     key below are NOT display names. They are install location and upgrade
+     identity, and stay Moonlight's, because changing any of them makes an
+     existing install invisible to the upgrade and strands its settings. -->
+<?define ShortName = "Bulan" ?>
+<?define FullName = "Bulan" ?>
 
 <?define ShortcutName = "$(var.ShortName)" ?>
-<?define ShortcutDesc = "Stream games and other applications from another PC" ?>
+<?define ShortcutDesc = "Stream games from your PC, on a controller" ?>
 <?define InstallFolder = "Moonlight Game Streaming" ?>
 
 <Wix xmlns="http://wixtoolset.org/schemas/v4/wxs" xmlns:fire="http://wixtoolset.org/schemas/v4/wxs/firewall" xmlns:util="http://wixtoolset.org/schemas/v4/wxs/util">
@@ -100,7 +107,7 @@
       <Files Include="$(var.DeployDir)\**" />
     </ComponentGroup>
 
-    <Feature Id="ProductFeature" Title="Moonlight" Level="1" ConfigurableDirectory="INSTALLFOLDER">
+    <Feature Id="ProductFeature" Title="$(var.ShortName)" Level="1" ConfigurableDirectory="INSTALLFOLDER">
       <ComponentRef Id="Moonlight" />
       <ComponentRef Id="MoonlightShortcuts" />
       <ComponentRef Id="MoonlightDesktopShortcutState" />

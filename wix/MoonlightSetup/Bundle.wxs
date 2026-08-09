@@ -11,17 +11,21 @@
 
 <Wix xmlns="http://wixtoolset.org/schemas/v4/wxs" xmlns:bal="http://wixtoolset.org/schemas/v4/wxs/bal" xmlns:util="http://wixtoolset.org/schemas/v4/wxs/util">
 
-  <Bundle Name="Moonlight Game Streaming Client"
+  <!-- Name and the condition messages are what the installer shows, so they are
+       Bulan's. Manufacturer, UpgradeCode, InstallFolder and the registry key
+       below are upgrade and install identity and stay Moonlight's. See
+       Product.wxs for what changing them would break. -->
+  <Bundle Name="Bulan"
           Version="!(bind.PackageVersion.Moonlight_x64)"
           Manufacturer="Moonlight Game Streaming Project"
           UpgradeCode="466fa35d-4be4-40ef-9ce5-afadc3b63bc5"
-          HelpUrl="https://github.com/moonlight-stream/moonlight-docs/wiki/Setup-Guide"
-          UpdateUrl="https://github.com/moonlight-stream/moonlight-qt/releases"
+          HelpUrl="https://github.com/laweirdo/Bulan"
+          UpdateUrl="https://github.com/laweirdo/Bulan/releases"
           DisableModify="yes"
           IconSourceFile="..\..\app\moonlight.ico">
 
-    <bal:Condition Message="This version of Moonlight requires Windows 10 or later." Condition="VersionNT &gt;= v10.0" />
-    <bal:Condition Message="This version of Moonlight requires a 64-bit version of Windows." Condition="NativeMachine &lt;&gt; 332" />
+    <bal:Condition Message="Bulan requires Windows 10 or later." Condition="VersionNT &gt;= v10.0" />
+    <bal:Condition Message="Bulan requires a 64-bit version of Windows." Condition="NativeMachine &lt;&gt; 332" />
 
     <Variable Name="InstallFolder" Type="formatted" Value="[ProgramFiles6432Folder]Moonlight Game Streaming" />
 

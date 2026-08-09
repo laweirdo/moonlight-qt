@@ -1,6 +1,6 @@
 [Desktop Entry]
 Name=Bulan
-Comment=Stream games from your PC, wherever you are
+Comment=Stream games from your PC, on a controller
 Exec=moonlight
 Icon=com.moonlight_stream.Moonlight
 Terminal=false
