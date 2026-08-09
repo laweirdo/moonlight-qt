@@ -239,6 +239,11 @@ ApplicationWindow {
         // new operation arrives rather than abandoning it part-way, which is
         // what keeps rapid B/A input from stranding a screen at an
         // in-between offset or a partial opacity.
+        //
+        // The two do not share a duration: the fade runs at
+        // motionTransitionFadeMs and finishes first, so the tail of the
+        // movement is pure travel at full opacity. See that token in Bulan.qml
+        // for why the fade is shortened rather than removed.
         pushEnter: Transition {
             NumberAnimation {
                 property: "y"
@@ -251,7 +256,7 @@ ApplicationWindow {
                 property: "opacity"
                 from: 0
                 to: 1
-                duration: Bulan.motionTransitionMs
+                duration: Bulan.motionTransitionFadeMs
                 easing.type: Easing.OutCubic
             }
         }
@@ -268,7 +273,7 @@ ApplicationWindow {
                 property: "opacity"
                 from: 1
                 to: 0
-                duration: Bulan.motionTransitionMs
+                duration: Bulan.motionTransitionFadeMs
                 easing.type: Easing.OutCubic
             }
         }
@@ -285,7 +290,7 @@ ApplicationWindow {
                 property: "opacity"
                 from: 0
                 to: 1
-                duration: Bulan.motionTransitionMs
+                duration: Bulan.motionTransitionFadeMs
                 easing.type: Easing.OutCubic
             }
         }
@@ -302,7 +307,7 @@ ApplicationWindow {
                 property: "opacity"
                 from: 1
                 to: 0
-                duration: Bulan.motionTransitionMs
+                duration: Bulan.motionTransitionFadeMs
                 easing.type: Easing.OutCubic
             }
         }

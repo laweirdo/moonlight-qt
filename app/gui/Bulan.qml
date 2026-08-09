@@ -186,6 +186,23 @@ QtObject {
     // screen rises or descends during a stack transition.
     readonly property int  motionTransitionRise: space3xl
 
+    // The opacity half of a stack transition, which finishes before the
+    // travel does. Client decision, 9 August 2026: with real transition blur
+    // now carrying the sense of movement, a fade running the full duration
+    // flattened the intended "surfacing" feel -- the screen spent its whole
+    // arrival semi-transparent, so what the eye read was a cross-dissolve
+    // with some drift rather than a surface rising into place.
+    //
+    // Ending the fade early means the last stretch of the movement is pure
+    // travel, at full opacity, which is the part that reads as surfacing. The
+    // fade is kept rather than removed because both screens are opaque and
+    // full-bleed: without it, the outgoing screen would stay solid the whole
+    // way off, showing two stacked backgrounds for the duration.
+    //
+    // Derived from motionTransitionMs rather than set independently, so the
+    // two can never drift apart.
+    readonly property int  motionTransitionFadeMs: motionTransitionMs / 2
+
     // Screen transition blur. Client override, 2 August 2026 review: the
     // opacity falloff alone was not enough, and real runtime blur is
     // accepted with the Deck performance cost to be measured after private
