@@ -189,8 +189,15 @@ meaningful proof that the environment is correct — not merely that a window ap
 
 | | |
 |---|---|
-| `origin` | `https://github.com/laweirdo/moonlight-qt.git` — your fork, where your work goes |
-| `upstream` | `https://github.com/moonlight-stream/moonlight-qt.git` — the official project, where updates come from |
+| `origin` | `https://github.com/laweirdo/moonlight-qt.git` — Bulan, where your work goes |
+| `upstream` | `https://github.com/moonlight-stream/moonlight-qt.git` — Moonlight, where updates come from |
+
+`master` is Bulan's default branch; cut task branches from it. Upstream is
+tracked through the `upstream` remote, not by keeping a Bulan branch pristine.
+
+**The repository is being renamed to `Bulan`.** Once that happens the URL above
+becomes `https://github.com/laweirdo/Bulan.git`. GitHub redirects the old URL,
+so an existing clone and remote keep working either way.
 
 ---
 

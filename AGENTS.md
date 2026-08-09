@@ -103,14 +103,21 @@ the rules, values, and runtime/review-copy split.
 **Minimum focus target.** Interactive focus targets are at least 64×64 px at the
 native 1280×800 Deck layout. Display-only elements are exempt.
 
+**Bulan is the project; Moonlight is its credited upstream.** Rename what a user
+reads. Never rename an identifier for branding — application and organization
+names, app IDs, upgrade codes, settings paths, the binary, upstream endpoints.
+They decide what an existing install recognises, so a rename strands user data
+and needs a migration and a client decision. Each is commented where defined.
+
 ## Branches, commits, and remotes
 
-- `master` is the fork's clean mirror of upstream; never commit Bulan work to it.
-  `bulan` is the integration branch and known-good baseline.
-- Work on a short, clearly named task branch cut from `bulan`. Merge only after
+- `master` is Bulan's primary integration and default branch. `bulan` is the
+  historical development branch, kept until the client retires it.
+- Work on a short, clearly named task branch cut from `master`. Merge only after
   the client signs off, then delete it locally and on the fork.
-- `origin` is the client's fork. Never push to upstream Moonlight. A remote named
-  `upstream` may not exist on every machine — inspect remotes before using one.
+- `origin` is the client's fork. Never push to upstream Moonlight. Upstream is
+  tracked through an `upstream` remote, never by keeping a Bulan branch
+  pristine; that remote may not exist on every machine — inspect first.
 - **Do not push any branch unless the client has authorized that push.**
 
 One logical, independently reviewable change per commit. Show the client each

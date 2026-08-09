@@ -489,6 +489,14 @@ required, the build fails without them:
 git clone --recurse-submodules https://github.com/laweirdo/moonlight-qt.git /home/deck/Documents/moonlight-qt
 ```
 
+The repository is being renamed to `Bulan`; afterwards the URL is
+`https://github.com/laweirdo/Bulan.git`. GitHub redirects the old one, so either
+works. The local folder name is left as `moonlight-qt` on purpose — the recipe
+and the paths throughout this document point at it.
+
+`master` is Bulan's default branch. The clone lands on it, which is the branch
+this recipe expects unless you deliberately check out another.
+
 **3. Get the recipe folder** (Flathub's published recipe, which you then modify
 with the four changes described above):
 

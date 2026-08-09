@@ -69,15 +69,22 @@ ACTIVE_TASK_SET = ["TASK-BRIEF.md"]
 # failure is ignored; a failure with no slack corrupts the document. The band
 # gives roughly one paragraph of room and then stops.
 #
-# AGENTS.md is allowed 2150 rather than the 2000 the other entry points get.
+# AGENTS.md is allowed 2300 rather than the 2000 the other entry points get.
 # Compressing it further meant cutting whole safety rules -- the push
 # authorization, the working-tree ownership handover, the validation-honesty
 # clause -- rather than words. The startup package as a whole still fits its
 # budget, which is the number that actually costs context every session.
+#
+# Raised from 2150 on 9 August 2026, when the identifier-rename rule was added:
+# renaming an application ID, settings path or upgrade code for branding strands
+# an existing install's data, and that is a data-loss rule, not prose. Raising
+# the budget by one rule's worth is the outcome the tolerance band exists to
+# allow; trimming a different safety rule to make room is the outcome it exists
+# to prevent.
 BUDGET_TOLERANCE = 1.05
 
 BUDGETS = {
-    "AGENTS.md": 2150,
+    "AGENTS.md": 2300,
     "CLAUDE.md": 1000,
     "HANDOFF.md": 1000,
     "TASK-BRIEF.md": 1500,

@@ -8,7 +8,12 @@ history_policy: replace-not-append
 
 # Bulan — roadmap
 
-**Current as of:** 8 August 2026 · **Owner:** Lao
+**Current as of:** 9 August 2026 · **Owner:** Lao
+
+**Milestone identity: Bulan — Alpha v0.0.1.** The release number Bulan reports
+is its own, `0.0.1`, not the inherited Moonlight `6.1.0`. `app/version.txt` is
+the single source; the upstream release the fork is built on is carried
+separately as provenance.
 
 **Current phase:** F — ship private v1. **Every phase is built.** What remains
 is not implementation: it is the target-device validation that cannot happen off
@@ -68,8 +73,9 @@ game through Flatpak.
   decision, 2 August 2026. Game artwork comes from the host PC.
 - Public-facing release preparation, a full brand rules sheet, and broader
   contributor guidance are later work.
-- The root README keeps its upstream content. A concise Bulan-fork notice is
-  documentation orientation, not marketing.
+- The root README presents Bulan — client decision, 9 August 2026, superseding
+  the earlier decision that it keep upstream's content. Moonlight is credited
+  as the upstream foundation, prominently, with the GPLv3 obligation stated.
 
 ## Phase F — remaining exit criteria
 
