@@ -486,13 +486,13 @@ flatpak remote-add --user --if-not-exists flathub https://dl.flathub.org/repo/fl
 required, the build fails without them:
 
 ```bash
-git clone --recurse-submodules https://github.com/laweirdo/moonlight-qt.git /home/deck/Documents/moonlight-qt
+git clone --recurse-submodules https://github.com/laweirdo/bulan-qt.git /home/deck/Documents/moonlight-qt
 ```
 
-The repository is being renamed to `Bulan`; afterwards the URL is
-`https://github.com/laweirdo/Bulan.git`. GitHub redirects the old one, so either
-works. The local folder name is left as `moonlight-qt` on purpose — the recipe
-and the paths throughout this document point at it.
+The local folder name stays `moonlight-qt` on purpose: the recipe and every path
+in this document point at it, and renaming the folder would mean rewriting all of
+them for nothing. GitHub still redirects the old `moonlight-qt` repository URL,
+so an existing checkout keeps working without being re-pointed.
 
 `master` is Bulan's default branch. The clone lands on it, which is the branch
 this recipe expects unless you deliberately check out another.

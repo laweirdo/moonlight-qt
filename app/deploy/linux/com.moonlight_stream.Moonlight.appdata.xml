@@ -24,10 +24,10 @@
 	     icon below stay on the upstream app-ID: they are the installed identity
 	     on machines that already have this, and renaming them needs a migration,
 	     not a branding pass. -->
-	<url type="homepage">https://github.com/laweirdo/Bulan</url>
-	<url type="bugtracker">https://github.com/laweirdo/Bulan/issues</url>
-	<url type="help">https://github.com/laweirdo/Bulan#readme</url>
-	<url type="vcs-browser">https://github.com/laweirdo/Bulan</url>
+	<url type="homepage">https://github.com/laweirdo/bulan-qt</url>
+	<url type="bugtracker">https://github.com/laweirdo/bulan-qt/issues</url>
+	<url type="help">https://github.com/laweirdo/bulan-qt#readme</url>
+	<url type="vcs-browser">https://github.com/laweirdo/bulan-qt</url>
 	<developer id="io.github.laweirdo">
 		<name>Bulan</name>
 	</developer>

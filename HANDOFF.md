@@ -4,7 +4,7 @@ authority: repository-state
 read_when:
   - session-start
 history_policy: replace-not-append
-last_verified_commit: 686cda70
+last_verified_commit: 467cdd3a
 ---
 
 # Bulan — current state
@@ -20,7 +20,7 @@ Replaced, never appended to. Past states are in Git history, past evidence in
 | Item | State |
 |---|---|
 | Branches | `master` and `bulan`, both at this session's tip. `master` is now the primary integration branch |
-| Remote | `origin` only. **Nothing is pushed** — client decision, 9 August 2026. `origin/master` is still the old upstream mirror; `origin/bulan` is behind |
+| Remote | `origin` only — `laweirdo/bulan-qt`, renamed from `moonlight-qt` on 9 August 2026. Both branches pushed |
 | Working tree | Clean |
 | Task branch | None. `fix-deck-osk` was merged and is gone |
 | Active task | **None.** No `TASK-BRIEF.md` exists |
@@ -67,9 +67,10 @@ None. `BUGS.md` is empty.
 
 ## Next action
 
-1. **Push, once the client says so.** `master` and `bulan` are both ready.
-2. **Rename the GitHub repository to `Bulan`**, with its description and default
-   branch — a client action in repository settings. Documentation and package
-   metadata already name the post-rename URL; GitHub redirects the old one.
-3. **A Deck session** to see the new entrances and the transition on hardware,
-   and an LCD unit for the remaining panel-appearance gap.
+1. **Set the default branch to `master`** in GitHub's settings, and give the
+   repository a Bulan description. Both are client actions; everything in the
+   tree already assumes `master` is the default.
+2. **A Deck session** to see the new entrances, the transition and the launch
+   handoff on hardware, and an LCD unit for the remaining panel-appearance gap.
+3. **The macOS bundle icon.** `app/moonlight.icns` is still upstream's; it needs
+   macOS tooling this session did not have.
