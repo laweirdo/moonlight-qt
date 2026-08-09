@@ -67,10 +67,10 @@ None. `BUGS.md` is empty.
 
 ## Next action
 
-1. **Set the default branch to `master`** in GitHub's settings, and give the
-   repository a Bulan description. Both are client actions; everything in the
-   tree already assumes `master` is the default.
-2. **A Deck session** to see the new entrances, the transition and the launch
+1. **A Deck session** to see the new entrances, the transition and the launch
    handoff on hardware, and an LCD unit for the remaining panel-appearance gap.
-3. **The macOS bundle icon.** `app/moonlight.icns` is still upstream's; it needs
+2. **The macOS bundle icon.** `app/moonlight.icns` is still upstream's; it needs
    macOS tooling this session did not have.
+3. **The repository description** on GitHub, a client action. The default branch
+   was already `master` and needs no change — it is what made the repository
+   present upstream Moonlight before `bulan` was merged into it.
