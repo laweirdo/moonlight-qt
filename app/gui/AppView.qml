@@ -45,6 +45,45 @@ FocusScope {
     id: root
     focus: true
 
+    // --- launch handoff fade ---
+    //
+    // Client decision, 9 August 2026: launching a game should look like the
+    // artwork travelling to the Connecting screen while everything else gets
+    // out of its way. The travel already existed -- LaunchTransition.qml flies
+    // a frozen copy of the tile from its place in the grid to where the
+    // Connecting screen draws its artwork -- but the grid underneath stayed
+    // fully opaque for the whole flight and was then replaced in a single
+    // frame, because the stack push is deliberately Immediate so it cannot add
+    // motion of its own. What that read as on screen was a cut, with the
+    // artwork's travel lost against a screen that had not changed.
+    //
+    // This is the other half: the grid, header, tabs and hint bar fade out on
+    // the same clock the artwork travels on. The flying proxy is NOT affected,
+    // because it is a sibling of the StackView in main.qml rather than a child
+    // of this screen -- which is what lets one opacity here mean "everything
+    // except the thing that is moving".
+    property real launchFade: 1
+    opacity: launchFade
+
+    NumberAnimation {
+        id: launchFadeOut
+        target: root
+        property: "launchFade"
+        to: 0
+        duration: Bulan.motionTransitionMs
+        easing.type: Easing.OutCubic
+    }
+
+    // Restores instantly rather than fading back in. Every path that calls this
+    // is one where the launch did not happen -- a rollback, or a return from a
+    // stream that is re-showing a screen the player is already looking at -- and
+    // fading a screen in after a failure reads as a second transition rather
+    // than as the failure it is.
+    function resetLaunchFade() {
+        launchFadeOut.stop()
+        root.launchFade = 1
+    }
+
     property int computerIndex
     property bool showHiddenGames
 
@@ -1571,6 +1610,9 @@ FocusScope {
         // Source hiding and proxy reveal are assigned in this same event-loop
         // pass, so the scene graph never receives a frame containing both.
         launchTransition.start()
+        // Same pass, same clock: the screen begins clearing as the artwork
+        // begins travelling, rather than one waiting on the other.
+        launchFadeOut.restart()
         root.releaseLaunchSourceMotion()
     }
 
@@ -1686,6 +1728,7 @@ FocusScope {
         if (reason) {
             console.error(reason)
         }
+        root.resetLaunchFade()
         root.invalidateLaunchCapture()
         if (root.pendingLaunch) {
             root.selectAppById(root.pendingLaunch.appId,
@@ -1712,6 +1755,7 @@ FocusScope {
     }
 
     function restoreAfterLaunch() {
+        root.resetLaunchFade()
         root.invalidateLaunchCapture()
         if (root.pendingLaunch) {
             // createSessionForApp() updates lastPlayed and may move this game
@@ -1938,6 +1982,12 @@ FocusScope {
             } else {
                 root.restoreAfterLaunch()
             }
+        } else {
+            // Backstop for the launch handoff fade. Every ordinary path already
+            // resets it, but this screen being back on top with the fade still
+            // applied means an invisible screen that still takes input, which is
+            // the worst failure this file can produce. Cheaper to be certain.
+            root.resetLaunchFade()
         }
 
         // Null in review mode -- see createModel().

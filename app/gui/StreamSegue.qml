@@ -348,6 +348,20 @@ FocusScope {
             anchors.topMargin: Bulan.spaceXl
             height: busyDots.height + Bulan.spaceXl + progressTitle.height
 
+            // The artwork arrives here already in place -- AppView flies a
+            // frozen copy of the tile to exactly this frame's geometry, off the
+            // same launchDestination tokens -- and the atmosphere behind is
+            // unchanged from the grid. This text and its dots are the only
+            // things that are genuinely new on the screen, so they are the only
+            // things that fade in. Matching the travel's own clock, so the
+            // handoff and this read as one movement rather than two.
+            opacity: 0
+            NumberAnimation on opacity {
+                to: 1
+                duration: Bulan.motionTransitionMs
+                easing.type: Easing.OutCubic
+            }
+
             Item {
                 id: busyDots
                 anchors.top: parent.top
