@@ -347,6 +347,10 @@ FocusScope {
                 stop()
                 root.reviewAppsOpened = true
                 root.selectIndex(i)
+                // Revealed as the library goes on top of it, not before: this
+                // screen is what B comes back to, and it must be already drawn
+                // and settled by the time that happens.
+                root.revealContent()
                 root.openAppView(i, tile.uuid, tile.hostName, false)
                 return
             }
@@ -354,6 +358,7 @@ FocusScope {
             // poll's own cadence.
             if (root.reviewAppsAttempts >= 80) {
                 stop()
+                root.revealContent()
                 console.warn("MOONLIGHT_OPEN_APPS_FOR_HOST: no reachable paired host named",
                              openAppsForHost, "after", root.reviewAppsAttempts, "tries")
             }
@@ -366,6 +371,55 @@ FocusScope {
     // The remembered last-used host the startup auto-open is waiting for, or
     // "" when there is nothing to return to. See StackView.onActivated.
     property string autoOpenUuid: ""
+
+    // --- startup reveal ---
+    //
+    // Client decision, 9 August 2026: launching straight into the last host's
+    // library must not flash the carousel on the way there. The auto-open below
+    // cannot fire until discovery reports that host online, which takes a
+    // second or three, and for that whole time this screen was fully drawn --
+    // tiles appearing one by one as hosts were found, then the library
+    // replacing the lot. What the player saw was a screen they did not ask for,
+    // doing something, then being taken away.
+    //
+    // So while an auto-open is pending, the screen draws its atmosphere and
+    // nothing else. It reveals itself when the auto-open fires (by which point
+    // the library is on top and this is underneath, where B expects it), when
+    // the grace period expires, or immediately when there is nothing to wait
+    // for.
+    property bool contentRevealed: false
+
+    Timer {
+        id: autoOpenGrace
+        interval: Bulan.carouselAutoOpenGraceMs
+        onTriggered: {
+            // Reveal AND cancel. Letting the auto-open still fire after the
+            // player has been shown a carousel they can use would pull the
+            // screen out from under them mid-press.
+            openAppsReviewTimer.stop()
+            root.autoOpenUuid = ""
+            root.revealContent()
+        }
+    }
+
+    function revealContent() {
+        autoOpenGrace.stop()
+        root.contentRevealed = true
+    }
+
+    // False until the carousel band has a real width. Tile x is derived from
+    // carousel.width, which is 0 on the frame the delegates are first bound, so
+    // every tile's first x is off to the left of the screen. Enabling the travel
+    // Behaviors before that resolves is what made hosts appear to slide in from
+    // the side at launch -- upstream motion nobody wrote, produced by animating
+    // a layout that had not happened yet.
+    property bool layoutSettled: false
+
+    Timer {
+        id: layoutSettleTimer
+        interval: 0
+        onTriggered: root.layoutSettled = true
+    }
 
     property int currentIndex: 0
 
@@ -420,7 +474,21 @@ FocusScope {
     Timer {
         id: zeroHostsEntranceDelay
         interval: Bulan.motionTransitionMs
-        onTriggered: zeroHostsEntranceAnimation.start()
+        // Held back while the screen is still hiding itself for a pending
+        // auto-open. Otherwise the entrance would play behind the curtain and
+        // the state would simply be there, already at rest, when the screen
+        // finally showed itself -- an entrance nobody saw.
+        onTriggered: {
+            if (root.contentRevealed) {
+                zeroHostsEntranceAnimation.start()
+            }
+        }
+    }
+
+    onContentRevealedChanged: {
+        if (contentRevealed && !hasHosts && zeroHostsEntranceProgress === 0) {
+            zeroHostsEntranceDelay.restart()
+        }
     }
     SequentialAnimation {
         id: zeroHostsEntranceAnimation
@@ -955,6 +1023,18 @@ FocusScope {
             openAppsReviewTimer.restart()
         }
 
+        // One decision for both waiting paths above: if either is pending, stay
+        // out of sight and let the grace timer bound the wait. Otherwise there
+        // is nothing to wait for -- no remembered host, or this is a return to
+        // the screen rather than a launch -- so show it straight away.
+        if (!root.contentRevealed) {
+            if (openAppsReviewTimer.running) {
+                autoOpenGrace.restart()
+            } else {
+                root.revealContent()
+            }
+        }
+
         if (root.useFakeHosts && !reviewWakeStarted &&
                 typeof fakeWakeOnStart !== "undefined" && fakeWakeOnStart) {
             reviewWakeStarted = true
@@ -1037,6 +1117,7 @@ FocusScope {
         // --- header ----------------------------------------------------------
         Image {
             id: wordmark
+        visible: root.contentRevealed
         anchors.left: parent.left
         anchors.leftMargin: Bulan.layoutScreenMarginX
         anchors.top: parent.top
@@ -1083,7 +1164,7 @@ FocusScope {
         height: width
         x: carousel.x + carousel.width / 2 - width / 2
         y: carousel.y + carousel.focusY - height / 2
-        visible: root.hasHosts
+        visible: root.hasHosts && root.contentRevealed
         opacity: root.hostOnline ? 1.0 : 0.3
 
         Behavior on opacity {
@@ -1122,11 +1203,21 @@ FocusScope {
         width: parent.width
         height: Bulan.hostTileSize * 1.6
 
+        // Arm the layout gate as soon as the band has a real width. interval 0
+        // fires on the next event-loop pass, which is after the delegates have
+        // re-evaluated their x against that width, so no tile ever animates its
+        // first placement.
+        onWidthChanged: {
+            if (width > 0 && !root.layoutSettled) {
+                layoutSettleTimer.restart()
+            }
+        }
+
         // Where the focused tile's centre sits inside the band. The band is taller
         // than the tile so the neighbours' name labels have somewhere to go.
         readonly property real focusY: Bulan.hostTileSize * 0.52
 
-        visible: root.hasHosts
+        visible: root.hasHosts && root.contentRevealed
 
         Repeater {
             id: hostRepeater
@@ -1250,35 +1341,35 @@ FocusScope {
                 // how it read. It is a judgement call and it is the client's to
                 // confirm on screen.
                 Behavior on x {
-                    enabled: hostTile.settled
+                    enabled: hostTile.settled && root.layoutSettled
                     NumberAnimation {
                         duration: Bulan.motionFocusMs
                         easing.type: Easing.InOutQuad
                     }
                 }
                 Behavior on y {
-                    enabled: hostTile.settled
+                    enabled: hostTile.settled && root.layoutSettled
                     NumberAnimation {
                         duration: Bulan.motionFocusMs
                         easing.type: Easing.InOutQuad
                     }
                 }
                 Behavior on tileScale {
-                    enabled: hostTile.settled
+                    enabled: hostTile.settled && root.layoutSettled
                     NumberAnimation {
                         duration: Bulan.motionFocusMs
                         easing.type: Easing.InOutQuad
                     }
                 }
                 Behavior on opacity {
-                    enabled: hostTile.settled
+                    enabled: hostTile.settled && root.layoutSettled
                     NumberAnimation {
                         duration: Bulan.motionFocusMs
                         easing.type: Easing.InOutQuad
                     }
                 }
                 Behavior on focusAmount {
-                    enabled: hostTile.settled
+                    enabled: hostTile.settled && root.layoutSettled
                     NumberAnimation {
                         duration: Bulan.motionFocusMs
                         easing.type: Easing.InOutQuad
@@ -1324,7 +1415,7 @@ FocusScope {
         spacing: Bulan.spaceLg
         width: Math.min(parent.width - Bulan.layoutScreenMarginX * 2,
                          Bulan.hostTileSize * 2.4)
-        visible: !root.hasHosts
+        visible: !root.hasHosts && root.contentRevealed
         opacity: Math.min(1, root.zeroHostsEntranceProgress)
 
         Image {
@@ -1450,7 +1541,8 @@ FocusScope {
     // own hints and the two bars would otherwise print on top of each other --
     // "A Select" over "A Connect", "B Close" over "Host Settings". AppView.qml
     // already guards its bar the same way; this screen was missed.
-    readonly property bool hintBarVisible: !hostSettingsMenu.visible
+    readonly property bool hintBarVisible: root.contentRevealed
+                                           && !hostSettingsMenu.visible
                                            && !messagePanel.visible
                                            && !pinPanel.visible
                                            && !addPcPanel.visible

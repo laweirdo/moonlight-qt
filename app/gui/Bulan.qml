@@ -484,6 +484,21 @@ QtObject {
     // deliberate beat rather than flash past unseen.
     readonly property int onboardingSplashHoldMs: 1200
 
+    // How long the carousel stays out of sight at launch while it waits for the
+    // remembered host to come online, before giving up and showing itself.
+    //
+    // Client decision, 9 August 2026: launching into the host list is wrong when
+    // there is a PC to go back to, and the carousel appearing for a moment and
+    // then being replaced by the library is worse than either. So the carousel
+    // holds its content back until the auto-open either fires or times out.
+    //
+    // A saved host loads OFFLINE and only reports itself reachable when the
+    // discovery poll answers, which the wake path measures at roughly three
+    // seconds. This is that, with room for one poll to be missed. Past it the
+    // player is waiting on a screen that has not said anything, which is worse
+    // than showing them the carousel they can actually use.
+    readonly property int carouselAutoOpenGraceMs: 5000
+
     // The crescent alone (bulan_logomark.svg), as it appears on S1 and S2.
     // Measured off S1's mockup at its 1707px reference width, normalized to
     // the 1280x800 layout every other measurement in this file targets.
