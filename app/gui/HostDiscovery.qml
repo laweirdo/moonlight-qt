@@ -125,6 +125,7 @@ FocusScope {
     Component.onCompleted: refreshHost()
 
     function moveBy(step) {
+        root.settleEntrance()
         var next = currentIndex + step
         if (next < 0 || next > hostRepeater.count - 1) {
             return
@@ -148,11 +149,13 @@ FocusScope {
     }
 
     function actAddress() {
+        root.settleEntrance()
         addressPanel.opened = true
     }
 
     // --- select ------------------------------------------------------------
     function actSelect() {
+        root.settleEntrance()
         if (root.host === null) {
             return
         }
@@ -221,6 +224,36 @@ FocusScope {
 
     readonly property bool bulanScreen: true
 
+    // --- post-transition entrance ---
+    //
+    // Mark, headline, the results list, then the address escape hatch. See
+    // EntranceMotion.qml.
+    //
+    // The list arrives as one unit rather than per row: rows appear whenever
+    // discovery finds them, so a per-row entrance would fire at arbitrary times
+    // long after the screen settled, and would replay every time a host dropped
+    // and came back. HostCarousel's zero-host state moves its Column as a single
+    // unit for the same reason.
+    property bool entranceStarted: false
+
+    Timer {
+        interval: Bulan.motionGridEntranceDelayMs
+        running: true
+        onTriggered: root.entranceStarted = true
+    }
+
+    EntranceMotion { id: markMotion;    order: 0; started: root.entranceStarted }
+    EntranceMotion { id: titleMotion;   order: 1; started: root.entranceStarted }
+    EntranceMotion { id: listMotion;    order: 2; started: root.entranceStarted }
+    EntranceMotion { id: addressMotion; order: 3; started: root.entranceStarted }
+
+    function settleEntrance() {
+        markMotion.settle()
+        titleMotion.settle()
+        listMotion.settle()
+        addressMotion.settle()
+    }
+
     onActiveFocusChanged: {
         if (!activeFocus && StackView.status === StackView.Active) {
             Qt.callLater(reclaimFocus)
@@ -259,6 +292,8 @@ FocusScope {
                 sourceSize.width: width * 2
                 sourceSize.height: width * 2
                 smooth: true
+                opacity: markMotion.fadeOpacity
+                transform: Translate { y: markMotion.riseOffset }
             }
 
             Text {
@@ -267,11 +302,15 @@ FocusScope {
                 color: Bulan.textPrimary
                 font.family: Bulan.familyDisplay
                 font.pixelSize: Bulan.sizeDisplay
+                opacity: titleMotion.fadeOpacity
+                transform: Translate { y: titleMotion.riseOffset }
             }
 
             Column {
                 width: parent.width
                 spacing: Bulan.spaceMd
+                opacity: listMotion.fadeOpacity
+                transform: Translate { y: listMotion.riseOffset }
 
                 Repeater {
                     id: hostRepeater
@@ -372,6 +411,8 @@ FocusScope {
                 color: Bulan.textSecondary
                 font.family: Bulan.familyUi
                 font.pixelSize: Bulan.sizeLabel
+                opacity: addressMotion.fadeOpacity
+                transform: Translate { y: addressMotion.riseOffset }
 
                 MouseArea {
                     anchors.fill: parent
@@ -396,6 +437,15 @@ FocusScope {
     ]
 
     // --- input -------------------------------------------------------------
+    // Any key ends the entrance early. Deliberately does not set
+    // event.accepted -- it only stops an animation, and swallowing the press
+    // would eat the navigation and actions below. moveBy() and the act*
+    // functions settle as well, because Qt delivers the specific key signals
+    // independently of this handler.
+    Keys.onPressed: function(event) {
+        root.settleEntrance()
+    }
+
     Keys.onUpPressed: moveBy(-1)
     Keys.onDownPressed: moveBy(1)
     // Inert, and swallowed -- HostCarousel's own reasoning: without accepting

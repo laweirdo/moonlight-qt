@@ -29,10 +29,12 @@ FocusScope {
     focus: true
 
     function actLook() {
+        root.settleEntrance()
         stackView.push("HostDiscovery.qml")
     }
 
     function actAddress() {
+        root.settleEntrance()
         addressPanel.opened = true
     }
 
@@ -43,6 +45,32 @@ FocusScope {
     }
 
     readonly property bool bulanScreen: true
+
+    // --- post-transition entrance ---
+    //
+    // Mark, headline, supporting line, button, then the address escape hatch:
+    // the order the player reads them in. See EntranceMotion.qml.
+    property bool entranceStarted: false
+
+    Timer {
+        interval: Bulan.motionGridEntranceDelayMs
+        running: true
+        onTriggered: root.entranceStarted = true
+    }
+
+    EntranceMotion { id: markMotion;    order: 0; started: root.entranceStarted }
+    EntranceMotion { id: titleMotion;   order: 1; started: root.entranceStarted }
+    EntranceMotion { id: bodyMotion;    order: 2; started: root.entranceStarted }
+    EntranceMotion { id: buttonMotion;  order: 3; started: root.entranceStarted }
+    EntranceMotion { id: addressMotion; order: 4; started: root.entranceStarted }
+
+    function settleEntrance() {
+        markMotion.settle()
+        titleMotion.settle()
+        bodyMotion.settle()
+        buttonMotion.settle()
+        addressMotion.settle()
+    }
 
     // Focus recovery, HostCarousel.qml's own pattern: the manual-address
     // panel is the only overlay this screen ever opens, and closing it must
@@ -84,6 +112,8 @@ FocusScope {
                 sourceSize.width: width * 2
                 sourceSize.height: width * 2
                 smooth: true
+                opacity: markMotion.fadeOpacity
+                transform: Translate { y: markMotion.riseOffset }
             }
 
             Text {
@@ -93,6 +123,8 @@ FocusScope {
                 font.family: Bulan.familyDisplay
                 font.pixelSize: Bulan.sizeDisplay
                 horizontalAlignment: Text.AlignHCenter
+                opacity: titleMotion.fadeOpacity
+                transform: Translate { y: titleMotion.riseOffset }
             }
 
             Text {
@@ -104,6 +136,8 @@ FocusScope {
                 color: Bulan.textSecondary
                 font.family: Bulan.familyUi
                 font.pixelSize: Bulan.sizeBody
+                opacity: bodyMotion.fadeOpacity
+                transform: Translate { y: bodyMotion.riseOffset }
             }
 
             // --- primary button ---------------------------------------------
@@ -126,6 +160,13 @@ FocusScope {
                     id: pressFlash
                     interval: Bulan.motionPressMs
                 }
+
+                // Entrance rise rides alongside the press scale rather than
+                // fighting it: `scale` and the transform list compose, so a
+                // press landing mid-entrance still squashes the button while it
+                // is still rising.
+                opacity: buttonMotion.fadeOpacity
+                transform: Translate { y: buttonMotion.riseOffset }
 
                 scale: lookButton.pressed ? Bulan.motionPressScale : 1.0
                 Behavior on scale {
@@ -183,6 +224,8 @@ FocusScope {
                 color: Bulan.textSecondary
                 font.family: Bulan.familyUi
                 font.pixelSize: Bulan.sizeLabel
+                opacity: addressMotion.fadeOpacity
+                transform: Translate { y: addressMotion.riseOffset }
 
                 MouseArea {
                     anchors.fill: parent
@@ -206,6 +249,15 @@ FocusScope {
         { action: "options", label: qsTr("Enter address") }
     ]
     readonly property var hintRightHints: []
+
+    // Any key ends the entrance early. Deliberately does not set
+    // event.accepted -- it only stops an animation, and swallowing the press
+    // would eat A, X, and the Escape main.qml pops on. The two act* functions
+    // settle as well, because Qt delivers the specific key signals below
+    // independently of this handler.
+    Keys.onPressed: function(event) {
+        root.settleEntrance()
+    }
 
     // A. Three keycodes for one button, matching HostCarousel.actConfirm()'s
     // own reasoning: Return and Enter are the same press on different

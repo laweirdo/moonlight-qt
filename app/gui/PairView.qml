@@ -61,6 +61,7 @@ FocusScope {
     }
 
     function retry() {
+        root.settleEntrance()
         if (root.computerModel === null) {
             return
         }
@@ -95,6 +96,34 @@ FocusScope {
 
     readonly property bool bulanScreen: true
 
+    // --- post-transition entrance ---
+    //
+    // Headline, then the instruction, then the PIN, then the waiting line: the
+    // order the player reads them in. See EntranceMotion.qml.
+    //
+    // Deliberately not restarted when pairState flips to "failed". That is a
+    // change of copy on a screen already on stage, not an arrival, and replaying
+    // the entrance would read as the screen being pushed a second time.
+    property bool entranceStarted: false
+
+    Timer {
+        interval: Bulan.motionGridEntranceDelayMs
+        running: true
+        onTriggered: root.entranceStarted = true
+    }
+
+    EntranceMotion { id: headlineMotion; order: 0; started: root.entranceStarted }
+    EntranceMotion { id: bodyMotion;     order: 1; started: root.entranceStarted }
+    EntranceMotion { id: pinMotion;      order: 2; started: root.entranceStarted }
+    EntranceMotion { id: waitingMotion;  order: 3; started: root.entranceStarted }
+
+    function settleEntrance() {
+        headlineMotion.settle()
+        bodyMotion.settle()
+        pinMotion.settle()
+        waitingMotion.settle()
+    }
+
     Item {
         anchors.fill: parent
 
@@ -114,6 +143,8 @@ FocusScope {
                 color: Bulan.textPrimary
                 font.family: Bulan.familyDisplay
                 font.pixelSize: Bulan.sizeDisplay
+                opacity: headlineMotion.fadeOpacity
+                transform: Translate { y: headlineMotion.riseOffset }
             }
 
             Text {
@@ -129,12 +160,16 @@ FocusScope {
                 color: Bulan.textSecondary
                 font.family: Bulan.familyUi
                 font.pixelSize: Bulan.sizeBody
+                opacity: bodyMotion.fadeOpacity
+                transform: Translate { y: bodyMotion.riseOffset }
             }
 
             Row {
                 anchors.horizontalCenter: parent.horizontalCenter
                 spacing: Bulan.spaceLg
                 visible: root.pairState !== "failed"
+                opacity: pinMotion.fadeOpacity
+                transform: Translate { y: pinMotion.riseOffset }
 
                 Repeater {
                     model: 4
@@ -164,6 +199,8 @@ FocusScope {
                 color: Bulan.textSecondary
                 font.family: Bulan.familyUi
                 font.pixelSize: Bulan.sizeBody
+                opacity: waitingMotion.fadeOpacity
+                transform: Translate { y: waitingMotion.riseOffset }
             }
         }
     }
@@ -175,6 +212,16 @@ FocusScope {
     readonly property var hintRightHints: [
         { action: "back", label: qsTr("Cancel") }
     ]
+
+    // Any key ends the entrance early -- the player acting is the entrance's
+    // whole purpose already served, so it stops rather than finishing under
+    // them. Deliberately does NOT set event.accepted: this handler only ends an
+    // animation, and swallowing the press would eat the retry below and the
+    // Escape that main.qml pops the stack on. retry() settles as well, because
+    // Qt delivers the specific key signals independently of this one.
+    Keys.onPressed: function(event) {
+        root.settleEntrance()
+    }
 
     Keys.onReturnPressed: if (root.pairState === "failed") root.retry()
     Keys.onEnterPressed: if (root.pairState === "failed") root.retry()
