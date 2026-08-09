@@ -20,8 +20,14 @@ Only the standard library is used, matching every other asset script in this
 directory. See gen-atmosphere-textures.py, which writes PNG the same way.
 
 Outputs:
-    app/moonlight.ico    -- Windows, embedded in the exe via RC_ICONS
+    app/moonlight.ico     -- Windows, embedded in the exe via RC_ICONS
     app/moonlight_wix.png -- the installer's logo
+    app/res/bulan_app_icon_<n>.png -- the runtime window icon, see main.cpp
+
+The runtime set is PNG rather than the .ico or the SVG master on purpose. Qt
+reads PNG with no image-format plugin deployed, where .ico needs qico present;
+and Qt's SVG renderer does not implement the master's inner-shadow filter, so
+pointing QIcon at the SVG would quietly drop it.
 """
 
 from __future__ import annotations
@@ -37,6 +43,12 @@ from pathlib import Path
 # and 256 for large Explorer views. The rest are the intermediate scales it
 # picks at fractional DPI; leaving them out makes it downscale 256 badly.
 ICO_SIZES = [16, 20, 24, 32, 40, 48, 64, 96, 128, 256]
+
+# The runtime window icon, handed to QIcon as several files so Qt picks the
+# right one per surface rather than downscaling one large image into a mush at
+# 16px. A subset of the above: the title bar, the taskbar, alt-tab, and the
+# large form Windows uses in task view.
+WINDOW_ICON_SIZES = [16, 24, 32, 48, 64, 128, 256]
 
 # Above this, ICO entries carry a PNG rather than a DIB. Windows Vista and
 # later read both; the PNG form exists because a 256x256 BGRA bitmap plus its
@@ -181,6 +193,16 @@ def main() -> int:
     wix_path = root / "app" / "moonlight_wix.png"
     wix_path.write_bytes(write_png(images[64], 64))
     print(f"wrote {wix_path.relative_to(root)} ({wix_path.stat().st_size} bytes)")
+
+    # The runtime window icon: what the title bar and the taskbar show while the
+    # app is running. That is a separate thing from the icon embedded in the
+    # exe -- Qt's setWindowIcon overrides the exe's icon once the window is up,
+    # so shipping only the .ico leaves the running app wearing whatever
+    # setWindowIcon was pointed at.
+    for size in WINDOW_ICON_SIZES:
+        path = root / "app" / "res" / f"bulan_app_icon_{size}.png"
+        path.write_bytes(write_png(images[size], size))
+        print(f"wrote {path.relative_to(root)} ({path.stat().st_size} bytes)")
 
     return 0
 

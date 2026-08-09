@@ -78,6 +78,13 @@
         <file>res/arrow_left.svg</file>
         <file>res/question_mark.svg</file>
         <file>res/moonlight.svg</file>
+        <file>res/bulan_app_icon_16.png</file>
+        <file>res/bulan_app_icon_24.png</file>
+        <file>res/bulan_app_icon_32.png</file>
+        <file>res/bulan_app_icon_48.png</file>
+        <file>res/bulan_app_icon_64.png</file>
+        <file>res/bulan_app_icon_128.png</file>
+        <file>res/bulan_app_icon_256.png</file>
         <file>res/update.svg</file>
         <file>res/baseline-help_outline-24px.svg</file>
         <file>res/baseline-error_outline-24px.svg</file>

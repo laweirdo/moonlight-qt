@@ -961,7 +961,26 @@ int main(int argc, char *argv[])
 #ifndef Q_OS_DARWIN
     // Set the window icon except on macOS where we want to keep the
     // modified macOS 11 style rounded corner icon.
-    app.setWindowIcon(QIcon(":/res/moonlight.svg"));
+    //
+    // This is what the title bar and the taskbar show while Bulan is running,
+    // and it OVERRIDES the icon embedded in the executable -- so replacing only
+    // moonlight.ico left the running app still wearing upstream's mark, which
+    // is exactly what happened.
+    //
+    // Built from several PNGs rather than one image or the SVG master. Qt picks
+    // the nearest size per surface instead of squashing 256 down to 16, it
+    // reads PNG without an image-format plugin being deployed where .ico needs
+    // qico present, and its SVG renderer does not implement the master's
+    // inner-shadow filter -- pointing QIcon at the SVG would quietly drop it.
+    // scripts/gen-app-icon.py writes this set.
+    {
+        QIcon bulanIcon;
+        for (int size : { 16, 24, 32, 48, 64, 128, 256 }) {
+            bulanIcon.addFile(QString(":/res/bulan_app_icon_%1.png").arg(size),
+                              QSize(size, size));
+        }
+        app.setWindowIcon(bulanIcon);
+    }
 #endif
 
     // This is necessary to show our icon correctly on Wayland

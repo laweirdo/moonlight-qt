@@ -540,8 +540,10 @@ unix:!macx: {
     # "moonlight". That is the freedesktop convention the desktop entry's
     # Icon= key now points at, and it is what Flatpak expects to find, so the
     # non-Steam library entry shows the Bulan icon instead of an upstream icon
-    # or a blank placeholder. res/moonlight.svg is left in the tree: it is the
-    # upstream mark and nothing in the app draws it.
+    # or a blank placeholder. res/moonlight.svg is left in the tree as upstream
+    # supplied it; main.cpp used to hand it to setWindowIcon, which is what kept
+    # the running app wearing upstream's mark long after this file was pointed
+    # at Bulan's, and it now loads res/bulan_app_icon_*.png instead.
     #
     # Content is a copy of res/bulan_app_icon.svg, the icon master. The
     # FILENAME stays on the upstream application ID because that is installed
