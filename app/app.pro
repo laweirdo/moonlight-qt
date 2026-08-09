@@ -539,9 +539,14 @@ unix:!macx: {
     # The Bulan app icon, installed under the application ID rather than as
     # "moonlight". That is the freedesktop convention the desktop entry's
     # Icon= key now points at, and it is what Flatpak expects to find, so the
-    # non-Steam library entry shows the Bulan mark instead of an upstream icon
+    # non-Steam library entry shows the Bulan icon instead of an upstream icon
     # or a blank placeholder. res/moonlight.svg is left in the tree: it is the
     # upstream mark and nothing in the app draws it.
+    #
+    # Content is a copy of res/bulan_app_icon.svg, the icon master. The
+    # FILENAME stays on the upstream application ID because that is installed
+    # identity, matching the AppStream id and the desktop entry's Icon= key --
+    # see AGENTS.md on renaming identifiers.
     icons.files = deploy/linux/com.moonlight_stream.Moonlight.svg
     icons.path = $$PREFIX/$$DATADIR/icons/hicolor/scalable/apps/
 

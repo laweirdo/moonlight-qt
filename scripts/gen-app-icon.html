@@ -1,0 +1,84 @@
+<!doctype html>
+<meta charset="utf-8">
+<title>Bulan icon rasteriser</title>
+
+<!--
+  Half of the app-icon pipeline. See scripts/gen-app-icon.py for the other half
+  and for why this step is a browser rather than Python: the icon master's
+  inner-shadow filter uses SVG features Qt's own renderer does not implement, so
+  the only renderers that draw it correctly are real browsers.
+
+  To regenerate the icon, from the repository root:
+
+      python -m http.server 8000
+      # open http://127.0.0.1:8000/scripts/gen-app-icon.html
+      # it downloads icon-pixels.json
+      python scripts/gen-app-icon.py <path-to-icon-pixels.json>
+
+  It must be served over http rather than opened as a file:// URL, because
+  reading the SVG uses fetch and drawing it to a canvas taints the canvas under
+  the file:// origin rules.
+-->
+
+<style>
+  body { font: 14px system-ui, sans-serif; margin: 2rem; }
+  #out { white-space: pre-wrap; }
+</style>
+
+<h1>Bulan icon rasteriser</h1>
+<p id="out">working…</p>
+<p><a id="dl" hidden download="icon-pixels.json">download icon-pixels.json</a></p>
+
+<script>
+// The sizes Windows actually asks for: 16 in the title bar, 32 in the taskbar
+// and alt-tab, 256 for large Explorer views, and the rest for the intermediate
+// scales it picks at fractional DPI. gen-app-icon.py requires all of them.
+const SIZES = [16, 20, 24, 32, 40, 48, 64, 96, 128, 256];
+const MASTER = '../app/res/bulan_app_icon.svg';
+
+function render(svgText, size) {
+  return new Promise((resolve, reject) => {
+    const img = new Image();
+    img.onload = () => {
+      const canvas = document.createElement('canvas');
+      canvas.width = size;
+      canvas.height = size;
+      const ctx = canvas.getContext('2d');
+      ctx.clearRect(0, 0, size, size);
+      ctx.drawImage(img, 0, 0, size, size);
+      const data = ctx.getImageData(0, 0, size, size).data;
+      // Chunked, because String.fromCharCode over a megabyte of argument list
+      // overflows the call stack.
+      let binary = '';
+      const CHUNK = 8192;
+      for (let i = 0; i < data.length; i += CHUNK) {
+        binary += String.fromCharCode.apply(null, data.subarray(i, i + CHUNK));
+      }
+      resolve({ size: size, rgba: btoa(binary) });
+    };
+    img.onerror = () => reject(new Error('could not render at ' + size));
+    img.src = 'data:image/svg+xml;base64,' +
+      btoa(unescape(encodeURIComponent(svgText)));
+  });
+}
+
+(async () => {
+  const out = document.getElementById('out');
+  try {
+    const svg = await (await fetch(MASTER)).text();
+    const results = [];
+    for (const size of SIZES) {
+      results.push(await render(svg, size));
+      out.textContent = 'rendered ' + size + '…';
+    }
+    const blob = new Blob([JSON.stringify(results)], { type: 'application/json' });
+    const link = document.getElementById('dl');
+    link.href = URL.createObjectURL(blob);
+    link.hidden = false;
+    out.textContent = 'Rendered ' + results.map(r => r.size).join(', ') +
+      '. Download below, then run scripts/gen-app-icon.py on it.';
+  } catch (error) {
+    out.textContent = 'FAILED: ' + error.message;
+  }
+})();
+</script>

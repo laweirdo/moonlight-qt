@@ -31,3 +31,7 @@ app/Info.generated.plist
 # Regenerated on every build by scripts/gen-buildstamp.sh. Same in-source
 # caveat: it lands beside main.cpp rather than in a shadow dir.
 app/buildstamp.h
+
+# Python bytecode from the scripts in scripts/
+__pycache__/
+*.pyc
