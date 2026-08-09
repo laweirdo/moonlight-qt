@@ -639,12 +639,15 @@ DEFINES += MOONLIGHT_BASE_VERSION_STR=\\\"6.1.0\\\"
 # targets -- macOS and the Deck -- are both unix. main.cpp falls back to a plain
 # "unknown" wherever the define is absent, so nothing breaks elsewhere.
 unix {
-    # Relative, deliberately. qmake's own header scan records main.cpp's
-    # dependency on this file by its bare name, and make matches rules by target
-    # string rather than by resolved path -- an absolute target here produces
-    # "no rule to make target buildstamp.h" even though the rule is right there.
-    # make runs in the build directory in both in-source and shadow builds, so
-    # the bare name resolves correctly either way.
+    # Relative, deliberately. make matches rules by target string rather than by
+    # resolved path, and make runs in the build directory in both in-source and
+    # shadow builds, so the bare name resolves correctly either way.
+    #
+    # This only holds because main.cpp includes the header with angle brackets.
+    # A quoted include makes qmake resolve it against main.cpp's own directory
+    # and record a dependency on <source>/app/buildstamp.h, which no rule ever
+    # produces -- fine in an in-source build, fatal in a shadow build. See the
+    # comment at that include.
     BUILDSTAMP_H = buildstamp.h
 
     buildstamp.target = $$BUILDSTAMP_H

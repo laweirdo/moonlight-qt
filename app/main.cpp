@@ -35,7 +35,16 @@
 // better than no line at all, because a missing line reads as an old build
 // rather than as an unstamped one.
 #ifdef HAVE_BUILD_STAMP
-#include "buildstamp.h"
+// Angle brackets, not quotes. The header is generated into the BUILD directory,
+// and a quoted include makes qmake's dependency scanner resolve it against this
+// file's own directory instead -- so main.o ends up depending on
+// <source>/app/buildstamp.h, a path nothing ever creates a rule for. That is
+// invisible in an in-source build, where the two directories are the same, and
+// breaks every shadow build: it is what stopped the AppImage, Steam Link and
+// macOS CI jobs dead while Windows stayed green, since the generator is unix
+// only. Angle brackets resolve through INCLUDEPATH, which app.pro points at the
+// build directory.
+#include <buildstamp.h>
 #endif
 #ifndef BUILD_STAMP_STR
 #define BUILD_STAMP_STR "unknown"
