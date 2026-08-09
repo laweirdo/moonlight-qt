@@ -355,8 +355,10 @@ FocusScope {
             // things that are genuinely new on the screen, so they are the only
             // things that fade in. Matching the travel's own clock, so the
             // handoff and this read as one movement rather than two.
-            opacity: 0
+            // `from` rather than a separate `opacity: 0`, which would be a
+            // binding competing with this value source for the same property.
             NumberAnimation on opacity {
+                from: 0
                 to: 1
                 duration: Bulan.motionTransitionMs
                 easing.type: Easing.OutCubic
