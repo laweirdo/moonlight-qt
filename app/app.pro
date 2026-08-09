@@ -639,13 +639,24 @@ DEFINES += MOONLIGHT_BASE_VERSION_STR=\\\"6.1.0\\\"
 # targets -- macOS and the Deck -- are both unix. main.cpp falls back to a plain
 # "unknown" wherever the define is absent, so nothing breaks elsewhere.
 unix {
-    # Relative, deliberately. qmake's own header scan records main.cpp's
-    # dependency on this file by its bare name, and make matches rules by target
-    # string rather than by resolved path -- an absolute target here produces
-    # "no rule to make target buildstamp.h" even though the rule is right there.
-    # make runs in the build directory in both in-source and shadow builds, so
-    # the bare name resolves correctly either way.
-    BUILDSTAMP_H = buildstamp.h
+    # Generated into the SOURCE directory, at an absolute path, because that is
+    # the exact path make asks for.
+    #
+    # qmake scans main.cpp, finds the include, and resolves it through DEPENDPATH
+    # -- which starts at the .pro file's own directory -- so main.o's dependency
+    # is recorded as <source>/app/buildstamp.h no matter how the include is
+    # written. make matches rules by target string, so the rule has to carry that
+    # same string or the build stops with "No rule to make target".
+    #
+    # A bare relative target resolves to the BUILD directory, which is the same
+    # place only for an in-source build. That is why this worked on a dev machine
+    # and broke every shadow build, and with it the AppImage, Steam Link and
+    # macOS CI jobs, while Windows stayed green because the generator is unix
+    # only.
+    #
+    # The header is gitignored. Writing one generated file into the source tree
+    # is the price of the dependency being recorded against it.
+    BUILDSTAMP_H = $$PWD/buildstamp.h
 
     buildstamp.target = $$BUILDSTAMP_H
     buildstamp.depends = FORCE

@@ -28,15 +28,44 @@ jobs:
           wget -qO - https://packages.lunarg.com/lunarg-signing-key-pub.asc | sudo apt-key add -
           sudo wget -qO /etc/apt/sources.list.d/lunarg-vulkan-1.4.313-jammy.list https://packages.lunarg.com/vulkan/1.4.313/lunarg-vulkan-1.4.313-jammy.list
           sudo apt update
-          sudo apt install -y qt6-base-dev qt6-declarative-dev libqt6svg6-dev qml6-module-qtquick-controls qml6-module-qtquick-templates qml6-module-qtquick-layouts \
-            qml6-module-qtqml-workerscript qml6-module-qtquick-window qml6-module-qtquick python3-pip nasm libgbm-dev libdrm-dev libfreetype-dev libasound2-dev \
+          # libxcb-cursor0 is required by Qt's xcb platform plugin from 6.5
+          # onwards. Qt 6.2, which this job used to install from apt, did not
+          # need it, so it was never in this list; linuxdeploy's qt plugin now
+          # fails to resolve it when bundling.
+          sudo apt install -y libxcb-cursor0 python3-pip nasm libgbm-dev libdrm-dev libfreetype-dev libasound2-dev \
             libdbus-1-dev libegl1-mesa-dev libgl1-mesa-dev libgles2-mesa-dev libglu1-mesa-dev libibus-1.0-dev libpulse-dev libudev-dev libx11-dev libxcursor-dev \
             libxext-dev libxi-dev libxinerama-dev libxkbcommon-dev libxrandr-dev libxss-dev libxt-dev libxv-dev libxxf86vm-dev libxcb-dri3-dev libx11-xcb-dev \
             libxfixes-dev libxtst-dev wayland-protocols libopus-dev libvdpau-dev libgl-dev libpipewire-0.3-dev liburing-dev vulkan-sdk cmake
-          sudo pip3 install meson
+          sudo pip3 install meson aqtinstall
           mkdir -p dep_root/{bin,include,lib}
           echo "DEP_ROOT=$PWD/dep_root" >> "${GITHUB_ENV}"
           echo "$PWD/dep_root/bin" >> "${GITHUB_PATH}"
+
+      # Qt comes from aqtinstall, not from apt.
+      #
+      # Bulan's interface uses MultiEffect from QtQuick.Effects, which arrived in
+      # Qt 6.5. Every Ubuntu LTS ships older than that -- 22.04 has 6.2, 24.04
+      # has 6.4 -- so the apt packages this job used to install cannot build the
+      # app at all, and an AppImage produced against them would fail to load
+      # most screens even if it linked. The Windows and macOS jobs already pull
+      # a pinned Qt rather than a distro one; this now matches them.
+      #
+      # Pinned to the version BUILDING-WINDOWS.md and the Deck Flatpak build
+      # against, so all three platforms ship the same Qt.
+      - name: Install Qt
+        env:
+          QT_VERSION: 6.9.3
+        run: |
+          # No -m: qtdeclarative (which carries QtQuick.Effects since 6.5),
+          # qtsvg and qtshadertools are all in the desktop base package.
+          aqt install-qt linux desktop $QT_VERSION linux_gcc_64 -O "$PWD/Qt" || exit 1
+          QT_BIN="$PWD/Qt/$QT_VERSION/gcc_64/bin"
+          test -x "$QT_BIN/qmake" || { echo "qmake missing from $QT_BIN"; exit 1; }
+          # scripts/build-appimage.sh and linuxdeploy-plugin-qt both look for
+          # qmake6; the aqt package only provides qmake.
+          ln -s "$QT_BIN/qmake" "$PWD/dep_root/bin/qmake6"
+          echo "$QT_BIN" >> "${GITHUB_PATH}"
+          echo "QMAKE=$PWD/dep_root/bin/qmake6" >> "${GITHUB_ENV}"
 
       - name: Checkout SDL3
         uses: actions/checkout@v5
@@ -160,7 +189,12 @@ jobs:
       - name: Upload Binaries
         uses: actions/upload-artifact@v6
         with:
-          name: Moonlight-LinuxAppImage-${{ env.CI_VERSION }}
-          path: build/installer-release/Moonlight-${{ env.CI_VERSION }}-x86_64.AppImage
+          name: Bulan-LinuxAppImage-${{ env.CI_VERSION }}
+          # Globbed rather than named. linuxdeploy takes the AppImage's filename
+          # from the desktop entry's Name, which is Bulan, so the hardcoded
+          # Moonlight-*.AppImage path stopped matching the moment this fork
+          # renamed that entry -- the build succeeded and the upload then found
+          # nothing. A glob cannot drift out of step with the desktop file again.
+          path: build/installer-release/*.AppImage
           compression-level: 0
           if-no-files-found: error

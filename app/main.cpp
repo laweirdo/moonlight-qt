@@ -35,6 +35,8 @@
 // better than no line at all, because a missing line reads as an old build
 // rather than as an unstamped one.
 #ifdef HAVE_BUILD_STAMP
+// Generated next to this file, not into the build directory -- see the build
+// stamp block in app.pro for why the path has to be the source one.
 #include "buildstamp.h"
 #endif
 #ifndef BUILD_STAMP_STR
