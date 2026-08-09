@@ -184,15 +184,16 @@ jobs:
           if scripts/build-appimage.sh 2>&1 | tee /tmp/build.log; then
             exit 0
           fi
-          # Surface the failure as annotations. Job logs need an authenticated
-          # token to read, but annotations are on the public REST API, so this
-          # is what makes a red build diagnosable from outside.
+          # Surface the failure as ONE annotation. Job logs need an
+          # authenticated token to read, but annotations are on the public REST
+          # API, so this is what makes a red build diagnosable from outside.
+          # It has to be a single annotation with encoded newlines rather than
+          # one per line, because GitHub keeps only the first 10 per job.
           # ponytail: diagnostic scaffolding, delete once this job is green.
-          echo "--- error lines ---"
-          grep -inE 'error|fatal|No such file|undefined reference|cannot find' /tmp/build.log \
-            | tail -n 25 | while IFS= read -r line; do echo "::error::$line"; done
-          echo "--- last lines ---"
-          tail -n 25 /tmp/build.log | while IFS= read -r line; do echo "::error::TAIL $line"; done
+          MSG=$(tail -n 300 /tmp/build.log \
+                | sed -e 's/%/%25/g' -e 's/\r//g' \
+                | awk '{ printf "%s%%0A", $0 }')
+          echo "::error::$MSG"
           exit 1
 
       - name: Upload Binaries
