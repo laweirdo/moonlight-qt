@@ -190,10 +190,13 @@ jobs:
           # It has to be a single annotation with encoded newlines rather than
           # one per line, because GitHub keeps only the first 10 per job.
           # ponytail: diagnostic scaffolding, delete once this job is green.
-          MSG=$(tail -n 300 /tmp/build.log \
-                | sed -e 's/%/%25/g' -e 's/\r//g' \
-                | awk '{ printf "%s%%0A", $0 }')
-          echo "::error::$MSG"
+          enc() { sed -e 's/%/%25/g' -e 's/\r//g' | awk '{ printf "%s%%0A", $0 }'; }
+          echo "::error::TAIL40 %0A$(tail -n 40 /tmp/build.log | enc)"
+          echo "::error::HITS %0A$(grep -inE 'error|Error [0-9]|Killed|out of memory|virtual memory exhausted|internal compiler|undefined reference|No rule|No such file' /tmp/build.log | tail -n 20 | enc)"
+          # LTO linking this project on a 7GB runner is a plausible way to die
+          # with no compiler diagnostic at all, so rule the OOM killer in or out
+          # rather than inferring it from silence.
+          echo "::error::OOM %0A$(sudo dmesg -T 2>/dev/null | grep -iE 'killed process|out of memory' | tail -n 5 | enc)"
           exit 1
 
       - name: Upload Binaries
