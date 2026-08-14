@@ -478,6 +478,16 @@ QtObject {
     readonly property int shellStartupMaxMs: 600
     readonly property int shellWordmarkHeight: 168
 
+    // --- Core home ----------------------------------------------------------
+    // Accepted desktop composition, normalized to the 1280x800 reference.
+    // The largest card owns reserved bounds, so focus never clips its title or
+    // pushes the shelf toward the bottom action bar.
+    readonly property int homeShelfTileWidth: 184
+    readonly property int homeShelfTileHeight: 230
+    readonly property int homeShelfFocusWidth: 244
+    readonly property int homeShelfFocusHeight: 304
+    readonly property int homeShelfSpread: 218
+
     // --- First-run onboarding (private v1 finalisation, stage 3) -------------
     // S0-S3 introduce no new colours or type -- the mockups reuse the palette
     // and faces already declared above -- so this section is geometry and

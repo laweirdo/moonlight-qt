@@ -1,0 +1,2 @@
+module Bulan
+singleton Bulan 1.0 ../../../../app/gui/Bulan.qml

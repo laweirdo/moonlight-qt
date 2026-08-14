@@ -77,6 +77,17 @@ QUrl BoxArtManager::loadBoxArt(NvComputer* computer, NvApp& app)
         return QUrl::fromLocalFile(cacheFile.fileName());
     }
 
+    // An offline library is still useful, but it cannot satisfy an artwork
+    // request. Keep cached files above and avoid filling the worker pool with
+    // guaranteed failures for missing covers. AppModel invalidates this role
+    // when the host comes online so the normal fetch path is retried then.
+    {
+        QReadLocker lock(&computer->lock);
+        if (computer->state != NvComputer::CS_ONLINE) {
+            return QUrl("qrc:/res/no_app_image.png");
+        }
+    }
+
     // If we get here, we need to fetch asynchronously.
     // Kick off a worker on our thread pool to do just that.
     NetworkBoxArtLoadTask* netLoadTask = new NetworkBoxArtLoadTask(this, computer, app);

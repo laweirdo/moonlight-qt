@@ -16,6 +16,7 @@ void AppModel::initialize(ComputerManager* computerManager, int computerIndex, b
     Q_ASSERT(computerIndex < m_ComputerManager->getComputers().count());
     m_Computer = m_ComputerManager->getComputers().at(computerIndex);
     m_CurrentGameId = m_Computer->currentGameId;
+    m_ComputerState = m_Computer->state;
     m_ShowHiddenGames = showHiddenGames;
 
     updateAppList(m_Computer->appList);
@@ -282,6 +283,10 @@ void AppModel::handleComputerStateChanged(NvComputer* computer)
         return;
     }
 
+    bool becameOnline = m_ComputerState != NvComputer::CS_ONLINE
+            && m_Computer->state == NvComputer::CS_ONLINE;
+    m_ComputerState = m_Computer->state;
+
     // If the computer has gone offline or we've been unpaired,
     // signal the UI so we can go back to the PC view.
     if (m_Computer->state == NvComputer::CS_OFFLINE ||
@@ -295,6 +300,12 @@ void AppModel::handleComputerStateChanged(NvComputer* computer)
     // we can't check that first.
     if (computer->appList != m_AllApps) {
         updateAppList(computer->appList);
+    }
+
+    if (becameOnline && !m_VisibleApps.isEmpty()) {
+        emit dataChanged(createIndex(0, 0),
+                         createIndex(m_VisibleApps.count() - 1, 0),
+                         QVector<int>() << BoxArtRole);
     }
 
     // Finally, process changes to the active app

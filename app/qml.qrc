@@ -22,6 +22,8 @@
         <file>gui/Bulan.qml</file>
         <file>gui/BulanShell.qml</file>
         <file>gui/BulanStartup.qml</file>
+        <file>gui/BulanHome.qml</file>
+        <file>gui/BulanGameTile.qml</file>
         <file>gui/Atmosphere.qml</file>
         <file>gui/BulanQuitConfirmation.qml</file>
         <file>gui/ControllerGlyph.qml</file>

@@ -71,5 +71,6 @@ private:
     ComputerManager* m_ComputerManager;
     QVector<NvApp> m_VisibleApps, m_AllApps;
     int m_CurrentGameId;
+    NvComputer::ComputerState m_ComputerState;
     bool m_ShowHiddenGames;
 };
