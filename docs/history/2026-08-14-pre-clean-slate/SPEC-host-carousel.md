@@ -1,10 +1,8 @@
 # Host carousel — as built
 
-This is the durable authority for the accepted host-carousel surface: component
-inventory, navigation, state model, design decisions, compromises, known
-unfinished work, and validation evidence. Application source is the objective
-authority for what currently runs. Live branch, task, and build state belong in
-`HANDOFF.md` and `TASK-BRIEF.md`.
+**Superseded 14 August 2026 by the clean-slate core-shell direction.** This file
+is preserved only as evidence of the retired host-carousel implementation; it
+does not govern current work.
 
 Decision labels in this file have specific weight:
 

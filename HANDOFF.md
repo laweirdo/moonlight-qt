@@ -4,78 +4,41 @@ authority: repository-state
 read_when:
   - session-start
 history_policy: replace-not-append
-last_verified_commit: 467cdd3a
+last_verified_commit: phase-1-authority-reset
 ---
 
 # Bulan — current state
 
-**Verified 9 August 2026.** Inspect Git before relying on this — it is a
-snapshot, not an authority on what Git says.
-
-Replaced, never appended to. Past states are in Git history, past evidence in
-`docs/validation/`.
+**Verified 14 August 2026.** Inspect Git before relying on this snapshot.
 
 ## Repository
 
 | Item | State |
 |---|---|
-| Branches | `master` and `bulan`, both at this session's tip. `master` is now the primary integration branch |
-| Remote | `origin` only — `laweirdo/bulan-qt`, renamed from `moonlight-qt` on 9 August 2026. Both branches pushed |
-| Working tree | Clean |
-| Task branch | None. `fix-deck-osk` was merged and is gone |
-| Active task | **None.** No `TASK-BRIEF.md` exists |
+| Branch | `codex/rework-core-shell`, cut from clean `master` at `177a58bd` |
+| Remote | `origin` only — `laweirdo/bulan-qt`; no push authorized |
+| Working tree | Stage 1 is recorded by the commit containing this snapshot |
+| Active task | `TASK-BRIEF.md` — core shell vertical slice |
 
-**The branch model changed.** `master` was a pristine upstream mirror; it is now
-Bulan's default branch, fast-forwarded to `bulan`, no history rewritten. `bulan`
-is kept until the client retires it. `AGENTS.md` owns the rule.
+## Current stage
 
-## Where the product is
+Stage 1, repository-authority reset, was approved on 14 August 2026:
 
-**Alpha v0.0.1.** The version the app reports is its own `0.0.1`, not the
-inherited Moonlight `6.1.0`. `ROADMAP.md` owns scope and phase.
+- The retired game-grid and host-carousel specifications and the previous full
+  creative brief are preserved under
+  `docs/history/2026-08-14-pre-clean-slate/`.
+- `FLOW.md`, `DESIGN-SYSTEM.md`, `ROADMAP.md` and
+  `bulan-creative-brief.md` now describe the accepted clean-slate direction.
+- References to the archived specifications were reconciled across the
+  Markdown tree.
+- No application source has changed yet.
 
-9 August 2026: entrances on `FirstRun`, `HostDiscovery` and `PairView` via a
-shared `EntranceMotion.qml`; a shorter transition fade so travel leads; the
-version identity; Bulan branding on display-only surfaces; a Bulan README. Then,
-from a client review: Bulan's own app icon, built from
-`app/res/bulan_app_icon.svg` by `scripts/gen-app-icon.*`; the carousel no longer
-showing or sliding at startup, so launch goes straight to the last host's
-library; and the library fading out as the artwork flies to the Connecting
-screen.
+## Validation
 
-## Validation status
-
-**Passed, on the Windows review station:** Qt 6.9.3 / MSVC Release build;
-`qmllint` on every changed QML file; the version flag, Win32 resource, window
-title, About and embedded icon checked against the built binary; startup going
-straight to the last host's library; the launch route reaching the Connecting
-screen; `python scripts/context-audit.py`.
-
-**Passed, in CI:** all five jobs, for the first time on this fork. The three
-unix ones had all been failing on one defect — a build-stamp header generated
-where a shadow build never looks for it. The AppImage artifact is how to get
-Bulan onto a Deck without building it; `BUILDING-DECK.md` says where.
-
-**Not established.** No Deck ran, so nothing was checked on hardware —
-entrances, the shortened fade, the launch handoff and cold boot in Game Mode.
-The macOS bundle and the WiX MSI were not built; their metadata is inspected
-statically only, and `app/moonlight.icns` is still upstream's because icns needs
-macOS tooling. The launch handoff's mid-flight frames were not captured, only
-that it runs and lands. LCD appearance remains unvalidated.
-
-Latest reports: `docs/validation/2026-08-08-osk-diagnosis-and-resolution.md`,
-`docs/validation/2026-08-05-private-v1-deck.md`.
-
-## Open blockers
-
-None. `BUGS.md` is empty.
+`python scripts/context-audit.py` passed after the authority reset. No build,
+QML lint, desktop review or hardware review applies to this documentation-only
+stage and none has been claimed.
 
 ## Next action
 
-1. **A Deck session** to see the new entrances, the transition and the launch
-   handoff on hardware, and an LCD unit for the remaining panel-appearance gap.
-2. **The macOS bundle icon.** `app/moonlight.icns` is still upstream's; it needs
-   macOS tooling this session did not have.
-3. **The repository description** on GitHub, a client action. The default branch
-   was already `master` and needs no change — it is what made the repository
-   present upstream Moonlight before `bulan` was merged into it.
+Begin stage 2: Fraunces Semibold, minimal tokens and the shell foundation.

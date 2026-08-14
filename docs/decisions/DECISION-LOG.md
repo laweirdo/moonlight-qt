@@ -33,11 +33,11 @@ Flatpak.
 | Decision | Replaced | Now owned by |
 |---|---|---|
 | **The screen transition carries a real runtime blur**, and its performance cost is accepted knowingly, with the Deck measurement deferred until after private v1 | Opacity falling away during travel — the inexpensive reading of the brief's "slight motion blur" | `DESIGN-SYSTEM.md` |
-| **Game tiles rise from below on a staggered cascade** | A horizontal slide into ranked position, which the client saw as "swiping in from the side, way too quickly" | `FLOW.md`, `SPEC-game-grid.md` |
+| **Game tiles rise from below on a staggered cascade** | A horizontal slide into ranked position, which the client saw as "swiping in from the side, way too quickly" | `FLOW.md`, `docs/history/2026-08-14-pre-clean-slate/SPEC-game-grid.md` |
 | **The hint bar holds still while the screen moves.** It belongs to the window, not to a screen | Screen-level hint bars that travelled with their screen | `FLOW.md` |
 | **Screen entry is transition first, then a staggered element entrance**, with a slight overshoot and one soft bounce | Ad-hoc per-screen entrance motion | `DESIGN-SYSTEM.md` |
 | **220 ms and a 64 px rise are kept** after seeing the transition live | — | `DESIGN-SYSTEM.md` |
-| **X opens Game Options, and that is its intended private-v1 destination** | A separate game detail screen, drawn on the flow board | `FLOW.md`, `SPEC-game-grid.md` |
+| **X opens Game Options, and that is its intended private-v1 destination** | A separate game detail screen, drawn on the flow board | `FLOW.md`, `docs/history/2026-08-14-pre-clean-slate/SPEC-game-grid.md` |
 | **SELECT on the game grid opens the existing Host Settings overlay** | Dropping the mockup's *SELECT Host Settings* hint | `FLOW.md` |
 | **Steam library artwork is not a Bulan deliverable.** Game artwork comes from the host PC | Deliverable 3: capsule, wide capsule, hero, transparent logo PNG | `ROADMAP.md`, `docs/design-rationale/creative-history.md` |
 
@@ -45,14 +45,14 @@ Flatpak.
 
 | Decision | Replaced | Now owned by |
 |---|---|---|
-| **The host tile busy state is accepted** after a hardware gamepad review | — | `SPEC-host-carousel.md` |
-| **The game grid is accepted**, after a review that produced four changes | — | `SPEC-game-grid.md` |
+| **The host tile busy state is accepted** after a hardware gamepad review | — | `docs/history/2026-08-14-pre-clean-slate/SPEC-host-carousel.md` |
+| **The game grid is accepted**, after a review that produced four changes | — | `docs/history/2026-08-14-pre-clean-slate/SPEC-game-grid.md` |
 
 ### 31 July 2026
 
 | Decision | Replaced | Now owned by |
 |---|---|---|
-| **Wake resolves on the host tile** — a dimmed disc and three bouncing dots, resolving on the host reporting online or on a 30-second give-up | A waiting overlay held until success or failure. Decided before anything was built, not after | `FLOW.md`, `SPEC-host-carousel.md` |
+| **Wake resolves on the host tile** — a dimmed disc and three bouncing dots, resolving on the host reporting online or on a 30-second give-up | A waiting overlay held until success or failure. Decided before anything was built, not after | `FLOW.md`, `docs/history/2026-08-14-pre-clean-slate/SPEC-host-carousel.md` |
 | **Test Network is restored to private-v1 scope** | Its earlier deferral alongside Rename PC | `ROADMAP.md` |
 
 ### 30 July 2026
@@ -71,7 +71,7 @@ Flatpak.
 |---|---|---|
 | **`motionFocusMs` moves from 140 to 180 ms** after the OLED review | The brief's original `140 ms` | `DESIGN-SYSTEM.md` |
 | **`atmosphereGrainOpacity` 0.03, `sizeCaption` 16, and `motionOvershoot` 0.7 are confirmed** on OLED hardware | — | `DESIGN-SYSTEM.md` |
-| **The hint bar reflow when Y Wake appears and disappears is accepted as built** | Greying Y out, or keeping Y and relabelling it | `SPEC-host-carousel.md` |
+| **The hint bar reflow when Y Wake appears and disappears is accepted as built** | Greying Y out, or keeping Y and relabelling it | `docs/history/2026-08-14-pre-clean-slate/SPEC-host-carousel.md` |
 
 Evidence: `docs/validation/2026-07-28-deck-oled-review.md`.
 

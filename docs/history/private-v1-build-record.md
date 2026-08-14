@@ -14,8 +14,9 @@ What each phase built on the way to the private v1 draft accepted on 3 August
 narrative `HANDOFF.md` and `ROADMAP.md` no longer carry.
 
 Evidence for what was actually checked is in `docs/validation/`. Durable
-screen-level design reasoning stays in `SPEC-host-carousel.md` and
-`SPEC-game-grid.md`.
+screen-level design reasoning stays in
+`docs/history/2026-08-14-pre-clean-slate/SPEC-host-carousel.md` and
+`docs/history/2026-08-14-pre-clean-slate/SPEC-game-grid.md`.
 
 ## Phase A — Stabilise, completed 28 July 2026
 

@@ -215,7 +215,7 @@ Two things about this that look like bugs and aren't:
 
 Offscreen mode cannot render shader effects, which is why glyph colour is baked
 in at import time rather than tinted at runtime. The durable review-model notes
-are in `SPEC-host-carousel.md`.
+are in `docs/history/2026-08-14-pre-clean-slate/SPEC-host-carousel.md`.
 
 ---
 

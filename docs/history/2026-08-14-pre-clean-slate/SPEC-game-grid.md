@@ -1,10 +1,8 @@
 # Game grid — as built
 
-This is the durable authority for the Recent and Library surface: component
-inventory, navigation, state model, design decisions, compromises, known
-unfinished work, and validation evidence. Application source is the objective
-authority for what currently runs. Live branch and build state belong in
-`HANDOFF.md`; a temporary `TASK-BRIEF.md` exists only while a task is active.
+**Superseded 14 August 2026 by the clean-slate core-shell direction.** This file
+is preserved only as evidence of the retired Recent and Library implementation;
+it does not govern current work.
 
 Decision labels in this file carry the same weight `SPEC-host-carousel.md`
 defined:

@@ -129,12 +129,14 @@ originally a waiting overlay that resolved on success or failure. **Superseded
 31 July 2026**, before anything was built: the client chose a host-tile
 treatment instead — a dimmed disc and three bouncing dots, resolving on the
 host's model row reporting online or on a 30-second give-up. Reviewed with a
-hardware gamepad and accepted 1 August 2026. Design in `SPEC-host-carousel.md`.
+hardware gamepad and accepted 1 August 2026. Design in
+`docs/history/2026-08-14-pre-clean-slate/SPEC-host-carousel.md`.
 
 **A game detail screen behind X.** The board's route sent X to a separate detail
 screen and Play onward from there. Superseded by the Game Options modal, which
 is the intended private-v1 destination rather than a substitute for a screen
-that was never built. Reasoning in `SPEC-game-grid.md`.
+that was never built. Reasoning in
+`docs/history/2026-08-14-pre-clean-slate/SPEC-game-grid.md`.
 
 **A single line of placeholder copy for the empty library.** The game grid
 shipped `"No games here yet."` as a holding treatment, explicitly not the

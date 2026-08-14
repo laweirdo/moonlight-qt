@@ -17,13 +17,15 @@ those to a developer to point them at the exact spot.
 > Superseded in the Bulan fork:
 >
 > - **Screen 1, "Computers"** — the card grid described below is no longer the host
->   screen. `HostCarousel.qml` replaced it; see `SPEC-host-carousel.md`. `PcView.qml`
+>   screen. `HostCarousel.qml` replaced it; see
+>   `docs/history/2026-08-14-pre-clean-slate/SPEC-host-carousel.md`. `PcView.qml`
 >   is still in the tree but is no longer the initial view.
 > - **Section 6, "Contextual button hints"** — the finding was that exactly one
 >   on-screen hint existed in the entire app. `HintBar.qml` now exists, and the host
 >   screen carries a full hint set.
 > - **Section 3's D-pad map** — Y and START no longer share `Key_Hangup`, and SELECT
->   is now mapped at all. See the input table in `SPEC-host-carousel.md`.
+>   is now mapped at all. See the input table in
+>   `docs/history/2026-08-14-pre-clean-slate/SPEC-host-carousel.md`.
 >
 > The remaining material is the upstream baseline and a catalogue of historical
 > redesign findings. It is not an active Bulan defect list or a current-state

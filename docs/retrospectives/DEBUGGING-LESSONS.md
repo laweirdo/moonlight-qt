@@ -40,7 +40,8 @@ experience.
 When every repair can only exchange one visible artifact for another, check
 whether the underlying component expresses the approved interaction at all.
 The eventual direct-positioning rebuild removed the loop, join, and route
-choice together. The full rationale remains in `SPEC-host-carousel.md`.
+choice together. The full rationale remains in
+`docs/history/2026-08-14-pre-clean-slate/SPEC-host-carousel.md`.
 
 ## Review models must not address real objects by position
 

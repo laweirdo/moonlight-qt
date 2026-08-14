@@ -7,7 +7,8 @@ status.
 
 Open unintended behavior belongs in `BUGS.md`. Cross-cutting lessons distilled
 from these investigations are in `DEBUGGING-LESSONS.md`. Durable decisions
-about the accepted carousel are in `SPEC-host-carousel.md`.
+about the accepted carousel are in
+`docs/history/2026-08-14-pre-clean-slate/SPEC-host-carousel.md`.
 
 | # | Investigation | Resolution |
 |---|---|---|
