@@ -31,6 +31,7 @@ ApplicationWindow {
     FontLoader { source: "qrc:/fonts/Inter-Medium.ttf" }
     FontLoader { source: "qrc:/fonts/Inter-SemiBold.ttf" }
     FontLoader { source: "qrc:/fonts/Fraunces-Regular.ttf" }
+    FontLoader { source: "qrc:/fonts/Fraunces-SemiBold.ttf" }
 
     // Inherited by every child control unless overridden.
     font.family: Bulan.familyUi

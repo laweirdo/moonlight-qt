@@ -158,6 +158,10 @@
         <file alias="Inter-Medium.ttf">fonts/Inter-Medium.ttf</file>
         <file alias="Inter-SemiBold.ttf">fonts/Inter-SemiBold.ttf</file>
         <file alias="Fraunces-Regular.ttf">fonts/Fraunces-Regular.ttf</file>
+        <!-- Static instance baked from undercasetype/Fraunces commit 7ccdec31,
+             source SHA-256 0776a870a0856b296e11639505ac0cf9be5e7800bb1849dfa21a1bd182455fc0,
+             at opsz=14 SOFT=100 WONK=0 wght=600. -->
+        <file alias="Fraunces-SemiBold.ttf">fonts/Fraunces-SemiBold.ttf</file>
         <file alias="OFL-Inter.txt">fonts/OFL-Inter.txt</file>
         <file alias="OFL-Fraunces.txt">fonts/OFL-Fraunces.txt</file>
     </qresource>

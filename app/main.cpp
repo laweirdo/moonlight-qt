@@ -1062,15 +1062,9 @@ int main(int argc, char *argv[])
             tokenProofMode = true;
         }
         else {
-            // Splash decides, once it has held briefly, whether the app
-            // continues to the host carousel (a host is already known and
-            // paired) or to first run. It always replaces itself rather than
-            // being pushed under either, so it is never left on the stack --
-            // see Splash.qml's proceed(). The host carousel itself still
-            // replaces PcView's grid; PcView is left in the tree because it
-            // still owns the rename/delete/network-test flows that the
-            // carousel has no designed home for yet.
-            initialView = "qrc:/gui/Splash.qml";
+            // Normal GUI startup enters the clean-slate shell. Explicit CLI
+            // routes below keep their existing segue components.
+            initialView = "qrc:/gui/BulanShell.qml";
         }
 
         // Debug hook: MOONLIGHT_INITIAL_VIEW=qrc:/gui/SettingsView.qml boots

@@ -24,6 +24,10 @@ import QtQuick 2.9
 
 QtObject {
 
+    // --- Composition --------------------------------------------------------
+    readonly property int referenceWidth: 1280
+    readonly property int referenceHeight: 800
+
     // --- Colour (figma: colour/base) -----------------------------------------
     readonly property color bgBase:        "#0D1024"
     readonly property color bgBaseOled:    "#080A18"
@@ -59,6 +63,7 @@ QtObject {
     // about weight already gets this; the token exists for the places that
     // used to say `font.bold` and now have to say something.
     readonly property int weightBody: Font.Medium
+    readonly property int weightDisplay: Font.DemiBold
     // From the mockup, not the variables file. See header.
     readonly property string familyDisplay: "Fraunces"
 
@@ -467,6 +472,11 @@ QtObject {
     // Deterministic review replay cadence; long enough for the transition to
     // finish and rest before the next captured cycle begins.
     readonly property int launchReviewCycleMs: motionTransitionMs * 4
+
+    // --- Clean-slate shell --------------------------------------------------
+    // Arrival never waits on discovery and any input can end it sooner.
+    readonly property int shellStartupMaxMs: 600
+    readonly property int shellWordmarkHeight: 168
 
     // --- First-run onboarding (private v1 finalisation, stage 3) -------------
     // S0-S3 introduce no new colours or type -- the mockups reuse the palette
