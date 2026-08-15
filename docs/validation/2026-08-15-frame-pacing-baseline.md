@@ -57,6 +57,25 @@ is already set, following the pattern the `QT_OPENGL` guard above it already
 uses. **The shipping default is unchanged** — a build that does not set the
 variable still gets `basic`.
 
+## Re-measured after the overdraw cuts, same protocol
+
+| Run | Median | p90 | Jitter | Renderer cost |
+|---|---|---|---|---|
+| Before | 4 ms | 12 ms | 3.0× | 0.30 ms/frame |
+| After | 4 ms | 12 ms | 3.0× | 0.43 ms/frame |
+
+**No improvement, and the "after" figure is nominally worse.** Both numbers are
+run-to-run noise on a GPU that is nowhere near saturated — the same reason the
+4× pixel probe barely moved. This machine cannot show a difference in overdraw,
+so it did not.
+
+The two cuts were made anyway, on the grounds that the work removed is provably
+invisible rather than merely cheap: the window background was painting a vignette
+and a tiled grain that every screen's own opaque atmosphere covered completely,
+and every game tile without artwork was running a mask pass to round the corners
+of a fully transparent image. Neither can be seen at any frame rate. Whether that
+matters in frames is a Deck question, still unanswered.
+
 ## What this does not establish
 
 - **Nothing about the Steam Deck.** No Deck was run. The Deck's GPU is far

@@ -310,10 +310,24 @@ ApplicationWindow {
             }
         }
 
-        // The shared atmosphere layer — gradient, vignette and grain — behind
-        // every page. See Atmosphere.qml; each effect is individually
-        // switchable there.
-        background: Atmosphere {}
+        // The ground behind the pages — gradient only, deliberately.
+        //
+        // Every Bulan screen draws its own full Atmosphere, and a screen is
+        // opaque, so at rest this background is completely covered: its vignette
+        // and its tiled grain were two full-screen textured quads that no one
+        // could ever see. What it is actually for is the band of bare stack that
+        // shows during a vertical transition, while one screen has risen and the
+        // next has not yet landed, and a flat gradient covers that.
+        //
+        // The screens keep their own copies rather than sharing this one. Theirs
+        // is what hides the outgoing screen during that travel, and it sits
+        // inside the layer that blurs behind a popup — pull it out and screens
+        // read through each other mid-transition, and the grain stops blurring
+        // with everything else behind a modal.
+        background: Atmosphere {
+            vignetteEnabled: false
+            grainEnabled: false
+        }
 
         Component.onCompleted: {
             // Perform our early initialization before constructing

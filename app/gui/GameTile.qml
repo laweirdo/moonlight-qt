@@ -179,13 +179,16 @@ Item {
         // the fallback is concerned the image loaded fine. That is exactly how
         // it failed the first time it was pointed at a real host: real names,
         // real art on disk, and twenty-five blank rectangles.
+        // Only allocated while the artwork above is actually being masked. The
+        // mask is a texture in its own right, so an always-on one costs a second
+        // render target per tile for as long as the tile exists.
         Rectangle {
             id: artMask
             anchors.fill: parent
             anchors.margins: artRect.artInset
             radius: Bulan.radiusMd
             visible: false
-            layer.enabled: true
+            layer.enabled: art.showArt
         }
 
         // The artwork sits inside the border rather than under it. Box art
@@ -236,7 +239,13 @@ Item {
                 NumberAnimation { duration: Bulan.motionFocusMs; easing.type: Easing.OutCubic }
             }
 
-            layer.enabled: true
+            // Gated on there being artwork to mask. A tile whose art is missing,
+            // still loading, or a known placeholder draws the fallback instead
+            // and this Image is at zero opacity -- but an ungated layer still
+            // allocates a render target and runs a masking pass every frame to
+            // round the corners of something invisible. A library of mostly
+            // artless games was paying full price for every one of them.
+            layer.enabled: art.showArt
             layer.effect: MultiEffect {
                 maskEnabled: true
                 maskSource: artMask
