@@ -34,21 +34,31 @@ Replaced, never appended to. Past states are in Git history, past evidence in
 anything was changed; the busy-dots animation was unified and two broken copies
 of it removed; screen entrances now start from the transition rather than a
 timer and can be settled by input; Rename PC was ported into the host settings
-overlay; and the inherited Moonlight shell — its toolbar, `SettingsView.qml`,
-`PcView.qml` and every stock control only they kept alive — was deleted, 2931
-lines against 49 added.
+overlay; the inherited Moonlight shell — its toolbar, `SettingsView.qml`,
+`PcView.qml` and every stock control only they kept alive — was deleted; the
+hint bar became one bar owned by the window, with popups declaring hints instead
+of drawing their own; line weights got their own tokens and `HostPanel` finished
+the glass migration; and the focus bloom became one component instead of four
+hand-copied canvases.
 
-The remaining stages of the active task are the overdraw work, one popup
-mechanism, one hint-bar owner, the `AppView.qml` split, the token cleanup, and
-then mockups before any screen is redrawn.
+The remaining stages of the active task are the overdraw work, the
+`AppView.qml` split with its two duplicate capture pipelines, the stock error
+dialogs that still live in Qt's overlay layer, and then mockups before any
+screen is redrawn. `DESIGN-SYSTEM.md` records three open design questions that
+came out of this work.
 
 ## Validation status
 
 **Passed, on the Windows review station:** Qt 6.9.3 / MSVC Release build;
-`qmllint` exit 0 on all 36 QML files, warning categories unchanged from the
-documented baseline; the carousel, game grid, settings shell and first-run screen
-each booted directly and rendered with zero QML errors; the host settings menu
-showing Rename PC.
+`qmllint` exit 0 on every QML file, warning categories unchanged from the
+documented baseline; the carousel, game grid, settings shell, discovery and
+first-run screens each booted directly and rendered with zero QML errors; the
+host settings menu showing Rename PC; a settings popup showing its own hints
+rather than the shell's.
+
+One regression was introduced and fixed within the session: both overlays sized
+their surface against the hint bar they used to draw, and that binding failed
+once the bar was removed. Caught by reading the log, not the build.
 
 **Measured, 15 August 2026:** frame pacing on the game grid — see
 `docs/validation/2026-08-15-frame-pacing-baseline.md`. The reported 30 fps did

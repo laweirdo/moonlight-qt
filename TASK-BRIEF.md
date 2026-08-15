@@ -58,6 +58,22 @@ Layout, spacing and composition are stage 7 and are the client's call.
 Branch `polish-and-shell-rework`, cut from `master` at `177a58bd`, working tree
 clean. `master` and `bulan` are both at that commit.
 
+## Design questions raised, awaiting the client
+
+Recorded here, not in `DESIGN-SYSTEM.md`, because each needs a decision before it
+can become a rule.
+
+- **The line-height ramp is not shipping.** Four `lineHeight*` tokens exist and
+  no screen binds `Text.lineHeight`. Wiring it in changes vertical rhythm on
+  every screen; the alternative is dropping the tokens. A typography call, so it
+  belongs with the redraw review.
+- **`BulanTokens.qml` disagrees with the runtime.** The proof sheet's copy claims
+  to be the source of truth and draws body and caption a weight lighter than the
+  app does. It should read the singleton or stop existing.
+- **There is no d-pad glyph.** `ControllerGlyph` covers face buttons, shoulders,
+  triggers and start/select, so a Left/Right action cannot be hinted — the slider
+  popup shows only its back hint because of it.
+
 ## Acceptance
 
 - A measured frame-rate improvement recorded in `docs/validation/`, not an
