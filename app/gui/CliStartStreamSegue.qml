@@ -27,14 +27,17 @@ Item {
     }
 
     function onLaunchFailed(message) {
-        errorDialog.text = message
-        errorDialog.open()
+        // The message comes from the launcher and is not this file's to
+        // rewrite; the log line stays, because a CLI route is the one place a
+        // technical string genuinely belongs.
+        errorDialog.show("", message)
         console.error(message)
     }
 
     function onAppQuitRequired(appName) {
         quitAppDialog.appName = appName
-        quitAppDialog.open()
+        quitAppDialog.show("", qsTr("Are you sure you want to quit %1? Any unsaved progress will be lost.")
+                                   .arg(appName))
     }
 
     StackView.onActivated: {
@@ -68,29 +71,37 @@ Item {
         }
     }
 
-    ErrorMessageDialog {
+    // Bulan panels, not the stock Dialogs these replaced. Same reasoning as
+    // main.qml's configuration warnings: a stock Dialog lives in Qt's own
+    // overlay layer and brings Material controls with it.
+    HostPanel {
         id: errorDialog
-
-        onClosed: {
-            Qt.quit();
-        }
+        anchors.fill: parent
+        onDismissed: Qt.quit()
     }
 
-    NavigableMessageDialog {
+    HostPanel {
         id: quitAppDialog
-        text:qsTr("Are you sure you want to quit %1? Any unsaved progress will be lost.").arg(appName)
-        standardButtons: Dialog.Yes | Dialog.No
-        property string appName : ""
+        anchors.fill: parent
+        property string appName: ""
 
-        function quitApp() {
+        // Yes/No became confirm/dismiss: the panel has one confirm action and
+        // one way out, which is what Yes and No were.
+        confirmable: true
+
+        onAccepted: {
             var component = Qt.createComponent("QuitSegue.qml")
             var params = {"appName": appName, "quitRunningAppFn": function() { launcher.quitRunningApp() }}
             // CLI entry routes stay free of competing stack motion (brief
             // decision 7, out-of-scope table).
             stackView.push(component.createObject(stackView, params), StackView.Immediate)
         }
-
-        onAccepted: quitApp()
-        onRejected: Qt.quit()
+        // Declining a quit on a CLI route leaves nothing to return to, exactly
+        // as the stock dialog's onRejected did.
+        onDismissed: {
+            if (!quitAppDialog.confirmed) {
+                Qt.quit()
+            }
+        }
     }
 }

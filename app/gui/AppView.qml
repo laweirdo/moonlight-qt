@@ -1533,6 +1533,30 @@ FocusScope {
         }
     }
 
+    // Is this grab result the one we asked for?
+    //
+    // The launch and the quit-and-switch pipelines both ask this, identically,
+    // and it is the only part of the two that genuinely is the same code rather
+    // than the same shape. `grabToImage` is asynchronous, and in the meantime
+    // the delegate that was captured can have been recycled onto a different
+    // row -- so a perfectly valid texture can arrive for the wrong game. Object
+    // identity alone is not enough, hence the app-id check on both the tile we
+    // expected and the tile now standing in its place.
+    //
+    // Deliberately a predicate over data, not a shared pipeline. Merging the
+    // rest of the two paths was tried on 15 August 2026 and reverted: they
+    // differ in when the source tile's motion is released, in what they push,
+    // and in how they fail, and parameterising that took eleven arguments and
+    // four callbacks to save nothing. Two readable copies beat one unreadable
+    // abstraction.
+    function captureMatchesSource(result, expectedTile, currentTile,
+                                  expectedAppId) {
+        return !!result && !!result.url
+                && !!expectedTile && currentTile === expectedTile
+                && root.sameAppId(expectedTile.appId, expectedAppId)
+                && root.sameAppId(currentTile.appId, expectedAppId)
+    }
+
     function acceptLaunchCapture(result, contract, generation,
                                  expectedTile, expectedAppId) {
         if (!root.launchBusy || root.pendingLaunch === null
@@ -1547,10 +1571,8 @@ FocusScope {
         }
         var currentTile = root.sourceTileForAppId(root.pendingLaunch.appId,
                                                   root.pendingLaunch.origin)
-        if (!expectedTile || currentTile !== expectedTile
-                || !root.sameAppId(expectedTile.appId, expectedAppId)
-                || !root.sameAppId(currentTile.appId, expectedAppId)
-                || !result || !result.url) {
+        if (!root.captureMatchesSource(result, expectedTile, currentTile,
+                                       expectedAppId)) {
             // A reused delegate can deliver a valid image for the wrong app.
             // Reject that texture and continue with the honest no-source card.
             root.frozenLaunchResult = null
@@ -2603,10 +2625,8 @@ FocusScope {
         }
         var currentTile = root.sourceTileForAppId(expectedAppId,
                                                   root.pendingQuit.origin)
-        if (!expectedTile || currentTile !== expectedTile
-                || !root.sameAppId(expectedTile.appId, expectedAppId)
-                || !root.sameAppId(currentTile.appId, expectedAppId)
-                || !result || !result.url) {
+        if (!root.captureMatchesSource(result, expectedTile, currentTile,
+                                       expectedAppId)) {
             root.releaseLaunchSourceMotion()
             root.pendingQuit.sourceItemAtCapture = null
             root.finishQuitSwitchCapture(

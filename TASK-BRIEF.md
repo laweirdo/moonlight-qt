@@ -58,6 +58,16 @@ Layout, spacing and composition are stage 7 and are the client's call.
 Branch `polish-and-shell-rework`, cut from `master` at `177a58bd`, working tree
 clean. `master` and `bulan` are both at that commit.
 
+## Copy the client owes
+
+The four configuration warnings in `main.qml` and the CLI routes' messages are
+upstream's words, unchanged, and they name XWayland, `QT_QPA_PLATFORM`, and
+"hardware accelerated video decoder" on front-facing screens — which
+`bulan-creative-brief.md` §5 forbids. They were converted to Bulan panels
+without touching the text, by client decision on 15 August 2026: the client
+writes the replacements. The confirm and dismiss wording on those panels is the
+same decision.
+
 ## Design questions raised, awaiting the client
 
 Recorded here, not in `DESIGN-SYSTEM.md`, because each needs a decision before it

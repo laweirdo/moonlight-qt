@@ -16,8 +16,8 @@ Item {
     }
 
     function onFailure(message) {
-        errorDialog.text = message
-        errorDialog.open()
+        // The launcher's own message, not this file's to rewrite.
+        errorDialog.show("", message)
     }
 
     StackView.onActivated: {
@@ -49,11 +49,11 @@ Item {
         }
     }
 
-    ErrorMessageDialog {
+    // A Bulan panel, not the stock Dialog it replaced -- see main.qml's
+    // configuration warnings for why.
+    HostPanel {
         id: errorDialog
-
-        onClosed: {
-            Qt.quit()
-        }
+        anchors.fill: parent
+        onDismissed: Qt.quit()
     }
 }

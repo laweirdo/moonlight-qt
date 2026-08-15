@@ -432,6 +432,23 @@ ApplicationWindow {
                 if (quitConfirmationDialog.visible) {
                     return quitConfirmationDialog
                 }
+                // The startup configuration warnings are parented to the window
+                // rather than to a screen, so they are not in any screen's
+                // hintOwner chain and have to be asked about here. Each carries
+                // its hints inside its own card, so naming one as the owner is
+                // what takes the screen's bar off the screen beneath it.
+                if (noHwDecoderDialog.visible) {
+                    return noHwDecoderDialog
+                }
+                if (xWaylandDialog.visible) {
+                    return xWaylandDialog
+                }
+                if (wow64Dialog.visible) {
+                    return wow64Dialog
+                }
+                if (unmappedGamepadDialog.visible) {
+                    return unmappedGamepadDialog
+                }
                 var screen = stackView.currentItem
                 if (!screen) {
                     return null
@@ -554,38 +571,67 @@ ApplicationWindow {
         }
     }
 
-    ErrorMessageDialog {
+    // --- configuration warnings ----------------------------------------------
+    // Raised once at startup when the machine cannot do something Bulan expects.
+    // Bulan panels rather than the stock Dialogs these replaced: a stock Dialog
+    // lives in Qt's own overlay layer, which is a second stacking system this
+    // application does not otherwise use -- it painted over the hint bar and
+    // brought Material buttons with it.
+    //
+    // The Help buttons are gone with them. They opened a moonlight-docs wiki
+    // page in a browser, and the target device has no browser to open (client
+    // decision, 15 August 2026).
+    //
+    // **The copy below is upstream's, unchanged, and is the client's to
+    // rewrite.** It names XWayland, a display protocol and a decoder API on a
+    // front-facing screen, which the creative brief forbids. It is left exactly
+    // as upstream wrote it rather than replaced with a placeholder, because a
+    // placeholder is a thing that ships by accident. Tracked in TASK-BRIEF.md.
+
+    HostPanel {
         id: noHwDecoderDialog
-        text: qsTr("No functioning hardware accelerated video decoder was detected by Moonlight. " +
-                   "Your streaming performance may be severely degraded in this configuration.")
-        helpText: qsTr("Click the Help button for more information on solving this problem.")
-        helpUrl: "https://github.com/moonlight-stream/moonlight-docs/wiki/Fixing-Hardware-Decoding-Problems"
-    }
-
-    ErrorMessageDialog {
-        id: xWaylandDialog
-        text: qsTr("Hardware acceleration doesn't work on XWayland. Continuing on XWayland may result in poor streaming performance. " +
-                   "Try running with QT_QPA_PLATFORM=wayland or switch to X11.")
-        helpText: qsTr("Click the Help button for more information.")
-        helpUrl: "https://github.com/moonlight-stream/moonlight-docs/wiki/Fixing-Hardware-Decoding-Problems"
-    }
-
-    NavigableMessageDialog {
-        id: wow64Dialog
-        standardButtons: Dialog.Ok | Dialog.Cancel
-        text: qsTr("This version of Moonlight isn't optimized for your PC. Please download the '%1' version of Moonlight for the best streaming performance.").arg(SystemProperties.friendlyNativeArchName)
-        onAccepted: {
-            Qt.openUrlExternally("https://github.com/moonlight-stream/moonlight-qt/releases");
+        anchors.fill: parent
+        onDismissed: stackView.forceActiveFocus()
+        function open() {
+            show("", qsTr("No functioning hardware accelerated video decoder was detected by Moonlight. " +
+                          "Your streaming performance may be severely degraded in this configuration."))
         }
     }
 
-    ErrorMessageDialog {
+    HostPanel {
+        id: xWaylandDialog
+        anchors.fill: parent
+        onDismissed: stackView.forceActiveFocus()
+        function open() {
+            show("", qsTr("Hardware acceleration doesn't work on XWayland. Continuing on XWayland may result in poor streaming performance. " +
+                          "Try running with QT_QPA_PLATFORM=wayland or switch to X11."))
+        }
+    }
+
+    HostPanel {
+        id: wow64Dialog
+        anchors.fill: parent
+        // The one config warning with something to agree to, so it is the one
+        // that offers a confirm rather than only a way out. The confirm's
+        // wording is the client's, like the message itself; until then it keeps
+        // the panel's default.
+        confirmable: true
+        onDismissed: stackView.forceActiveFocus()
+        onAccepted: Qt.openUrlExternally("https://github.com/moonlight-stream/moonlight-qt/releases")
+        function open() {
+            show("", qsTr("This version of Moonlight isn't optimized for your PC. Please download the '%1' version of Moonlight for the best streaming performance.")
+                         .arg(SystemProperties.friendlyNativeArchName))
+        }
+    }
+
+    HostPanel {
         id: unmappedGamepadDialog
-        property string unmappedGamepads : ""
-        text: qsTr("Moonlight detected gamepads without a mapping:") + "\n" + unmappedGamepads
-        helpTextSeparator: "\n\n"
-        helpText: qsTr("Click the Help button for information on how to map your gamepads.")
-        helpUrl: "https://github.com/moonlight-stream/moonlight-docs/wiki/Gamepad-Mapping"
+        anchors.fill: parent
+        property string unmappedGamepads: ""
+        onDismissed: stackView.forceActiveFocus()
+        function open() {
+            show("", qsTr("Moonlight detected gamepads without a mapping:") + "\n\n" + unmappedGamepads)
+        }
     }
 
     // This dialog appears when quitting via keyboard or gamepad button

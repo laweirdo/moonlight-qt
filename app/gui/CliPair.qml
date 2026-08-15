@@ -16,13 +16,13 @@ Item {
 
     function onFailed(message) {
         stageIndicator.visible = false
-        errorDialog.text = message
-        errorDialog.open()
+        // The launcher's own message, not this file's to rewrite.
+        errorDialog.show("", message)
     }
 
     function onSuccess(appName) {
         stageIndicator.visible = false
-        pairCompleteDialog.open()
+        pairCompleteDialog.show("", qsTr("Pairing completed successfully"))
     }
 
     // Allow user to back out of pairing
@@ -67,22 +67,17 @@ Item {
         }
     }
 
-    ErrorMessageDialog {
+    // Bulan panels, not the stock Dialogs these replaced -- see main.qml's
+    // configuration warnings for why.
+    HostPanel {
         id: errorDialog
-
-        onClosed: {
-            Qt.quit();
-        }
+        anchors.fill: parent
+        onDismissed: Qt.quit()
     }
 
-    NavigableMessageDialog {
+    HostPanel {
         id: pairCompleteDialog
-        closePolicy: Popup.CloseOnEscape
-
-        text:qsTr("Pairing completed successfully")
-        standardButtons: Dialog.Ok
-        onClosed: {
-            Qt.quit()
-        }
+        anchors.fill: parent
+        onDismissed: Qt.quit()
     }
 }
