@@ -1974,10 +1974,6 @@ FocusScope {
 
     // --- lifecycle -----------------------------------------------------------
     StackView.onActivated: {
-        // This is a Bulan screen now; the stock toolbar upstream's AppView kept
-        // is gone, replaced by this screen's own header and hint bar.
-        toolBar.visible = false
-
         // The transition has settled, so the tiles may start arriving.
         root.gridEntranceStarted = true
 

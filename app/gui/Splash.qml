@@ -149,7 +149,6 @@ FocusScope {
     }
 
     StackView.onActivated: {
-        toolBar.visible = false
         root.forceActiveFocus()
         root.recomputePaired()
     }

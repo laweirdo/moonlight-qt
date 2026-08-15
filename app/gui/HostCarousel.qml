@@ -947,9 +947,6 @@ FocusScope {
 
     // --- lifecycle -----------------------------------------------------------
     StackView.onActivated: {
-        // No toolbar here: the wordmark and the hint bar are this screen's chrome.
-        toolBar.visible = false
-
         // Arrow-key navigation, not the settings page's tab chain.
         SdlGamepadKeyNavigation.setUiNavMode(false)
 

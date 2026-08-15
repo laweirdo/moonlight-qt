@@ -215,7 +215,6 @@ FocusScope {
     }
 
     StackView.onActivated: {
-        toolBar.visible = false
         SdlGamepadKeyNavigation.setUiNavMode(false)
         root.forceActiveFocus()
         root.clampIndex()

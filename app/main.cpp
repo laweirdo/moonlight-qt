@@ -1074,14 +1074,14 @@ int main(int argc, char *argv[])
             // continues to the host carousel (a host is already known and
             // paired) or to first run. It always replaces itself rather than
             // being pushed under either, so it is never left on the stack --
-            // see Splash.qml's proceed(). The host carousel itself still
-            // replaces PcView's grid; PcView is left in the tree because it
-            // still owns the rename/delete/network-test flows that the
-            // carousel has no designed home for yet.
+            // see Splash.qml's proceed(). The host carousel replaced PcView's
+            // grid, and now owns every host flow it once held -- rename,
+            // forget, network test, wake and details -- through the host
+            // settings overlay, so PcView itself is gone.
             initialView = "qrc:/gui/Splash.qml";
         }
 
-        // Debug hook: MOONLIGHT_INITIAL_VIEW=qrc:/gui/SettingsView.qml boots
+        // Debug hook: MOONLIGHT_INITIAL_VIEW=qrc:/gui/SettingsShell.qml boots
         // straight to a given screen, so a single view can be captured without
         // navigating to it. Ignored when unset.
         if (!qEnvironmentVariableIsEmpty("MOONLIGHT_INITIAL_VIEW")) {

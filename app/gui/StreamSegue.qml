@@ -213,9 +213,8 @@ FocusScope {
         warningContinueTimer.stop()
         reviewCycleTimer.stop()
 
-        // Preserve the inherited toolbar/gamepad cleanup. main.qml's Bulan
-        // backstop hides the toolbar again when the retained AppView returns.
-        toolBar.visible = true
+        // Gamepad cleanup. The inherited toolbar this used to hand back no
+        // longer exists, and neither does the backstop that had to undo it.
         if (!reviewMode && guiGamepadDisabled) {
             SdlGamepadKeyNavigation.enable()
             guiGamepadDisabled = false
@@ -234,7 +233,6 @@ FocusScope {
     }
 
     StackView.onActivated: {
-        toolBar.visible = false
         launchContentVisible = true
         forceActiveFocus()
         Qt.callLater(forceActiveFocus)

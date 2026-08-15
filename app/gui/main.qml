@@ -15,9 +15,10 @@ import SdlGamepadKeyNavigation 1.0
 ApplicationWindow {
     property bool pollingActive: false
 
-    // Set by SettingsView to force the back operation to pop all
-    // pages except the initial view. This is required when doing
-    // a retranslate() because AppView breaks for some reason.
+    // Set by SettingsShell before a retranslate, to force the back operation to
+    // pop every page except the initial view -- AppView does not survive one.
+    // Inherited from upstream's SettingsView, which is gone; the shell copied
+    // the workaround and is now its only writer.
     property bool clearOnBack: false
 
     id: window
@@ -165,14 +166,11 @@ ApplicationWindow {
         interval: 1500
         onTriggered: {
             // The window root is a QQuickRootItem with no QML engine, so it
-            // cannot be grabbed. Capture the content and the toolbar as two
-            // images instead.
+            // cannot be grabbed. Capture the content item instead. This used to
+            // take a second image of the toolbar, which no longer exists.
             var ok = contentCapture.grabToImage(function(res) {
                 res.saveToFile(screenshotPath)
-                toolBar.grabToImage(function(res2) {
-                    res2.saveToFile(screenshotPath.replace(".png", "-toolbar.png"))
-                    Qt.quit()
-                })
+                Qt.quit()
             })
             // grabToImage returns false if the item cannot be rendered; quit
             // regardless so a failed grab never hangs the run.
@@ -317,31 +315,6 @@ ApplicationWindow {
         // switchable there.
         background: Atmosphere {}
 
-        // Backstop for upstream's toolbar appearing on a Bulan screen.
-        //
-        // Toolbar visibility is imperative all over this application: each
-        // screen writes toolBar.visible in its own onActivated or
-        // onDeactivating. That works while every screen agrees, and it stopped
-        // working when Bulan screens arrived, because upstream screens hand the
-        // toolbar back on the way out on the assumption that whatever is
-        // underneath wants it. StreamSegue and QuitSegue both do exactly that,
-        // and both of them sit on top of the game grid, which never wants it.
-        //
-        // Rather than rewrite every upstream screen's toolbar handling -- which
-        // would reach well past this task -- a Bulan screen declares itself with
-        // `bulanScreen`, and this runs after the push or pop has settled and
-        // takes the toolbar back off. callLater is what makes it deterministic:
-        // it runs at the end of the current pass, after both the outgoing
-        // screen's onDeactivating and the incoming screen's onActivated,
-        // whichever order those two happen to fire in. Reasoning about that
-        // order is exactly what made the flash intermittent to describe.
-        function hideToolBarOnBulanScreen() {
-            if (stackView.currentItem &&
-                    stackView.currentItem.bulanScreen === true) {
-                toolBar.visible = false
-            }
-        }
-
         Component.onCompleted: {
             // Perform our early initialization before constructing
             // the initial view and pushing it to the StackView
@@ -356,7 +329,6 @@ ApplicationWindow {
             if (currentItem) {
                 currentItem.forceActiveFocus()
             }
-            Qt.callLater(hideToolBarOnBulanScreen)
         }
 
         Keys.onEscapePressed: {
@@ -377,22 +349,24 @@ ApplicationWindow {
             }
         }
 
+        // These three used to press an invisible toolbar button to get here.
+        // The toolbar is gone, so they navigate directly.
         Keys.onMenuPressed: {
-            settingsButton.clicked()
+            navigateTo("qrc:/gui/SettingsShell.qml", SettingsShell)
         }
 
         // This is a keypress we've reserved for letting the
         // SdlGamepadKeyNavigation object tell us to show settings
         // when Menu is consumed by a focused control. Start sends it.
         Keys.onHangupPressed: {
-            settingsButton.clicked()
+            navigateTo("qrc:/gui/SettingsShell.qml", SettingsShell)
         }
 
         // Y, which used to share Key_Hangup with Start. Handled here too so Y
         // still opens settings on every screen that does not claim it first --
         // the host carousel claims it for Wake.
         Keys.onCallPressed: {
-            settingsButton.clicked()
+            navigateTo("qrc:/gui/SettingsShell.qml", SettingsShell)
         }
         }
 
@@ -515,274 +489,32 @@ ApplicationWindow {
         }
     }
 
-    header: ToolBar {
-        id: toolBar
-        // Bulan screens claim the inherited toolbar explicitly. Starting
-        // hidden prevents upstream chrome from painting before the first view
-        // has activated and decided which surface owns it.
-        visible: false
-        height: Bulan.targetRowHeight
-        anchors.topMargin: 0
-        anchors.bottomMargin: 0
+    // The inherited toolbar is gone. It was upstream's chrome, kept intact
+    // through the fork so a rebase stayed easy, and hidden by every Bulan
+    // screen in turn -- nineteen imperative `toolBar.visible` writes plus a
+    // Qt.callLater backstop to correct the ones that got it wrong. The two
+    // screens that actually wanted it, SettingsView and PcView, are gone with
+    // it. Bulan screens carry their own header and the window carries one hint
+    // bar, which is what this replaced it with in the first place.
+    //
+    // What went with it: the version label and the Discord community link,
+    // both of which only ever appeared on upstream's settings screen. The
+    // version is on the About page; the Discord link pointed at Moonlight's
+    // community, and Bulan credits its upstream in About instead (client
+    // decision, 15 August 2026). The Help and Gamepad Mapper buttons were an
+    // upstream wiki link and a permanently hidden stub.
+    // The update check is deliberately not started, and the button it would
+    // have revealed went with the toolbar. It compared this build's version
+    // against Moonlight's own release feed, and Bulan's version is its own
+    // (0.0.1), not a point on that feed's timeline -- so the check would have
+    // reported an "update" to Moonlight 6.1.0 forever, and clicking through
+    // would have sent the player to a different application's download page.
+    // The receiver survives because main.cpp still connects to it.
+    QtObject {
+        id: updateButton
 
-        // Transparent so the base gradient runs unbroken behind the chrome,
-        // with a single hairline to divide it from the content.
-        background: Rectangle {
-            // Match the top stop of the content gradient so the chrome and the
-            // content read as one continuous ground.
-            color: Bulan.gradientBaseTop
-
-            // The atmosphere layer lives in StackView.background, which sits
-            // below this bar rather than behind it — so without this the grain
-            // would stop dead at the bar's lower edge and leave a visible
-            // untextured strip. Only the grain is repeated: the gradient's top
-            // stop is already the fill above, and the vignette is positioned
-            // against the full window rather than this 88px slice.
-            Atmosphere {
-                anchors.fill: parent
-                gradientEnabled: false
-                vignetteEnabled: false
-            }
-
-            Rectangle {
-                anchors.bottom: parent.bottom
-                width: parent.width
-                height: 1
-                color: Bulan.hairline
-            }
-        }
-
-        Label {
-            id: titleLabel
-            visible: toolBar.width > 700
-            anchors.fill: parent
-            // Null-guarded: Splash.qml hands off with clear() then push(), and
-            // between those two the stack legitimately has no current item.
-            // Without this that one frame throws a TypeError into the log on
-            // every launch.
-            text: stackView.currentItem ? stackView.currentItem.objectName : ""
-            // The screen name is the one piece of display typography in the
-            // chrome, so it carries the Fraunces face.
-            font.family: Bulan.familyDisplay
-            font.pixelSize: Bulan.sizeTitle
-            font.letterSpacing: Bulan.trackingTitle
-            color: Bulan.textPrimary
-            elide: Label.ElideRight
-            horizontalAlignment: Qt.AlignHCenter
-            verticalAlignment: Qt.AlignVCenter
-        }
-
-        RowLayout {
-            spacing: Bulan.spaceSm
-            anchors.leftMargin: Bulan.spaceLg
-            anchors.rightMargin: Bulan.spaceLg
-            anchors.fill: parent
-
-            NavigableToolButton {
-                // Only make the button visible if the user has navigated somewhere.
-                visible: stackView.depth > 1
-
-                iconSource: "qrc:/res/arrow_left.svg"
-
-                onClicked: goBack()
-
-                Keys.onDownPressed: {
-                    stackView.currentItem.forceActiveFocus(Qt.TabFocus)
-                }
-            }
-
-            // This label will appear when the window gets too small and
-            // we need to ensure the toolbar controls don't collide
-            Label {
-                id: titleRowLabel
-                font.family: Bulan.familyDisplay
-                font.pixelSize: Bulan.sizeTitle
-                font.letterSpacing: Bulan.trackingTitle
-                color: Bulan.textPrimary
-                elide: Label.ElideRight
-                horizontalAlignment: Qt.AlignHCenter
-                verticalAlignment: Qt.AlignVCenter
-                Layout.fillWidth: true
-
-                // We need this label to always be visible so it can occupy
-                // the remaining space in the RowLayout. To "hide" it, we
-                // just set the text to empty string.
-                // Null-guarded for the same reason as titleLabel above.
-                text: (!titleLabel.visible && stackView.currentItem)
-                      ? stackView.currentItem.objectName : ""
-            }
-
-            Label {
-                id: versionLabel
-                visible: stackView.currentItem instanceof SettingsView
-                text: qsTr("Version %1").arg(SystemProperties.versionString)
-                font.pixelSize: Bulan.sizeCaption
-                color: Bulan.textSecondary
-                horizontalAlignment: Qt.AlignRight
-                verticalAlignment: Qt.AlignVCenter
-            }
-
-            NavigableToolButton {
-                id: discordButton
-                visible: SystemProperties.hasBrowser &&
-                         stackView.currentItem instanceof SettingsView
-
-                iconSource: "qrc:/res/discord.svg"
-
-                ToolTip.delay: 1000
-                ToolTip.timeout: 3000
-                ToolTip.visible: hovered
-                ToolTip.text: qsTr("Join our community on Discord")
-
-                // TODO need to make sure browser is brought to foreground.
-                onClicked: Qt.openUrlExternally("https://moonlight-stream.org/discord");
-
-                Keys.onDownPressed: {
-                    stackView.currentItem.forceActiveFocus(Qt.TabFocus)
-                }
-            }
-
-            NavigableToolButton {
-                id: addPcButton
-                visible: stackView.currentItem instanceof PcView
-
-                iconSource:  "qrc:/res/ic_add_to_queue_white_48px.svg"
-
-                ToolTip.delay: 1000
-                ToolTip.timeout: 3000
-                ToolTip.visible: hovered
-                ToolTip.text: qsTr("Add PC manually") + (newPcShortcut.nativeText ? (" ("+newPcShortcut.nativeText+")") : "")
-
-                Shortcut {
-                    id: newPcShortcut
-                    sequence: StandardKey.New
-                    onActivated: addPcButton.clicked()
-                }
-
-                onClicked: {
-                    addPcDialog.open()
-                }
-
-                Keys.onDownPressed: {
-                    stackView.currentItem.forceActiveFocus(Qt.TabFocus)
-                }
-            }
-
-            NavigableToolButton {
-                property string browserUrl: ""
-
-                id: updateButton
-
-                iconSource: "qrc:/res/update.svg"
-
-                ToolTip.delay: 1000
-                ToolTip.timeout: 3000
-                ToolTip.visible: hovered || visible
-
-                // Invisible until we get a callback notifying us that
-                // an update is available
-                visible: false
-
-                onClicked: {
-                    if (SystemProperties.hasBrowser) {
-                        Qt.openUrlExternally(browserUrl);
-                    }
-                }
-
-                function updateAvailable(version, url)
-                {
-                    ToolTip.text = qsTr("Update available for Moonlight: Version %1").arg(version)
-                    updateButton.browserUrl = url
-                    updateButton.visible = true
-                }
-
-                // The update check is deliberately not started. It compares
-                // this build's version against Moonlight's own release feed,
-                // and Bulan's version is its own (0.0.1), not a point on that
-                // feed's timeline -- so the check would report an "update"
-                // to Moonlight 6.1.0 forever, and clicking through would send
-                // the player to a different application's download page.
-                //
-                // The button and its handler are left in place rather than
-                // removed: this is upstream's toolbar, kept intact so the fork
-                // stays easy to rebase, and the button is invisible until a
-                // callback that can no longer arrive makes it visible.
-                //
-                // Already a no-op on the Deck -- AutoUpdateChecker::start()
-                // compiles to nothing outside Windows, macOS, Steam Link and
-                // AppImage builds -- so this only changes the Windows and
-                // macOS builds, where it was live.
-
-                Keys.onDownPressed: {
-                    stackView.currentItem.forceActiveFocus(Qt.TabFocus)
-                }
-            }
-
-            NavigableToolButton {
-                id: helpButton
-                visible: SystemProperties.hasBrowser
-
-                iconSource: "qrc:/res/question_mark.svg"
-
-                ToolTip.delay: 1000
-                ToolTip.timeout: 3000
-                ToolTip.visible: hovered
-                ToolTip.text: qsTr("Help") + (helpShortcut.nativeText ? (" ("+helpShortcut.nativeText+")") : "")
-
-                Shortcut {
-                    id: helpShortcut
-                    sequence: StandardKey.HelpContents
-                    onActivated: helpButton.clicked()
-                }
-
-                // TODO need to make sure browser is brought to foreground.
-                onClicked: Qt.openUrlExternally("https://github.com/moonlight-stream/moonlight-docs/wiki/Setup-Guide");
-
-                Keys.onDownPressed: {
-                    stackView.currentItem.forceActiveFocus(Qt.TabFocus)
-                }
-            }
-
-            NavigableToolButton {
-                // TODO: Implement gamepad mapping then unhide this button
-                visible: false
-
-                ToolTip.delay: 1000
-                ToolTip.timeout: 3000
-                ToolTip.visible: hovered
-                ToolTip.text: qsTr("Gamepad Mapper")
-
-                iconSource: "qrc:/res/ic_videogame_asset_white_48px.svg"
-
-                onClicked: navigateTo("qrc:/gui/GamepadMapper.qml", GamepadMapper)
-
-                Keys.onDownPressed: {
-                    stackView.currentItem.forceActiveFocus(Qt.TabFocus)
-                }
-            }
-
-            NavigableToolButton {
-                id: settingsButton
-
-                iconSource:  "qrc:/res/settings.svg"
-
-                onClicked: navigateTo("qrc:/gui/SettingsShell.qml", SettingsShell)
-
-                Keys.onDownPressed: {
-                    stackView.currentItem.forceActiveFocus(Qt.TabFocus)
-                }
-
-                Shortcut {
-                    id: settingsShortcut
-                    sequence: StandardKey.Preferences
-                    onActivated: settingsButton.clicked()
-                }
-
-                ToolTip.delay: 1000
-                ToolTip.timeout: 3000
-                ToolTip.visible: hovered
-                ToolTip.text: qsTr("Settings") + (settingsShortcut.nativeText ? (" ("+settingsShortcut.nativeText+")") : "")
-            }
+        function updateAvailable(version, url)
+        {
         }
     }
 
@@ -834,46 +566,8 @@ ApplicationWindow {
         onQuitRequested: Qt.quit()
     }
 
-    NavigableDialog {
-        id: addPcDialog
-        property string label: qsTr("Enter the IP address of your host PC:")
-
-        standardButtons: Dialog.Ok | Dialog.Cancel
-
-        onOpened: {
-            // Force keyboard focus on the textbox so keyboard navigation works
-            editText.forceActiveFocus()
-        }
-
-        onClosed: {
-            editText.clear()
-        }
-
-        onAccepted: {
-            if (editText.text) {
-                ComputerManager.addNewHostManually(editText.text.trim())
-            }
-        }
-
-        ColumnLayout {
-            Label {
-                text: addPcDialog.label
-                font.bold: true
-            }
-
-            TextField {
-                id: editText
-                Layout.fillWidth: true
-                focus: true
-
-                Keys.onReturnPressed: {
-                    addPcDialog.accept()
-                }
-
-                Keys.onEnterPressed: {
-                    addPcDialog.accept()
-                }
-            }
-        }
-    }
+    // The Add PC dialog went with the toolbar button that was its only opener.
+    // Adding a PC by hand lives on the Bulan screens: HostDiscovery's "Enter an
+    // address instead", and the carousel's Add a PC, both of which raise
+    // HostPanel and call the same ComputerManager.addNewHostManually().
 }

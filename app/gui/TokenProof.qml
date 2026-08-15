@@ -68,14 +68,8 @@ Item {
     readonly property bool fontsOk: haveDisplayFace && haveUiFace
 
     StackView.onActivated: {
-        // Full-bleed: the 60px toolbar would eat into the 800px height.
-        toolBar.visible = false
         window.width = 1280
         window.height = 800
-    }
-
-    StackView.onDeactivating: {
-        toolBar.visible = true
     }
 
     // --- Background: the real vertical base gradient -------------------------

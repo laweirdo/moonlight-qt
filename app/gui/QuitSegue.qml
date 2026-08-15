@@ -90,7 +90,6 @@ FocusScope {
     }
 
     StackView.onActivated: {
-        toolBar.visible = false
         forceActiveFocus()
         Qt.callLater(forceActiveFocus)
 
@@ -120,7 +119,6 @@ FocusScope {
     }
 
     StackView.onDeactivating: {
-        toolBar.visible = true
         disconnectQuitSignal()
     }
 

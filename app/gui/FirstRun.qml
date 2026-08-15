@@ -39,7 +39,6 @@ FocusScope {
     }
 
     StackView.onActivated: {
-        toolBar.visible = false
         SdlGamepadKeyNavigation.setUiNavMode(false)
         root.forceActiveFocus()
         // The transition is over: StackView sets Active once the screen has

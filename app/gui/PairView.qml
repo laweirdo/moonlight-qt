@@ -89,7 +89,6 @@ FocusScope {
     }
 
     StackView.onActivated: {
-        toolBar.visible = false
         SdlGamepadKeyNavigation.setUiNavMode(false)
         root.forceActiveFocus()
         // Active means the screen has stopped travelling. See FirstRun.qml.
