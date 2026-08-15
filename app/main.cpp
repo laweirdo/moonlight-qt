@@ -673,7 +673,15 @@ int main(int argc, char *argv[])
     //
     // NB: Windows defaults to the "windows" non-threaded render loop on
     // Qt 5 and the threaded render loop on Qt 6.
-    qputenv("QSG_RENDER_LOOP", "basic");
+    //
+    // Bulan: honour an explicitly set QSG_RENDER_LOOP instead of overwriting
+    // it, following the QT_OPENGL guard above. This exists so the render loop
+    // can be measured against Bulan's UI motion; the default is unchanged, and
+    // the streaming requirement described above still stands for any build
+    // that does not set the variable.
+    if (!qEnvironmentVariableIsSet("QSG_RENDER_LOOP")) {
+        qputenv("QSG_RENDER_LOOP", "basic");
+    }
 #endif
 
 #if defined(Q_OS_DARWIN) && defined(QT_DEBUG) && !defined(HAVE_LIBPLACEBO_VULKAN)
