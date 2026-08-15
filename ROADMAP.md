@@ -120,15 +120,19 @@ upstream Moonlight. **Accepted is not validated:** the table above is what
 
 Ordered by expected value, not effort:
 
-1. Host-menu parity: **Rename PC**, deferred from private v1 pending Deck
-   keyboard work. Test Network was deferred with it, then restored to private-v1
-   scope by the client on 31 July 2026.
-2. Sound pack
-3. Boot animation
-4. Ambient background motion
-5. Stream overlay, if hardware validation shows Bulan needs one
-6. Merged multi-host library, if separate libraries prove awkward in use
-7. Public-release preparation
+1. Sound pack
+2. Boot animation
+3. Ambient background motion
+4. Stream overlay, if hardware validation shows Bulan needs one
+5. Merged multi-host library, if separate libraries prove awkward in use
+6. Public-release preparation
+
+**Host-menu parity is closed.** Rename PC was the last action left behind in the
+inherited `PcView.qml`; it moved into the host settings overlay on 15 August
+2026, when that screen was deleted. It uses the same panel the manual-address
+entry uses, so it carries the same Deck on-screen-keyboard caveat as every other
+text field — see `docs/validation/2026-08-08-osk-diagnosis-and-resolution.md`.
+Test Network was restored to private-v1 scope by the client on 31 July 2026.
 
 The client mentioned possibly revisiting the screen transition to push it
 further toward the brief's "whimsical" character. Unscheduled.

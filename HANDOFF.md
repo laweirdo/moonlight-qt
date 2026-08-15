@@ -4,12 +4,12 @@ authority: repository-state
 read_when:
   - session-start
 history_policy: replace-not-append
-last_verified_commit: 467cdd3a
+last_verified_commit: 7fd22e1a
 ---
 
 # Bulan — current state
 
-**Verified 9 August 2026.** Inspect Git before relying on this — it is a
+**Verified 15 August 2026.** Inspect Git before relying on this — it is a
 snapshot, not an authority on what Git says.
 
 Replaced, never appended to. Past states are in Git history, past evidence in
@@ -19,52 +19,52 @@ Replaced, never appended to. Past states are in Git history, past evidence in
 
 | Item | State |
 |---|---|
-| Branches | `master` and `bulan`, both at this session's tip. `master` is now the primary integration branch |
-| Remote | `origin` only — `laweirdo/bulan-qt`, renamed from `moonlight-qt` on 9 August 2026. Both branches pushed |
+| Branches | `master` and `bulan` both at `177a58bd`. Work is on `polish-and-shell-rework`, cut from `master`, five commits ahead, **not pushed** |
+| Remote | `origin` only — `laweirdo/bulan-qt`. Nothing pushed this session |
 | Working tree | Clean |
-| Task branch | None. `fix-deck-osk` was merged and is gone |
-| Active task | **None.** No `TASK-BRIEF.md` exists |
-
-**The branch model changed.** `master` was a pristine upstream mirror; it is now
-Bulan's default branch, fast-forwarded to `bulan`, no history rewritten. `bulan`
-is kept until the client retires it. `AGENTS.md` owns the rule.
+| Task branch | `polish-and-shell-rework` |
+| Active task | **Yes.** `TASK-BRIEF.md` — the polish audit and Bulan layer rework |
+| Other branches | `codex/rework-core-shell` is excluded by client decision, 15 August 2026, and is not a source for anything |
 
 ## Where the product is
 
-**Alpha v0.0.1.** The version the app reports is its own `0.0.1`, not the
-inherited Moonlight `6.1.0`. `ROADMAP.md` owns scope and phase.
+**Alpha v0.0.1.** `ROADMAP.md` owns scope and phase.
 
-9 August 2026: entrances on `FirstRun`, `HostDiscovery` and `PairView` via a
-shared `EntranceMotion.qml`; a shorter transition fade so travel leads; the
-version identity; Bulan branding on display-only surfaces; a Bulan README. Then,
-from a client review: Bulan's own app icon, built from
-`app/res/bulan_app_icon.svg` by `scripts/gen-app-icon.*`; the carousel no longer
-showing or sliding at startup, so launch goes straight to the last host's
-library; and the library fading out as the artwork flies to the Connecting
-screen.
+15 August 2026, on the polish branch: the frame rate was measured before
+anything was changed; the busy-dots animation was unified and two broken copies
+of it removed; screen entrances now start from the transition rather than a
+timer and can be settled by input; Rename PC was ported into the host settings
+overlay; and the inherited Moonlight shell — its toolbar, `SettingsView.qml`,
+`PcView.qml` and every stock control only they kept alive — was deleted, 2931
+lines against 49 added.
+
+The remaining stages of the active task are the overdraw work, one popup
+mechanism, one hint-bar owner, the `AppView.qml` split, the token cleanup, and
+then mockups before any screen is redrawn.
 
 ## Validation status
 
 **Passed, on the Windows review station:** Qt 6.9.3 / MSVC Release build;
-`qmllint` on every changed QML file; the version flag, Win32 resource, window
-title, About and embedded icon checked against the built binary; startup going
-straight to the last host's library; the launch route reaching the Connecting
-screen; `python scripts/context-audit.py`.
+`qmllint` exit 0 on all 36 QML files, warning categories unchanged from the
+documented baseline; the carousel, game grid, settings shell and first-run screen
+each booted directly and rendered with zero QML errors; the host settings menu
+showing Rename PC.
 
-**Passed, in CI:** all five jobs, for the first time on this fork. The three
-unix ones had all been failing on one defect — a build-stamp header generated
-where a shadow build never looks for it. The AppImage artifact is how to get
-Bulan onto a Deck without building it; `BUILDING-DECK.md` says where.
+**Measured, 15 August 2026:** frame pacing on the game grid — see
+`docs/validation/2026-08-15-frame-pacing-baseline.md`. The reported 30 fps did
+not reproduce; throughput is fine and the *pacing* is uneven, which is what the
+eye reads as a low frame rate. Cause named: `QSG_RENDER_LOOP=basic`, forced on
+every platform for streaming's benefit.
 
-**Not established.** No Deck ran, so nothing was checked on hardware —
-entrances, the shortened fade, the launch handoff and cold boot in Game Mode.
-The macOS bundle and the WiX MSI were not built; their metadata is inspected
-statically only, and `app/moonlight.icns` is still upstream's because icns needs
-macOS tooling. The launch handoff's mid-flight frames were not captured, only
-that it runs and lands. LCD appearance remains unvalidated.
+**Not established.** No Deck ran, so nothing was checked on hardware — the frame
+pacing above, the entrance changes, the launch handoff, Game Mode, LCD
+appearance. The busy-dots component compiles and lints but was never caught on
+screen; the wake review hook fires against the online host. The rename panel's
+own path was not seen either: review mode blocks every real host action before
+it, so it needs a real paired PC. macOS and the WiX MSI were not built.
 
-Latest reports: `docs/validation/2026-08-08-osk-diagnosis-and-resolution.md`,
-`docs/validation/2026-08-05-private-v1-deck.md`.
+Latest reports: `docs/validation/2026-08-15-frame-pacing-baseline.md`,
+`docs/validation/2026-08-08-osk-diagnosis-and-resolution.md`.
 
 ## Open blockers
 
@@ -72,10 +72,8 @@ None. `BUGS.md` is empty.
 
 ## Next action
 
-1. **A Deck session** to see the new entrances, the transition and the launch
-   handoff on hardware, and an LCD unit for the remaining panel-appearance gap.
-2. **The macOS bundle icon.** `app/moonlight.icns` is still upstream's; it needs
-   macOS tooling this session did not have.
-3. **The repository description** on GitHub, a client action. The default branch
-   was already `master` and needs no change — it is what made the repository
-   present upstream Moonlight before `bulan` was merged into it.
+1. **Continue the active task** at its next stage — see `TASK-BRIEF.md`.
+2. **A Deck session.** Everything measured this session was measured on a
+   desktop GPU with no vsync; the pacing finding and the overdraw question both
+   need re-measuring on the target device.
+3. **A real paired host** to see the rename panel and the busy dots on screen.
