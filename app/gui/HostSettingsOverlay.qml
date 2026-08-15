@@ -108,6 +108,16 @@ FocusScope {
             note: "",
             destructive: false
         })
+        // Ported from PcView.qml, the inherited screen this overlay replaced --
+        // it was the last host action that existed only there, and only through
+        // a stock dialog no player could reach. The caller opens the rename
+        // panel; this overlay only reports which action was chosen.
+        actions.push({
+            actionId: "rename",
+            label: qsTr("Rename PC"),
+            note: "",
+            destructive: false
+        })
         actions.push({
             actionId: "forget",
             label: qsTr("Forget PC"),

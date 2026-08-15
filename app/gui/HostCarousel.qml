@@ -933,6 +933,12 @@ FocusScope {
         } else if (actionId === "testNetwork") {
             hostSettingsMenu.showNetworkTestPending()
             computerModel.testConnectionForComputer(computerIndex)
+        } else if (actionId === "rename") {
+            hostSettingsMenu.close()
+            renamePanel.targetUuid = hostUuid
+            renamePanel.initialText = hostName
+            renamePanel.show(qsTr("Rename %1").arg(hostName),
+                             qsTr("What should this PC be called?"))
         } else if (actionId === "forget") {
             hostSettingsMenu.close()
             computerModel.deleteComputer(computerIndex)
@@ -1100,7 +1106,7 @@ FocusScope {
             return
         }
         if (messagePanel.visible || pinPanel.visible || addPcPanel.visible ||
-                hostSettingsMenu.visible) {
+                renamePanel.visible || hostSettingsMenu.visible) {
             return
         }
         root.forceActiveFocus()
@@ -1115,6 +1121,7 @@ FocusScope {
         // treatment appeared or did not depending on which panel you opened.
         layer.enabled: hostSettingsMenu.visible || messagePanel.visible
                        || pinPanel.visible || addPcPanel.visible
+                       || renamePanel.visible
         layer.effect: MultiEffect {
             autoPaddingEnabled: false
             blurEnabled: true
@@ -1558,6 +1565,7 @@ FocusScope {
                                            && !messagePanel.visible
                                            && !pinPanel.visible
                                            && !addPcPanel.visible
+                                           && !renamePanel.visible
 
     readonly property var hintLeftHints: root.hasHosts
         ? [
@@ -1700,6 +1708,31 @@ FocusScope {
             if (text) {
                 ComputerManager.addNewHostManually(text.trim())
             }
+        }
+    }
+
+    // Rename, raised from the host menu. Reuses the same panel the manual
+    // address entry uses rather than introducing a second text surface -- the
+    // stock dialog PcView.qml renamed through is exactly what this replaces.
+    // The UUID is captured when the panel opens and re-resolved on submit, the
+    // same identity discipline every other host action here follows.
+    HostPanel {
+        id: renamePanel
+        anchors.fill: parent
+        editable: true
+        confirmLabel: qsTr("Rename")
+        property string targetUuid: ""
+        onVisibleChanged: if (!visible) Qt.callLater(root.reclaimFocus)
+        onSubmitted: function(text) {
+            var name = text.trim()
+            if (name === "") {
+                return
+            }
+            var index = computerModel.computerIndexForUuid(renamePanel.targetUuid)
+            if (index < 0) {
+                return
+            }
+            computerModel.renameComputer(index, name)
         }
     }
 

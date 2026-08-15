@@ -131,7 +131,7 @@ FocusScope {
     // popup should blur what is behind it, the same glass treatment the host
     // carousel and the settings screen already give theirs.
     readonly property bool popupBackdropActive:
-        gameOptions.visible || hostSettingsMenu.visible
+        gameOptions.visible || hostSettingsMenu.visible || renamePanel.visible
 
     // Started from StackView.onActivated, which fires when the stack sets this
     // screen Active -- that is, when it has stopped travelling. A timer set to
@@ -2169,7 +2169,7 @@ FocusScope {
         if (root.StackView.status !== StackView.Active) {
             return
         }
-        if (gameOptions.visible || hostSettingsMenu.visible) {
+        if (gameOptions.visible || hostSettingsMenu.visible || renamePanel.visible) {
             return
         }
         root.forceActiveFocus()
@@ -2302,6 +2302,12 @@ FocusScope {
         } else if (actionId === "testNetwork") {
             hostSettingsMenu.showNetworkTestPending()
             root.hostSettingsModel.testConnectionForComputer(computerIndex)
+        } else if (actionId === "rename") {
+            hostSettingsMenu.close()
+            renamePanel.targetUuid = hostUuid
+            renamePanel.initialText = hostName
+            renamePanel.show(qsTr("Rename %1").arg(hostName),
+                             qsTr("What should this PC be called?"))
         } else if (actionId === "forget") {
             hostSettingsMenu.close()
             root.hostSettingsModel.deleteComputer(computerIndex)
@@ -3901,6 +3907,7 @@ FocusScope {
     // Settings". Two bars also contradict each other: only one of them
     // describes what the buttons do while an overlay owns the input.
     readonly property bool hintBarVisible: !gameOptions.visible && !hostSettingsMenu.visible
+                                           && !renamePanel.visible
 
     readonly property var hintLeftHints: root.gameCount > 0
         ? [
@@ -4114,6 +4121,30 @@ FocusScope {
             root.handleHostSettingsAction(actionId, hostUuid, hostName)
         }
         onVisibleChanged: if (!visible) Qt.callLater(root.reclaimFocus)
+    }
+
+    // Rename, raised from the host menu, exactly as the carousel raises it --
+    // the same panel, the same capture-then-re-resolve identity discipline. The
+    // header above this grid shows the host's name, so a rename is visible here
+    // the moment it lands.
+    HostPanel {
+        id: renamePanel
+        anchors.fill: parent
+        editable: true
+        confirmLabel: qsTr("Rename")
+        property string targetUuid: ""
+        onVisibleChanged: if (!visible) Qt.callLater(root.reclaimFocus)
+        onSubmitted: function(text) {
+            var name = text.trim()
+            if (name === "") {
+                return
+            }
+            var index = root.hostSettingsModel.computerIndexForUuid(renamePanel.targetUuid)
+            if (index < 0) {
+                return
+            }
+            root.hostSettingsModel.renameComputer(index, name)
+        }
     }
 
     // Mouse/touch equivalent of the launch key barrier. The top-level proxy

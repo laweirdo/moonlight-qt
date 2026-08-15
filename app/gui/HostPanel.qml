@@ -25,6 +25,16 @@ FocusScope {
     // When true, shows a text field and emits submitted() with its contents.
     property bool editable: false
 
+    // What the field starts with. Empty for "enter an address", where there is
+    // nothing to start from; the current name for a rename, where retyping a
+    // name you are only editing would be busywork. Applied by show(), not bound,
+    // so a caller changing it later cannot overwrite what is being typed.
+    property string initialText: ""
+
+    // The confirm hint's wording. "Add" is right for the address panel and wrong
+    // for anything else, and this panel is now used for more than one thing.
+    property string confirmLabel: qsTr("Add")
+
     signal submitted(string text)
     signal dismissed()
 
@@ -52,6 +62,11 @@ FocusScope {
     function show(t, b) {
         title = t
         body = b
+        field.text = panel.initialText
+        // Selected, not just placed: the whole point of starting from the
+        // current name is that typing replaces it, while a deliberate press
+        // still lets it be edited.
+        field.selectAll()
         opened = true
         panel.forceActiveFocus()
     }
@@ -211,7 +226,7 @@ FocusScope {
                     }
                     Text {
                         anchors.verticalCenter: parent.verticalCenter
-                        text: qsTr("Add")
+                        text: panel.confirmLabel
                         color: Bulan.textSecondary
                         font.family: Bulan.familyUi
                         font.pixelSize: Bulan.sizeLabel
