@@ -373,7 +373,7 @@ FocusScope {
                             anchors.left: parent.left
                             anchors.leftMargin: Bulan.spaceLg + Bulan.space2xs + Bulan.spaceMd
                             width: Bulan.spaceXs
-                            height: 1
+                            height: Bulan.hairlineWidth
                         }
 
                         Text {
@@ -426,7 +426,7 @@ FocusScope {
                    + (railColumn.rowHeight - height) / 2
                 radius: Bulan.radiusFull
                 color: Bulan.transparent
-                border.width: Bulan.space2xs / 2
+                border.width: Bulan.focusRingWidth
                 border.color: Bulan.accentPrimary
 
                 // motionOvershoot, not motionEntranceOvershoot. The entrance
@@ -511,7 +511,7 @@ FocusScope {
 
                     Rectangle {
                         width: parent.width
-                        height: Bulan.space2xs / 4
+                        height: Bulan.hairlineWidth
                         color: Bulan.hairline
                     }
 
@@ -543,7 +543,7 @@ FocusScope {
 
                     Rectangle {
                         width: parent.width
-                        height: Bulan.space2xs / 4
+                        height: Bulan.hairlineWidth
                         color: Bulan.hairline
                     }
 
@@ -624,7 +624,7 @@ FocusScope {
                             readonly property bool rowIsEnabled: root.rowEnabled(modelData)
 
                             color: isFocusedRow ? Bulan.surfaceHover : Bulan.bgSurface
-                            border.width: isFocusedRow ? Bulan.space2xs / 2 : 0
+                            border.width: isFocusedRow ? Bulan.focusRingWidth : 0
                             border.color: Bulan.accentPrimary
                             opacity: rowIsEnabled ? 1.0 : Bulan.disabledOpacity
 
@@ -752,7 +752,7 @@ FocusScope {
                                 // supposed to be following (client review,
                                 // 3 August 2026).
                                 color: Bulan.surfacePressed
-                                border.width: 1
+                                border.width: Bulan.hairlineWidth
                                 border.color: on ? Bulan.accentPrimary : Bulan.hairline
                                 Behavior on border.color {
                                     ColorAnimation { duration: Bulan.motionFocusMs }

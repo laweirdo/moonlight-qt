@@ -256,7 +256,7 @@ FocusScope {
 
         radius: Bulan.radiusXl
         color: Bulan.popupGlassSurface
-        border.width: Bulan.space2xs / 4
+        border.width: Bulan.hairlineWidth
         border.color: Bulan.popupGlassBorder
 
         MouseArea {
@@ -283,7 +283,7 @@ FocusScope {
                     height: Bulan.targetMin
                     radius: width / 2
                     color: Bulan.surfacePressed
-                    border.width: Bulan.space2xs / 4
+                    border.width: Bulan.hairlineWidth
                     border.color: Bulan.popupGlassBorder
 
                     Text {
@@ -353,7 +353,7 @@ FocusScope {
 
             Rectangle {
                 width: parent.width
-                height: Bulan.space2xs / 4
+                height: Bulan.hairlineWidth
                 color: Bulan.hairline
             }
 
@@ -386,7 +386,7 @@ FocusScope {
                             anchors.left: parent.left
                             anchors.right: parent.right
                             anchors.top: parent.top
-                            height: Bulan.space2xs / 4
+                            height: Bulan.hairlineWidth
                             visible: modelData.destructive
                             color: Bulan.hairline
                         }
@@ -401,7 +401,7 @@ FocusScope {
                             color: index === overlay.selectedAction
                                    ? Bulan.surfaceHover : Bulan.transparent
                             border.width: index === overlay.selectedAction
-                                          ? Bulan.space2xs / 2 : 0
+                                          ? Bulan.focusRingWidth : 0
                             border.color: Bulan.accentPrimary
 
                             Text {
@@ -525,7 +525,7 @@ FocusScope {
                             color: index === overlay.confirmIndex
                                    ? Bulan.surfaceHover : Bulan.surfacePressed
                             border.width: index === overlay.confirmIndex
-                                          ? Bulan.space2xs / 2 : 0
+                                          ? Bulan.focusRingWidth : 0
                             border.color: Bulan.accentPrimary
 
                             Text {

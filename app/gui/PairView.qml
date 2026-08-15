@@ -176,7 +176,7 @@ FocusScope {
                         height: Bulan.pairPinTileHeight
                         radius: Bulan.radiusMd
                         color: Bulan.bgSurface
-                        border.width: 1
+                        border.width: Bulan.hairlineWidth
                         border.color: Bulan.hairline
 
                         Text {

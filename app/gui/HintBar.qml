@@ -95,7 +95,7 @@ Item {
     Rectangle {
         anchors.top: parent.top
         width: parent.width
-        height: 1
+        height: Bulan.hairlineWidth
         color: Bulan.hairline
     }
 

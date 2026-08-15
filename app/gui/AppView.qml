@@ -2803,7 +2803,7 @@ FocusScope {
                 height: Bulan.gameHeaderAvatarSize
                 radius: width / 2
                 color: Bulan.bgSurface
-                border.width: 1
+                border.width: Bulan.hairlineWidth
                 border.color: Bulan.hairline
 
                 Text {

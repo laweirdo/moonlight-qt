@@ -110,7 +110,8 @@ Item {
         color: Bulan.bgSurface
 
         border.width: tile.launchMotionFrozen ? tile.frozenLaunchBorderWidth
-                                              : (tile.isCurrent ? 2 : 1)
+                                              : (tile.isCurrent ? Bulan.focusRingWidth
+                                                                : Bulan.hairlineWidth)
         border.color: tile.launchMotionFrozen ? tile.frozenLaunchBorderColor
                                               : (tile.isCurrent ? Bulan.accentPrimary
                                                                 : Bulan.hairline)

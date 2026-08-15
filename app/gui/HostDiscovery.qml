@@ -329,7 +329,7 @@ FocusScope {
                         height: Bulan.targetRowHeight
                         radius: Bulan.radiusLg
                         color: Bulan.bgSurface
-                        border.width: isCurrent ? 2 : 0
+                        border.width: isCurrent ? Bulan.focusRingWidth : 0
                         border.color: Bulan.accentPrimary
 
                         readonly property bool isCurrent: index === root.currentIndex

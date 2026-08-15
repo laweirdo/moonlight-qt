@@ -198,7 +198,7 @@ FocusScope {
 
         radius: Bulan.radiusXl
         color: Bulan.popupGlassSurface
-        border.width: Bulan.space2xs / 4
+        border.width: Bulan.hairlineWidth
         border.color: Bulan.popupGlassBorder
 
         MouseArea {
@@ -263,7 +263,7 @@ FocusScope {
                                 // See the option rows below: every row is
                                 // outlined, the focused one in amber.
                                 border.width: popup.selectedIndex === 0
-                                              ? Bulan.space2xs / 2 : Bulan.space2xs / 4
+                                              ? Bulan.focusRingWidth : Bulan.hairlineWidth
                                 border.color: popup.selectedIndex === 0
                                               ? Bulan.accentPrimary : Bulan.hairline
 
@@ -318,8 +318,8 @@ FocusScope {
                                 // unfocused rows with no border at all left
                                 // them reading as loose text rather than as
                                 // the list of choices they are.
-                                border.width: isSelected ? Bulan.space2xs / 2
-                                                         : Bulan.space2xs / 4
+                                border.width: isSelected ? Bulan.focusRingWidth
+                                                         : Bulan.hairlineWidth
                                 border.color: isSelected ? Bulan.accentPrimary
                                                          : Bulan.hairline
 
@@ -426,7 +426,8 @@ FocusScope {
                     height: Bulan.targetMin
                     radius: Bulan.radiusMd
                     color: Bulan.surfacePressed
-                    border.width: addField.activeFocus ? 2 : 1
+                    border.width: addField.activeFocus ? Bulan.focusRingWidth
+                                                       : Bulan.hairlineWidth
                     border.color: addField.activeFocus ? Bulan.accentPrimary : Bulan.hairline
 
                     TextInput {

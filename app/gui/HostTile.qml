@@ -97,7 +97,7 @@ Item {
         // The focus ring is always amber, online or not: focus has to read the
         // same everywhere or it stops being a reliable signal. Reachability is
         // carried by the status line and the halo instead.
-        border.width: tile.isCurrent ? 2 : 1
+        border.width: tile.isCurrent ? Bulan.focusRingWidth : Bulan.hairlineWidth
         border.color: tile.isCurrent ? Bulan.accentPrimary : Bulan.hairline
 
         transformOrigin: Item.Center

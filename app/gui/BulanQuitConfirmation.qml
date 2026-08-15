@@ -86,7 +86,7 @@ FocusScope {
         height: content.implicitHeight + Bulan.spaceXl * 2
         radius: Bulan.radiusXl
         color: Bulan.popupGlassSurface
-        border.width: Bulan.space2xs / 4
+        border.width: Bulan.hairlineWidth
         border.color: Bulan.popupGlassBorder
 
         MouseArea {
@@ -141,7 +141,7 @@ FocusScope {
                         color: choiceButton.index === overlay.selectedChoice
                                ? Bulan.surfaceHover : Bulan.surfacePressed
                         border.width: choiceButton.index === overlay.selectedChoice
-                                      ? Bulan.space2xs / 2 : 0
+                                      ? Bulan.focusRingWidth : 0
                         border.color: Bulan.accentPrimary
 
                         Text {

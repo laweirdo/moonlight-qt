@@ -449,7 +449,7 @@ FocusScope {
                 height: Bulan.targetMin
                 radius: Bulan.radiusMd
                 color: Bulan.surfaceHover
-                border.width: Bulan.space2xs / 2
+                border.width: Bulan.focusRingWidth
                 border.color: Bulan.accentPrimary
 
                 Text {

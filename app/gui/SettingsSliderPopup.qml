@@ -132,7 +132,7 @@ FocusScope {
 
         radius: Bulan.radiusXl
         color: Bulan.popupGlassSurface
-        border.width: Bulan.space2xs / 4
+        border.width: Bulan.hairlineWidth
         border.color: Bulan.popupGlassBorder
 
         MouseArea {

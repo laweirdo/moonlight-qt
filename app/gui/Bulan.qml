@@ -99,6 +99,18 @@ QtObject {
     readonly property int targetMin:           64
     readonly property int targetRowHeight:     88
 
+    // --- Line weights --------------------------------------------------------
+    // Two, because the app draws exactly two kinds of line: one that divides a
+    // surface from what is behind it, and one that says where the focus is.
+    //
+    // Both were raw literals before, or spacing steps divided down to reach the
+    // right number -- `space2xs / 4` on every popup border, `space2xs / 2` or a
+    // bare 1 or 2 on focus rings, in seven files. A spacing step is a distance
+    // between things; a line width is not, and dividing one into the other
+    // meant retuning either was impossible without checking every site.
+    readonly property int hairlineWidth:  1
+    readonly property int focusRingWidth: 2
+
     // --- Radius (figma: radius/base) -----------------------------------------
     readonly property int radiusXs: 4
     readonly property int radiusSm: 8

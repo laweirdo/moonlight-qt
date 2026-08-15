@@ -44,7 +44,9 @@ FocusScope {
     // motion at all (client review, 3 August 2026).
     property bool opened: false
     visible: opened || popupMotion.progress > 0.001
-    z: 100
+    // 200, the same as every other Bulan popup. This was 100, from before there
+    // was a second popup to stack against.
+    z: 200
 
     // The shared popup entrance. Every Bulan popup uses this one object rather
     // than its own copy of the animation.
@@ -134,8 +136,12 @@ FocusScope {
     // through the overlay.
     Rectangle {
         anchors.fill: parent
-        color: Bulan.bgBaseOled
-        opacity: 0.72 * popupMotion.scrimOpacity
+        // The shared popup scrim, not a raw 0.72 over the OLED base. This panel
+        // predates the glass treatment the client accepted on 3 August 2026 and
+        // was the only popup still painting its own darkness, so it sat a shade
+        // heavier than every other modal in the app.
+        color: Bulan.popupScrim
+        opacity: popupMotion.scrimOpacity
         MouseArea {
             anchors.fill: parent
             hoverEnabled: true
@@ -156,10 +162,11 @@ FocusScope {
         anchors.centerIn: parent
         width: Math.min(parent.width - Bulan.layoutScreenMarginX * 2, 640)
         height: content.implicitHeight + Bulan.spaceXl * 2
-        radius: Bulan.radiusLg
-        color: Bulan.bgSurface
-        border.width: 1
-        border.color: Bulan.hairline
+        // The glass surface, radius and border every other popup uses.
+        radius: Bulan.radiusXl
+        color: Bulan.popupGlassSurface
+        border.width: Bulan.hairlineWidth
+        border.color: Bulan.popupGlassBorder
 
         // Clicks on the panel itself must not fall through to the scrim.
         MouseArea {
@@ -198,7 +205,8 @@ FocusScope {
                 visible: panel.editable
                 radius: Bulan.radiusMd
                 color: Bulan.surfacePressed
-                border.width: field.activeFocus ? 2 : 1
+                border.width: field.activeFocus ? Bulan.focusRingWidth
+                                                : Bulan.hairlineWidth
                 border.color: field.activeFocus ? Bulan.accentPrimary : Bulan.hairline
 
                 TextInput {
