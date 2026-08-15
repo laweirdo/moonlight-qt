@@ -578,20 +578,16 @@ FocusScope {
         }
     }
 
-    HintBar {
-        id: hintBar
-        anchors.left: parent.left
-        anchors.right: parent.right
-        anchors.bottom: parent.bottom
-
-        leftHints: overlay.page === "menu" || overlay.page === "confirm"
-                   ? [{ action: "confirm", label: qsTr("Select"), emphasis: true }]
-                   : []
-        rightHints: [{
-                action: "back",
-                label: overlay.page === "menu" ? qsTr("Close") : qsTr("Back")
-            }]
-    }
+    // Declared, not drawn -- see GameOptionsOverlay.qml for why.
+    readonly property bool hintBarVisible: true
+    readonly property var hintLeftHints:
+        overlay.page === "menu" || overlay.page === "confirm"
+        ? [{ action: "confirm", label: qsTr("Select"), emphasis: true }]
+        : []
+    readonly property var hintRightHints: [{
+            action: "back",
+            label: overlay.page === "menu" ? qsTr("Close") : qsTr("Back")
+        }]
 
     Keys.onUpPressed: {
         if (page === "menu") {

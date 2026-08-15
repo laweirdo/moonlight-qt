@@ -402,12 +402,34 @@ ApplicationWindow {
             anchors.right: parent.right
             anchors.bottom: parent.bottom
 
-            visible: stackView.currentItem !== null
-                     && stackView.currentItem !== undefined
-                     && stackView.currentItem.hintBarVisible === true
+            // Whoever owns the input owns the hints. Three things could be that
+            // owner and they are resolved in the order they stack: the quit
+            // confirmation, which is parented to the window and sits above
+            // everything; whichever popup the current screen reports as open;
+            // and otherwise the screen itself.
+            //
+            // Popups used to draw hint bars of their own, so a second bar
+            // appeared over the first and every screen had to remember to
+            // suppress its own -- "A Select" printing over "A Connect". Some
+            // screens remembered and some did not. Now there is one bar, and a
+            // popup that wants no hints (HostPanel, which carries its own in
+            // its card) simply says so.
+            readonly property var owner: {
+                if (quitConfirmationDialog.visible) {
+                    return quitConfirmationDialog
+                }
+                var screen = stackView.currentItem
+                if (!screen) {
+                    return null
+                }
+                return screen.hintOwner ? screen.hintOwner : screen
+            }
 
-            leftHints: visible ? stackView.currentItem.hintLeftHints : []
-            rightHints: visible ? stackView.currentItem.hintRightHints : []
+            visible: owner !== null && owner !== undefined
+                     && owner.hintBarVisible === true
+
+            leftHints: visible ? owner.hintLeftHints : []
+            rightHints: visible ? owner.hintRightHints : []
         }
     }
 

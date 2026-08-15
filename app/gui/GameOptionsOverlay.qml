@@ -641,21 +641,20 @@ FocusScope {
         }
     }
 
-    HintBar {
-        id: hintBar
-        anchors.left: parent.left
-        anchors.right: parent.right
-        anchors.bottom: parent.bottom
-
-        leftHints: (overlay.page === "menu" || overlay.page === "quitConfirm"
-                    || overlay.page === "switchConfirm")
-                   ? [{ action: "confirm", label: qsTr("Select"), emphasis: true }]
-                   : []
-        rightHints: [{
-                action: "back",
-                label: overlay.page === "menu" ? qsTr("Close") : qsTr("Back")
-            }]
-    }
+    // Declared, not drawn. There is one hint bar and the window owns it; a
+    // popup that drew its own put a second bar on the screen and left every
+    // screen underneath suppressing its own to stop the two printing over each
+    // other. The screen hands these upward through its `hintOwner` instead.
+    readonly property bool hintBarVisible: true
+    readonly property var hintLeftHints:
+        (overlay.page === "menu" || overlay.page === "quitConfirm"
+         || overlay.page === "switchConfirm")
+        ? [{ action: "confirm", label: qsTr("Select"), emphasis: true }]
+        : []
+    readonly property var hintRightHints: [{
+            action: "back",
+            label: overlay.page === "menu" ? qsTr("Close") : qsTr("Back")
+        }]
 
     Keys.onUpPressed: function(event) {
         if (page === "menu") {

@@ -148,6 +148,17 @@ FocusScope {
         open: popup.opened
     }
 
+    // Hints, declared for the window's single bar. This popup had none at all,
+    // so the settings screen underneath kept printing "A Open / B Back" while
+    // this owned the input and B meant something different here.
+    readonly property bool hintBarVisible: true
+    readonly property var hintLeftHints: [
+        { action: "confirm", label: qsTr("Select"), emphasis: true }
+    ]
+    readonly property var hintRightHints: [
+        { action: "back", label: qsTr("Back") }
+    ]
+
     Rectangle {
         anchors.fill: parent
         color: Bulan.popupScrim

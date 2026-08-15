@@ -53,6 +53,15 @@ FocusScope {
         open: panel.opened
     }
 
+    // This panel carries its hints inside its own card, below the field, where
+    // they belong to the card rather than to the window. So it owns the hint
+    // bar while it is open and asks for nothing to be drawn -- which is what
+    // takes the screen's own bar off the screen underneath. Before this, the
+    // onboarding screens kept printing their hints under an open panel.
+    readonly property bool hintBarVisible: false
+    readonly property var hintLeftHints: []
+    readonly property var hintRightHints: []
+
     // A hidden panel must not be able to hold focus. Qt will not give active
     // focus to a disabled item, and relinquishes it if an item holding focus
     // becomes disabled -- so this is what stops focus being trapped on a panel

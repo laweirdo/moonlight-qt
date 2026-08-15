@@ -3902,8 +3902,14 @@ FocusScope {
     // other -- "Select" on top of "Play", "Close" on top of "Client
     // Settings". Two bars also contradict each other: only one of them
     // describes what the buttons do while an overlay owns the input.
-    readonly property bool hintBarVisible: !gameOptions.visible && !hostSettingsMenu.visible
-                                           && !renamePanel.visible
+    // Whichever popup owns the input, or null for this screen's own hints --
+    // see HostCarousel.qml and main.qml's single bar.
+    readonly property var hintOwner: gameOptions.visible ? gameOptions
+                                   : hostSettingsMenu.visible ? hostSettingsMenu
+                                   : renamePanel.visible ? renamePanel
+                                   : null
+
+    readonly property bool hintBarVisible: true
 
     readonly property var hintLeftHints: root.gameCount > 0
         ? [

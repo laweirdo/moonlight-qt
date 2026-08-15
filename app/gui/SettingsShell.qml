@@ -864,6 +864,14 @@ FocusScope {
     }
 
     // --- hint bar ----------------------------------------------------------
+    // Whichever popup owns the input, or null for this screen's own hints. This
+    // screen never suppressed its bar at all, so a popup's scrim had the
+    // shell's "A Open / B Back" printed across it while B meant something else
+    // -- the mirror image of the defect the carousel had already fixed.
+    readonly property var hintOwner: choicePopup.visible ? choicePopup
+                                   : sliderPopup.visible ? sliderPopup
+                                   : null
+
     readonly property bool hintBarVisible: true
     readonly property var hintLeftHints: [
         {

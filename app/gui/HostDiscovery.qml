@@ -425,6 +425,13 @@ FocusScope {
     // "Enter address" is the same controller-first addition FirstRun.qml
     // makes to its own hint bar, and for the same reason -- see that
     // screen's comment.
+    // Whichever panel owns the input, or null for this screen's own hints. Both
+    // panels carry their hints in their own cards, so the window bar goes away
+    // while either is open. See main.qml.
+    readonly property var hintOwner: messagePanel.visible ? messagePanel
+                                   : addressPanel.visible ? addressPanel
+                                   : null
+
     readonly property bool hintBarVisible: true
     readonly property var hintLeftHints: [
         { action: "confirm", label: qsTr("Select"), emphasis: true, visible: root.host !== null },

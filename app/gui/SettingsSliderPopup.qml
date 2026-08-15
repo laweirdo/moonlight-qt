@@ -92,6 +92,17 @@ FocusScope {
         open: popup.opened
     }
 
+    // Hints, declared for the window's single bar -- see SettingsChoicePopup.
+    //
+    // Only the back hint. Adjusting is Left/Right, and ControllerGlyph draws
+    // face buttons, shoulders, triggers and start/select -- there is no d-pad
+    // glyph, and inventing one is a design decision rather than a wiring one.
+    readonly property bool hintBarVisible: true
+    readonly property var hintLeftHints: []
+    readonly property var hintRightHints: [
+        { action: "back", label: qsTr("Done") }
+    ]
+
     Rectangle {
         anchors.fill: parent
         color: Bulan.popupScrim

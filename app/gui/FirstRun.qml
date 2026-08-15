@@ -245,6 +245,10 @@ FocusScope {
     // outranks a mockup that shows one screenshot, not every binding, and a
     // real binding missing from the hint bar is the exact failure HintBar
     // exists to prevent. HostCarousel's own "Add a PC" is the same shape.
+    // The address panel owns the hints while it is open -- it carries its own
+    // inside its card, so the window bar goes away. See main.qml.
+    readonly property var hintOwner: addressPanel.visible ? addressPanel : null
+
     readonly property bool hintBarVisible: true
     readonly property var hintLeftHints: [
         { action: "confirm", label: qsTr("Continue"), emphasis: true },

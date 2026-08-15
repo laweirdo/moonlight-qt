@@ -169,14 +169,15 @@ FocusScope {
         }
     }
 
-    HintBar {
-        anchors.left: parent.left
-        anchors.right: parent.right
-        anchors.bottom: parent.bottom
-
-        leftHints: [{ action: "confirm", label: qsTr("Select"), emphasis: true }]
-        rightHints: [{ action: "back", label: qsTr("Cancel") }]
-    }
+    // Declared, not drawn -- see GameOptionsOverlay.qml. This one is parented to
+    // the window rather than to a screen, so main.qml reads it directly.
+    readonly property bool hintBarVisible: true
+    readonly property var hintLeftHints: [
+        { action: "confirm", label: qsTr("Select"), emphasis: true }
+    ]
+    readonly property var hintRightHints: [
+        { action: "back", label: qsTr("Cancel") }
+    ]
 
     Shortcut {
         enabled: overlay.visible

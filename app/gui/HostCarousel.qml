@@ -1557,12 +1557,17 @@ FocusScope {
     // own hints and the two bars would otherwise print on top of each other --
     // "A Select" over "A Connect", "B Close" over "Host Settings". AppView.qml
     // already guards its bar the same way; this screen was missed.
+    // Whichever popup owns the input, or null for this screen's own hints.
+    // main.qml reads this and shows one bar for whoever is on top; the screen
+    // no longer has to suppress its own to avoid printing over a second one.
+    readonly property var hintOwner: hostSettingsMenu.visible ? hostSettingsMenu
+                                   : messagePanel.visible ? messagePanel
+                                   : pinPanel.visible ? pinPanel
+                                   : addPcPanel.visible ? addPcPanel
+                                   : renamePanel.visible ? renamePanel
+                                   : null
+
     readonly property bool hintBarVisible: root.contentRevealed
-                                           && !hostSettingsMenu.visible
-                                           && !messagePanel.visible
-                                           && !pinPanel.visible
-                                           && !addPcPanel.visible
-                                           && !renamePanel.visible
 
     readonly property var hintLeftHints: root.hasHosts
         ? [
