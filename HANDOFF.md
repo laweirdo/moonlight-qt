@@ -4,7 +4,7 @@ authority: repository-state
 read_when:
   - session-start
 history_policy: replace-not-append
-last_verified_commit: 7fd22e1a
+last_verified_commit: bb291747
 ---
 
 # Bulan — current state
@@ -30,22 +30,19 @@ Replaced, never appended to. Past states are in Git history, past evidence in
 
 **Alpha v0.0.1.** `ROADMAP.md` owns scope and phase.
 
-15 August 2026, on the polish branch: the frame rate was measured before
-anything was changed; the busy-dots animation was unified and two broken copies
-of it removed; screen entrances now start from the transition rather than a
-timer and can be settled by input; Rename PC was ported into the host settings
-overlay; the inherited Moonlight shell — its toolbar, `SettingsView.qml`,
-`PcView.qml` and every stock control only they kept alive — was deleted; the
-hint bar became one bar owned by the window, with popups declaring hints instead
-of drawing their own; line weights got their own tokens and `HostPanel` finished
-the glass migration; and the focus bloom became one component instead of four
-hand-copied canvases.
+15 August 2026, on the polish branch, in order: the frame rate was measured
+before anything changed; the busy-dots animation was unified and two broken
+copies removed; entrances now start from the transition instead of a timer and
+can be settled by input; Rename PC was ported into the host settings overlay;
+the inherited Moonlight shell — toolbar, `SettingsView.qml`, `PcView.qml` and
+every stock control only they kept alive — was deleted; the hint bar became one
+bar owned by the window; line weights got tokens and `HostPanel` finished the
+glass migration; the focus bloom became one component instead of four; the
+overdraw the measurement could justify was cut; and the last eight stock Dialogs
+became Bulan panels. **No stock visual control remains in a Bulan surface.**
 
-The remaining stages of the active task are the overdraw work, the
-`AppView.qml` split with its two duplicate capture pipelines, the stock error
-dialogs that still live in Qt's overlay layer, and then mockups before any
-screen is redrawn. `DESIGN-SYSTEM.md` records three open design questions that
-came out of this work.
+**Only the redraw is left, gated on mockups the client has not seen.**
+`TASK-BRIEF.md` carries what the client owes.
 
 ## Validation status
 
@@ -60,18 +57,18 @@ One regression was introduced and fixed within the session: both overlays sized
 their surface against the hint bar they used to draw, and that binding failed
 once the bar was removed. Caught by reading the log, not the build.
 
-**Measured, 15 August 2026:** frame pacing on the game grid — see
+**Measured:** frame pacing on the game grid —
 `docs/validation/2026-08-15-frame-pacing-baseline.md`. The reported 30 fps did
 not reproduce; throughput is fine and the *pacing* is uneven, which is what the
 eye reads as a low frame rate. Cause named: `QSG_RENDER_LOOP=basic`, forced on
-every platform for streaming's benefit.
+every platform for streaming's benefit. The overdraw cuts moved that number not
+at all, on a GPU too idle to show it.
 
-**Not established.** No Deck ran, so nothing was checked on hardware — the frame
-pacing above, the entrance changes, the launch handoff, Game Mode, LCD
-appearance. The busy-dots component compiles and lints but was never caught on
-screen; the wake review hook fires against the online host. The rename panel's
-own path was not seen either: review mode blocks every real host action before
-it, so it needs a real paired PC. macOS and the WiX MSI were not built.
+**Not established.** No Deck ran, so nothing was checked on hardware. Never seen
+on screen, only compiled and linted: the busy dots (the wake hook fires against
+the online host), the rename panel and the configuration warnings (review mode
+and real startup conditions block them), and the CLI panels. macOS and the WiX
+MSI were not built.
 
 Latest reports: `docs/validation/2026-08-15-frame-pacing-baseline.md`,
 `docs/validation/2026-08-08-osk-diagnosis-and-resolution.md`.
