@@ -38,6 +38,15 @@ FocusScope {
         rebuildTimer.restart()
     }
 
+    function entryForAppId(appId) {
+        for (var i = 0; i < alphabeticalEntries.length; i++) {
+            if (alphabeticalEntries[i].appId === appId) {
+                return alphabeticalEntries[i]
+            }
+        }
+        return null
+    }
+
     function shelfOffsetForAppId(appId) {
         var index = shelfAppIds.indexOf(appId)
         var selected = shelfAppIds.indexOf(selectedAppId)
@@ -80,6 +89,8 @@ FocusScope {
                     playedAt: playedAt(item.lastPlayedValue),
                     boxart: item.boxartValue,
                     running: item.isRunning,
+                    hidden: item.isHidden,
+                    directLaunch: item.isDirectLaunch,
                     appCollectorGame: item.isAppCollectorGame
                 })
             }
@@ -431,6 +442,8 @@ FocusScope {
                 readonly property var lastPlayedValue: model.lastPlayed
                 readonly property url boxartValue: model.boxart
                 readonly property bool isRunning: model.running
+                readonly property bool isHidden: model.hidden
+                readonly property bool isDirectLaunch: model.directLaunch
                 readonly property bool isAppCollectorGame: model.appCollectorGame
 
                 onGameNameChanged: root.scheduleRebuild()
@@ -438,6 +451,8 @@ FocusScope {
                 onLastPlayedValueChanged: root.scheduleRebuild()
                 onBoxartValueChanged: root.scheduleRebuild()
                 onIsRunningChanged: root.scheduleRebuild()
+                onIsHiddenChanged: root.scheduleRebuild()
+                onIsDirectLaunchChanged: root.scheduleRebuild()
                 onIsAppCollectorGameChanged: root.scheduleRebuild()
             }
 

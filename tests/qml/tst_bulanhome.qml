@@ -37,15 +37,32 @@ TestCase {
         optionsSpy.clear()
     }
 
-    function addGame(name, appId, lastPlayed) {
+    function addGame(name, appId, lastPlayed, running, hidden, directLaunch) {
         games.append({
             "name": name,
             "appid": appId,
             "boxart": "",
-            "running": false,
+            "running": running === true,
+            "hidden": hidden === true,
+            "directLaunch": directLaunch === true,
             "appCollectorGame": false,
             "lastPlayed": lastPlayed || new Date(0)
         })
+    }
+
+    function test_entrySnapshotCarriesStableMenuState() {
+        addGame("Hades II", 42, null, true, false, true)
+
+        var home = createTemporaryObject(subject, this)
+        verify(home !== null)
+        tryCompare(home, "gameCount", 1)
+        tryVerify(function() { return home.entryForAppId(42) !== null })
+        var entry = home.entryForAppId(42)
+
+        compare(entry.appId, 42)
+        compare(entry.running, true)
+        compare(entry.hidden, false)
+        compare(entry.directLaunch, true)
     }
 
     function test_withoutHistoryShowsFirstFiveAlphabetically() {

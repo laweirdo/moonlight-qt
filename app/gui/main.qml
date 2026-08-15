@@ -360,6 +360,19 @@ ApplicationWindow {
             Qt.callLater(hideToolBarOnBulanScreen)
         }
 
+        Connections {
+            target: stackView.currentItem
+            ignoreUnknownSignals: true
+
+            function onLegacySettingsRequested() {
+                navigateTo("qrc:/gui/SettingsShell.qml", SettingsShell)
+            }
+
+            function onLegacyPcRequested() {
+                navigateTo("qrc:/gui/PcView.qml", PcView)
+            }
+        }
+
         Keys.onEscapePressed: {
             if (depth > 1) {
                 goBack()

@@ -22,6 +22,11 @@ FocusScope {
     property var hostContexts: ({})
     property ComputerModel computerModel: createComputerModel()
 
+    signal legacySettingsRequested()
+    signal legacyPcRequested()
+    signal playRequested(int appId)
+    signal quitRequested(int appId)
+
     readonly property real compositionScale: Math.min(
             width / Bulan.referenceWidth,
             height / Bulan.referenceHeight)
@@ -37,6 +42,34 @@ FocusScope {
         hostSync.restart()
     }
 
+    function hostSnapshots() {
+        var hosts = []
+        for (var i = 0; i < hostMirror.count; i++) {
+            var item = hostMirror.itemAt(i)
+            if (item) {
+                hosts.push({
+                    uuid: item.hostUuid,
+                    name: item.hostName,
+                    online: item.online,
+                    paired: item.paired,
+                    wakeable: item.wakeable,
+                    statusUnknown: item.statusUnknown,
+                    address: item.address,
+                    details: item.details
+                })
+            }
+        }
+        return hosts
+    }
+
+    function hostForUuid(uuid) {
+        var hosts = hostSnapshots()
+        for (var i = 0; i < hosts.length; i++) {
+            if (hosts[i].uuid === uuid) return hosts[i]
+        }
+        return null
+    }
+
     function syncActiveHost() {
         var host = null
         for (var i = 0; i < hostMirror.count; i++) {
@@ -50,9 +83,11 @@ FocusScope {
         activeHostName = host ? host.hostName : ""
         activeHostOnline = host ? host.online : false
         activeHostWakeable = host ? host.wakeable : false
+        pcSwitcher.hosts = hostSnapshots()
 
         if (!host) {
             replaceAppModel(null, "")
+            if (shellReady && !pcSwitcher.opened) pcSwitcher.show()
             return
         }
         if (appModel && appModelHostUuid === activeHostUuid) return
@@ -94,12 +129,119 @@ FocusScope {
         home.contentY = context.contentY
     }
 
+    function openPcSwitcher() {
+        pcSwitcher.hosts = hostSnapshots()
+        pcSwitcher.activeHostUuid = activeHostUuid
+        pcSwitcher.show()
+    }
+
+    function openGameMenu(appId) {
+        var entry = home.entryForAppId(appId)
+        if (!entry) return
+        gameMenu.showForGame({
+            appId: entry.appId,
+            name: entry.name,
+            running: entry.running,
+            hidden: entry.hidden,
+            directLaunch: entry.directLaunch
+        })
+    }
+
+    function wakeHost(uuid) {
+        var index = computerModel.computerIndexForUuid(uuid)
+        if (index >= 0) computerModel.wakeComputer(index)
+    }
+
+    function handlePcAction(actionId, hostUuid, address) {
+        var host = hostForUuid(hostUuid)
+        if (actionId === "add") {
+            pcSwitcher.close()
+            legacyPcRequested()
+        } else if (actionId === "details") {
+            pcSwitcher.close()
+            legacyPcRequested()
+        } else if (actionId === "wake" && host) {
+            wakeHost(host.uuid)
+        } else if (actionId === "retry" && host && address !== "") {
+            ComputerManager.addNewHostManually(address)
+        } else if (actionId === "choose" && host) {
+            if (!host.paired) {
+                pcSwitcher.close()
+                legacyPcRequested()
+                return
+            }
+            saveHomeContext()
+            StreamingPreferences.lastHostUuid = host.uuid
+            activeHostUuid = host.uuid
+            pcSwitcher.close()
+        }
+    }
+
+    function rememberNearestApp(appId) {
+        var ids = home.displayAppIds
+        var index = ids.indexOf(appId)
+        var nearestId = 0
+        if (ids.length > 1 && index >= 0) {
+            nearestId = index < ids.length - 1 ? ids[index + 1] : ids[index - 1]
+        }
+        var contexts = hostContexts
+        var context = contexts[appModelHostUuid] || {
+            hostUuid: appModelHostUuid,
+            mode: home.mode,
+            contentY: home.contentY
+        }
+        context.appId = nearestId
+        contexts[appModelHostUuid] = context
+        hostContexts = contexts
+    }
+
+    function reloadAppModel() {
+        replaceAppModel(null, "")
+        scheduleHostSync()
+    }
+
+    function handleGameAction(actionId, appId) {
+        if (!appModel) return
+        var index = appModel.appIndexForId(appId)
+        if (index < 0) {
+            gameMenu.close()
+            return
+        }
+        var entry = home.entryForAppId(appId)
+        if (!entry) {
+            gameMenu.close()
+            return
+        }
+
+        if (actionId === "toggleHidden") {
+            rememberNearestApp(appId)
+            appModel.setAppHidden(index, !entry.hidden)
+            gameMenu.close()
+            reloadAppModel()
+        } else if (actionId === "toggleDirectLaunch") {
+            appModel.setAppDirectLaunch(index, !entry.directLaunch)
+            gameMenu.close()
+            reloadAppModel()
+        } else if (actionId === "play" || actionId === "resume") {
+            gameMenu.close()
+            playRequested(appId)
+        } else if (actionId === "quit") {
+            gameMenu.close()
+            quitRequested(appId)
+        }
+    }
+
     onActiveHostUuidChanged: scheduleHostSync()
 
     Timer {
         id: hostSync
         interval: 0
-        onTriggered: root.syncActiveHost()
+        onTriggered: {
+            root.syncActiveHost()
+            if (!pcSwitcher.opened && !gameMenu.opened) {
+                home.forceActiveFocus()
+            }
+        }
     }
 
     Atmosphere {
@@ -136,6 +278,11 @@ FocusScope {
             onSelectedAppIdChanged: root.saveHomeContext()
             onContentYChanged: root.saveHomeContext()
             onGameCountChanged: Qt.callLater(root.restoreHomeContext)
+            onPlayRequested: root.playRequested(appId)
+            onGameOptionsRequested: root.openGameMenu(appId)
+            onSwitchPcRequested: root.openPcSwitcher()
+            onWakeRequested: root.wakeHost(root.activeHostUuid)
+            onSettingsRequested: root.legacySettingsRequested()
         }
 
         Item {
@@ -149,17 +296,40 @@ FocusScope {
                     readonly property string hostUuid: model.uuid
                     readonly property string hostName: model.name
                     readonly property bool online: model.online
+                    readonly property bool paired: model.paired
                     readonly property bool wakeable: model.wakeable
+                    readonly property bool statusUnknown: model.statusUnknown
+                    readonly property string address: model.address
+                    readonly property string details: model.details
 
                     onHostUuidChanged: root.scheduleHostSync()
                     onHostNameChanged: root.scheduleHostSync()
                     onOnlineChanged: root.scheduleHostSync()
+                    onPairedChanged: root.scheduleHostSync()
                     onWakeableChanged: root.scheduleHostSync()
+                    onStatusUnknownChanged: root.scheduleHostSync()
+                    onAddressChanged: root.scheduleHostSync()
+                    onDetailsChanged: root.scheduleHostSync()
                 }
 
                 onItemAdded: root.scheduleHostSync()
                 onItemRemoved: root.scheduleHostSync()
             }
+        }
+
+        BulanPcSwitcher {
+            id: pcSwitcher
+            anchors.fill: parent
+            activeHostUuid: root.activeHostUuid
+            onActionRequested: root.handlePcAction(actionId, hostUuid, address)
+            onDismissed: Qt.callLater(home.forceActiveFocus)
+        }
+
+        BulanGameMenu {
+            id: gameMenu
+            anchors.fill: parent
+            onActionRequested: root.handleGameAction(actionId, appId)
+            onDismissed: Qt.callLater(home.forceActiveFocus)
         }
     }
 
@@ -170,7 +340,7 @@ FocusScope {
         startupDuration: Bulan.shellStartupMaxMs
         onCompleted: {
             root.shellReady = true
-            Qt.callLater(home.forceActiveFocus)
+            root.scheduleHostSync()
         }
     }
 
