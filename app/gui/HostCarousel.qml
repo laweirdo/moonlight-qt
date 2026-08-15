@@ -850,6 +850,7 @@ FocusScope {
     // "Enter an address instead", which is where a typed address belongs --
     // after looking has failed, not instead of looking.
     function actAddPc() {
+        root.settleZeroHostsEntrance()
         stackView.push("HostDiscovery.qml")
     }
 
@@ -859,7 +860,18 @@ FocusScope {
     // splash copy, since this screen already implies "look again", not "look
     // for the first time".
     function actLookAgain() {
+        root.settleZeroHostsEntrance()
         stackView.push("HostDiscovery.qml")
+    }
+
+    // Input is authoritative, EntranceMotion.qml's rule: the zero-hosts column
+    // ends at its resting place rather than continuing to fly while the player
+    // is already acting. Nothing here gated on it, so before this the entrance
+    // simply played on regardless of what was pressed.
+    function settleZeroHostsEntrance() {
+        zeroHostsEntranceDelay.stop()
+        zeroHostsEntranceAnimation.stop()
+        root.zeroHostsEntranceProgress = 1
     }
 
     function actClientSettings() {

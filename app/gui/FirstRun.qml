@@ -42,6 +42,9 @@ FocusScope {
         toolBar.visible = false
         SdlGamepadKeyNavigation.setUiNavMode(false)
         root.forceActiveFocus()
+        // The transition is over: StackView sets Active once the screen has
+        // stopped travelling, which is the moment the entrance is waiting for.
+        root.entranceStarted = true
     }
 
     readonly property bool bulanScreen: true
@@ -50,13 +53,13 @@ FocusScope {
     //
     // Mark, headline, supporting line, button, then the address escape hatch:
     // the order the player reads them in. See EntranceMotion.qml.
+    //
+    // Started by the transition itself rather than by a timer set to the
+    // transition's duration. The timer only matched the transition when the push
+    // was punctual; a slow one -- a first frame, an asset load -- left the
+    // entrance playing underneath a screen that was still moving, which is
+    // exactly what EntranceMotion.qml says must never happen.
     property bool entranceStarted: false
-
-    Timer {
-        interval: Bulan.motionGridEntranceDelayMs
-        running: true
-        onTriggered: root.entranceStarted = true
-    }
 
     EntranceMotion { id: markMotion;    order: 0; started: root.entranceStarted }
     EntranceMotion { id: titleMotion;   order: 1; started: root.entranceStarted }

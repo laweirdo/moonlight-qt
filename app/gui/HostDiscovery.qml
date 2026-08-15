@@ -220,6 +220,8 @@ FocusScope {
         root.forceActiveFocus()
         root.clampIndex()
         root.refreshHost()
+        // Active means the screen has stopped travelling. See FirstRun.qml.
+        root.entranceStarted = true
     }
 
     readonly property bool bulanScreen: true
@@ -234,13 +236,10 @@ FocusScope {
     // long after the screen settled, and would replay every time a host dropped
     // and came back. HostCarousel's zero-host state moves its Column as a single
     // unit for the same reason.
+    //
+    // Started by the transition, not by a timer set to its duration. See
+    // FirstRun.qml.
     property bool entranceStarted: false
-
-    Timer {
-        interval: Bulan.motionGridEntranceDelayMs
-        running: true
-        onTriggered: root.entranceStarted = true
-    }
 
     EntranceMotion { id: markMotion;    order: 0; started: root.entranceStarted }
     EntranceMotion { id: titleMotion;   order: 1; started: root.entranceStarted }

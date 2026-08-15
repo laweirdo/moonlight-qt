@@ -98,6 +98,7 @@ FocusScope {
     }
 
     function moveCategory(step) {
+        root.settleEntrance()
         var next = categoryIndex + step
         if (next < 0 || next >= categories.length) {
             return
@@ -107,6 +108,7 @@ FocusScope {
     }
 
     function moveRow(step) {
+        root.settleEntrance()
         var rows = currentRows
         if (rows.length === 0) {
             return
@@ -121,6 +123,9 @@ FocusScope {
     property var activePopupRow: null
 
     function activateCurrent() {
+        // Input is authoritative: an entrance still in flight ends at its
+        // resting place rather than continuing under the action.
+        root.settleEntrance()
         if (activePane === "rail") {
             activePane = "rows"
             return
@@ -180,6 +185,8 @@ FocusScope {
     StackView.onActivated: {
         SdlGamepadKeyNavigation.setUiNavMode(false)
         root.forceActiveFocus()
+        // Active means the screen has stopped travelling. See FirstRun.qml.
+        root.entranceStarted = true
 
         // Review hooks: MOONLIGHT_SETTINGS_REVIEW_CATEGORY selects a rail
         // category by id, and MOONLIGHT_SETTINGS_REVIEW_ROW additionally opens
@@ -235,11 +242,25 @@ FocusScope {
     // AppView.qml's Recent/Library tile entrance exactly, just with three
     // steps instead of per-tile, since a settings shell has three principal
     // regions rather than a grid of many identical ones.
+    //
+    // This screen used to write that motion out three times inline, once per
+    // region, each with its own progress object, its own SequentialAnimation and
+    // a hand-written stagger. It is EntranceMotion, so it uses EntranceMotion --
+    // one cadence, one overshoot, one place to retune them -- and, unlike the
+    // inline version, it can be settled by input.
+    //
+    // Started by the transition rather than by a timer set to the transition's
+    // duration. See FirstRun.qml.
     property bool entranceStarted: false
-    Timer {
-        interval: Bulan.motionGridEntranceDelayMs
-        running: true
-        onTriggered: root.entranceStarted = true
+
+    EntranceMotion { id: titleMotion; order: 0; started: root.entranceStarted }
+    EntranceMotion { id: railMotion;  order: 1; started: root.entranceStarted }
+    EntranceMotion { id: rowsMotion;  order: 2; started: root.entranceStarted }
+
+    function settleEntrance() {
+        titleMotion.settle()
+        railMotion.settle()
+        rowsMotion.settle()
     }
 
     Item {
@@ -272,33 +293,13 @@ FocusScope {
             anchors.left: parent.left
             anchors.leftMargin: Bulan.layoutScreenMarginX
             anchors.top: parent.top
-            anchors.topMargin: Bulan.layoutScreenMarginY
-                               + (1 - titleEntrance.entranceProgress) * Bulan.motionGridEntranceRise
-            opacity: Math.min(1, titleEntrance.entranceProgress)
+            anchors.topMargin: Bulan.layoutScreenMarginY + titleMotion.riseOffset
+            opacity: titleMotion.fadeOpacity
             text: qsTr("Settings")
             color: Bulan.textPrimary
             font.family: Bulan.familyDisplay
             font.pixelSize: Bulan.sizeDisplay
             font.letterSpacing: Bulan.trackingDisplay
-
-            QtObject {
-                id: titleEntrance
-                property real entranceProgress: 0
-                property bool entranceSettled: false
-            }
-            SequentialAnimation {
-                running: root.entranceStarted && !titleEntrance.entranceSettled
-                onStopped: titleEntrance.entranceSettled = true
-                PauseAnimation { duration: 0 }
-                NumberAnimation {
-                    target: titleEntrance
-                    property: "entranceProgress"
-                    to: 1
-                    duration: Bulan.motionGridEntranceRiseMs
-                    easing.type: Easing.OutBack
-                    easing.overshoot: Bulan.motionEntranceOvershoot
-                }
-            }
         }
 
         // --- rail --------------------------------------------------------
@@ -307,31 +308,11 @@ FocusScope {
             anchors.left: parent.left
             anchors.leftMargin: Bulan.layoutScreenMarginX
             anchors.top: titleLabel.bottom
-            anchors.topMargin: Bulan.spaceXl
-                               + (1 - railEntrance.entranceProgress) * Bulan.motionGridEntranceRise
+            anchors.topMargin: Bulan.spaceXl + railMotion.riseOffset
             anchors.bottom: parent.bottom
             anchors.bottomMargin: Bulan.targetRowHeight + Bulan.spaceLg
             width: Bulan.settingsRailWidth
-            opacity: Math.min(1, railEntrance.entranceProgress)
-
-            QtObject {
-                id: railEntrance
-                property real entranceProgress: 0
-                property bool entranceSettled: false
-            }
-            SequentialAnimation {
-                running: root.entranceStarted && !railEntrance.entranceSettled
-                onStopped: railEntrance.entranceSettled = true
-                PauseAnimation { duration: Bulan.motionGridEntranceStaggerMs }
-                NumberAnimation {
-                    target: railEntrance
-                    property: "entranceProgress"
-                    to: 1
-                    duration: Bulan.motionGridEntranceRiseMs
-                    easing.type: Easing.OutBack
-                    easing.overshoot: Bulan.motionEntranceOvershoot
-                }
-            }
+            opacity: railMotion.fadeOpacity
 
             Column {
                 id: railColumn
@@ -448,11 +429,16 @@ FocusScope {
                 border.width: Bulan.space2xs / 2
                 border.color: Bulan.accentPrimary
 
+                // motionOvershoot, not motionEntranceOvershoot. The entrance
+                // figure is tuned for a screen-scale translation; on a focus
+                // ring travelling one row it threw the ring about a tenth of
+                // its travel past the target on every category change.
+                // Bulan.qml says which is which where they are defined.
                 Behavior on y {
                     NumberAnimation {
                         duration: Bulan.motionFocusMs
                         easing.type: Easing.OutBack
-                        easing.overshoot: Bulan.motionEntranceOvershoot
+                        easing.overshoot: Bulan.motionOvershoot
                     }
                 }
 
@@ -476,30 +462,10 @@ FocusScope {
             anchors.right: parent.right
             anchors.rightMargin: Bulan.layoutScreenMarginX
             anchors.top: titleLabel.bottom
-            anchors.topMargin: Bulan.spaceXl
-                               + (1 - rowsEntrance.entranceProgress) * Bulan.motionGridEntranceRise
+            anchors.topMargin: Bulan.spaceXl + rowsMotion.riseOffset
             anchors.bottom: parent.bottom
             anchors.bottomMargin: Bulan.targetRowHeight + Bulan.spaceLg
-            opacity: Math.min(1, rowsEntrance.entranceProgress)
-
-            QtObject {
-                id: rowsEntrance
-                property real entranceProgress: 0
-                property bool entranceSettled: false
-            }
-            SequentialAnimation {
-                running: root.entranceStarted && !rowsEntrance.entranceSettled
-                onStopped: rowsEntrance.entranceSettled = true
-                PauseAnimation { duration: Bulan.motionGridEntranceStaggerMs * 2 }
-                NumberAnimation {
-                    target: rowsEntrance
-                    property: "entranceProgress"
-                    to: 1
-                    duration: Bulan.motionGridEntranceRiseMs
-                    easing.type: Easing.OutBack
-                    easing.overshoot: Bulan.motionEntranceOvershoot
-                }
-            }
+            opacity: rowsMotion.fadeOpacity
 
             // --- About: a fixed content page, not a row list -----------------
             Flickable {
@@ -920,12 +886,14 @@ FocusScope {
     // event -- and it never reaches there while a popup has focus, because the
     // popup's own handler accepts it first.
     Keys.onLeftPressed: function(event) {
+        root.settleEntrance()
         if (root.activePane === "rows") {
             root.activePane = "rail"
         }
         event.accepted = true
     }
     Keys.onRightPressed: function(event) {
+        root.settleEntrance()
         if (root.activePane === "rail") {
             root.activePane = "rows"
         }

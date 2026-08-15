@@ -133,12 +133,11 @@ FocusScope {
     readonly property bool popupBackdropActive:
         gameOptions.visible || hostSettingsMenu.visible
 
-    Timer {
-        id: gridEntranceTimer
-        interval: Bulan.motionGridEntranceDelayMs
-        running: true
-        onTriggered: root.gridEntranceStarted = true
-    }
+    // Started from StackView.onActivated, which fires when the stack sets this
+    // screen Active -- that is, when it has stopped travelling. A timer set to
+    // the transition's duration only agreed with the transition when the push
+    // was punctual; a slow one left the tiles rising underneath a screen still
+    // in motion.
 
     // Belt-and-braces against a settled tile re-entering. Ordinary Recent
     // re-ranking (a launch updates lastPlayed, recomputeRecentOrder() below
@@ -618,6 +617,10 @@ FocusScope {
         if (tab !== "recent" && tab !== "library") {
             return
         }
+        // A tab switch is input, and input ends the entrance. Before this, only
+        // a launch could settle the cascade, so an L1/R1 press during it left
+        // both grids' tiles flying while the player was already navigating.
+        root.completeGridEntrance()
         root.activeTab = tab
     }
 
@@ -1047,6 +1050,7 @@ FocusScope {
     // held down never dead-ends at a row edge the way a same-row-only clamp
     // would.
     function moveLibraryStep(step) {
+        root.completeGridEntrance()
         var next = root.libraryFocusedIndex + step
         if (next < 0 || next > root.gameCount - 1) {
             return
@@ -1059,6 +1063,7 @@ FocusScope {
     // falling back to gameCount - 1 whenever a full row-step would read past
     // the end of the model.
     function moveLibraryRow(step) {
+        root.completeGridEntrance()
         var candidate = root.libraryFocusedIndex + step * Bulan.gameGridColumns
         if (step < 0) {
             if (candidate < 0) {
@@ -1081,6 +1086,7 @@ FocusScope {
     // matching HostCarousel.moveBy() exactly. Up/Down are inert and swallowed
     // in Recent, same as the carousel; see the Keys handlers below.
     function moveRecentBy(step) {
+        root.completeGridEntrance()
         var next = root.recentFocusedIndex + step
         if (next < 0 || next > root.recentOrder.length - 1) {
             return
@@ -1971,6 +1977,9 @@ FocusScope {
         // This is a Bulan screen now; the stock toolbar upstream's AppView kept
         // is gone, replaced by this screen's own header and hint bar.
         toolBar.visible = false
+
+        // The transition has settled, so the tiles may start arriving.
+        root.gridEntranceStarted = true
 
         // A successful launch retains this AppView under the segue. Returning
         // restores the exact source tile, tab selections, and Library contentY

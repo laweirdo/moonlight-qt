@@ -92,6 +92,8 @@ FocusScope {
         toolBar.visible = false
         SdlGamepadKeyNavigation.setUiNavMode(false)
         root.forceActiveFocus()
+        // Active means the screen has stopped travelling. See FirstRun.qml.
+        root.entranceStarted = true
     }
 
     readonly property bool bulanScreen: true
@@ -104,13 +106,10 @@ FocusScope {
     // Deliberately not restarted when pairState flips to "failed". That is a
     // change of copy on a screen already on stage, not an arrival, and replaying
     // the entrance would read as the screen being pushed a second time.
+    //
+    // Started by the transition, not by a timer set to its duration. See
+    // FirstRun.qml.
     property bool entranceStarted: false
-
-    Timer {
-        interval: Bulan.motionGridEntranceDelayMs
-        running: true
-        onTriggered: root.entranceStarted = true
-    }
 
     EntranceMotion { id: headlineMotion; order: 0; started: root.entranceStarted }
     EntranceMotion { id: bodyMotion;     order: 1; started: root.entranceStarted }
