@@ -251,7 +251,10 @@ FocusScope {
 
         width: Math.min(parent.width - Bulan.layoutScreenMarginX * 2,
                         Bulan.hostTileSize * 2)
-        height: Math.min(parent.height - hintBar.height - Bulan.space3xl,
+        // Room left for the hint bar, which the window owns now -- it is always
+        // targetRowHeight tall, which is what this used to read off the bar
+        // this overlay drew for itself.
+        height: Math.min(parent.height - Bulan.targetRowHeight - Bulan.space3xl,
                          content.implicitHeight + Bulan.spaceXl * 2)
 
         radius: Bulan.radiusXl

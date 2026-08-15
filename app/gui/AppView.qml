@@ -3019,39 +3019,13 @@ FocusScope {
         // Library's: the focused tile in this view is always the centre one,
         // so there is nothing for the halo to follow. Declared before the
         // Repeater below so it paints behind every tile.
-        Canvas {
+        FocusBloom {
             id: recentFocusBloom
             width: Bulan.gameRecentTileWidth * 2.2
             height: Bulan.gameRecentTileHeight * 2.2
             x: recentView.width / 2 - width / 2
             y: recentView.focusCenterY - height / 2
             visible: root.recentOrder.length > 0
-
-            onWidthChanged: requestPaint()
-            onHeightChanged: requestPaint()
-            onPaint: {
-                var ctx = getContext("2d")
-                ctx.clearRect(0, 0, width, height)
-                var rx = width / 2
-                var ry = height / 2
-                // Stretched to the tile's portrait shape rather than drawn as
-                // a circle, exactly as the Library's own bloom does it.
-                ctx.save()
-                ctx.translate(rx, ry)
-                ctx.scale(1, ry / rx)
-                var g = ctx.createRadialGradient(0, 0, 0, 0, 0, rx)
-                var a = Bulan.focusBloomOpacity
-                g.addColorStop(0.00, Qt.rgba(1, 0.85, 0.63, a))
-                g.addColorStop(0.30, Qt.rgba(1, 0.85, 0.63, a * 0.45))
-                g.addColorStop(0.55, Qt.rgba(1, 0.85, 0.63, a * 0.16))
-                g.addColorStop(0.78, Qt.rgba(1, 0.85, 0.63, a * 0.04))
-                g.addColorStop(1.00, Qt.rgba(1, 0.85, 0.63, 0.0))
-                ctx.fillStyle = g
-                ctx.beginPath()
-                ctx.arc(0, 0, rx, 0, Math.PI * 2)
-                ctx.fill()
-                ctx.restore()
-            }
         }
 
         // How many neighbour slots fit on each side of the focused tile,
@@ -3648,7 +3622,7 @@ FocusScope {
         // both behind every tile in paint order and scrolled by the Flickable's
         // own content offset exactly as the tiles are -- nothing here reads
         // contentX/contentY directly.
-        Canvas {
+        FocusBloom {
             id: focusBloom
             width: Bulan.gameTileWidth * 2.2
             height: Bulan.gameTileHeight * 2.2
@@ -3669,34 +3643,6 @@ FocusScope {
             }
             Behavior on y {
                 NumberAnimation { duration: Bulan.motionFocusMs; easing.type: Easing.InOutQuad }
-            }
-
-            onWidthChanged: requestPaint()
-            onHeightChanged: requestPaint()
-            onPaint: {
-                var ctx = getContext("2d")
-                ctx.clearRect(0, 0, width, height)
-                var rx = width / 2
-                var ry = height / 2
-                // The tile is portrait, not square, so the halo is stretched to
-                // match rather than drawn as a circle: scale the canvas, draw a
-                // circle, unscale. Same stops and colour as
-                // HostCarousel.qml's focusBloom.
-                ctx.save()
-                ctx.translate(rx, ry)
-                ctx.scale(1, ry / rx)
-                var g = ctx.createRadialGradient(0, 0, 0, 0, 0, rx)
-                var a = Bulan.focusBloomOpacity
-                g.addColorStop(0.00, Qt.rgba(1, 0.85, 0.63, a))
-                g.addColorStop(0.30, Qt.rgba(1, 0.85, 0.63, a * 0.45))
-                g.addColorStop(0.55, Qt.rgba(1, 0.85, 0.63, a * 0.16))
-                g.addColorStop(0.78, Qt.rgba(1, 0.85, 0.63, a * 0.04))
-                g.addColorStop(1.00, Qt.rgba(1, 0.85, 0.63, 0.0))
-                ctx.fillStyle = g
-                ctx.beginPath()
-                ctx.arc(0, 0, rx, 0, Math.PI * 2)
-                ctx.fill()
-                ctx.restore()
             }
         }
 

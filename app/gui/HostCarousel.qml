@@ -1174,8 +1174,8 @@ FocusScope {
     // --- warm halo behind the focused tile -----------------------------------
     // One instance, centred, rather than one per delegate: the focused item is
     // always the centred one, so the halo never has to move or be repainted.
-        Canvas {
-            id: focusBloom
+    FocusBloom {
+        id: focusBloom
         width: Bulan.hostTileSize * 2.2
         height: width
         x: carousel.x + carousel.width / 2 - width / 2
@@ -1185,26 +1185,6 @@ FocusScope {
 
         Behavior on opacity {
             NumberAnimation { duration: Bulan.motionFocusMs; easing.type: Easing.OutCubic }
-        }
-
-        onWidthChanged: requestPaint()
-        onPaint: {
-            var ctx = getContext("2d")
-            ctx.clearRect(0, 0, width, height)
-            var r = width / 2
-            var g = ctx.createRadialGradient(r, r, 0, r, r, r)
-            var a = Bulan.focusBloomOpacity
-            // Eased rolloff: a linear alpha fade still reads as a visible disc
-            // edge against a ground this dark.
-            g.addColorStop(0.00, Qt.rgba(1, 0.85, 0.63, a))
-            g.addColorStop(0.30, Qt.rgba(1, 0.85, 0.63, a * 0.45))
-            g.addColorStop(0.55, Qt.rgba(1, 0.85, 0.63, a * 0.16))
-            g.addColorStop(0.78, Qt.rgba(1, 0.85, 0.63, a * 0.04))
-            g.addColorStop(1.00, Qt.rgba(1, 0.85, 0.63, 0.0))
-            ctx.fillStyle = g
-            ctx.beginPath()
-            ctx.arc(r, r, r, 0, Math.PI * 2)
-            ctx.fill()
         }
     }
 
