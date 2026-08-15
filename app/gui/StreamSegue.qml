@@ -364,55 +364,19 @@ FocusScope {
                 easing.type: Easing.OutCubic
             }
 
-            Item {
+            // The waiting indicator, shared with the host tile and the quit
+            // surface. This screen used to carry its own copy, in which each dot
+            // declared a resting `y` binding and a SequentialAnimation on the
+            // same property; QML kept the animation and discarded the binding,
+            // so the dots rested where the animation said rather than where the
+            // layout put them. Sizes are this screen's own, unchanged.
+            BusyDots {
                 id: busyDots
                 anchors.top: parent.top
                 anchors.horizontalCenter: parent.horizontalCenter
-                width: Bulan.spaceSm * 3 + Bulan.space2xs * 2
-                height: Bulan.spaceSm + Bulan.motionBusyBounceHeight
-
-                Repeater {
-                    model: 3
-                    Rectangle {
-                        id: busyDot
-                        width: Bulan.spaceSm
-                        height: width
-                        radius: width / 2
-                        color: Bulan.accentPrimary
-                        x: index * (Bulan.spaceSm + Bulan.space2xs)
-                        y: busyDots.height - height
-
-                        readonly property int travelMs:
-                            (Bulan.motionBusyBounceMs
-                             - Bulan.motionBusyStaggerMs * 2) / 2
-
-                        SequentialAnimation on y {
-                            running: progressContent.visible
-                            loops: Animation.Infinite
-                            PauseAnimation {
-                                duration: index * Bulan.motionBusyStaggerMs
-                            }
-                            NumberAnimation {
-                                from: busyDots.height - busyDot.height
-                                to: busyDots.height - busyDot.height
-                                    - Bulan.motionBusyBounceHeight
-                                duration: busyDot.travelMs
-                                easing.type: Easing.InOutQuad
-                            }
-                            NumberAnimation {
-                                from: busyDots.height - busyDot.height
-                                    - Bulan.motionBusyBounceHeight
-                                to: busyDots.height - busyDot.height
-                                duration: busyDot.travelMs
-                                easing.type: Easing.InOutQuad
-                            }
-                            PauseAnimation {
-                                duration: (2 - index)
-                                          * Bulan.motionBusyStaggerMs
-                            }
-                        }
-                    }
-                }
+                dotSize: Bulan.spaceSm
+                dotGap: Bulan.space2xs
+                running: progressContent.visible
             }
 
             Text {

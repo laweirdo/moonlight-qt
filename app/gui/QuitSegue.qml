@@ -144,55 +144,17 @@ FocusScope {
                             Bulan.hostTileSize * 2)
             spacing: Bulan.spaceLg
 
-            Item {
+            // Shared with the host tile and the launch surface. See BusyDots.qml
+            // for why there is one clock: this screen's former copy declared a
+            // resting `y` binding and a SequentialAnimation on the same
+            // property, and QML silently discarded the binding. Sizes are this
+            // screen's own, unchanged.
+            BusyDots {
                 id: busyDots
                 visible: root.showingProgress
                 anchors.horizontalCenter: parent.horizontalCenter
-                width: Bulan.spaceSm * 3 + Bulan.space2xs * 2
-                height: Bulan.spaceSm + Bulan.motionBusyBounceHeight
-
-                Repeater {
-                    model: 3
-                    Rectangle {
-                        id: busyDot
-                        width: Bulan.spaceSm
-                        height: width
-                        radius: width / 2
-                        color: Bulan.accentPrimary
-                        x: index * (Bulan.spaceSm + Bulan.space2xs)
-                        y: busyDots.height - height
-
-                        readonly property int travelMs:
-                            (Bulan.motionBusyBounceMs
-                             - Bulan.motionBusyStaggerMs * 2) / 2
-
-                        SequentialAnimation on y {
-                            running: busyDots.visible
-                            loops: Animation.Infinite
-                            PauseAnimation {
-                                duration: index * Bulan.motionBusyStaggerMs
-                            }
-                            NumberAnimation {
-                                from: busyDots.height - busyDot.height
-                                to: busyDots.height - busyDot.height
-                                    - Bulan.motionBusyBounceHeight
-                                duration: busyDot.travelMs
-                                easing.type: Easing.InOutQuad
-                            }
-                            NumberAnimation {
-                                from: busyDots.height - busyDot.height
-                                    - Bulan.motionBusyBounceHeight
-                                to: busyDots.height - busyDot.height
-                                duration: busyDot.travelMs
-                                easing.type: Easing.InOutQuad
-                            }
-                            PauseAnimation {
-                                duration: (2 - index)
-                                          * Bulan.motionBusyStaggerMs
-                            }
-                        }
-                    }
-                }
+                dotSize: Bulan.spaceSm
+                dotGap: Bulan.space2xs
             }
 
             Text {

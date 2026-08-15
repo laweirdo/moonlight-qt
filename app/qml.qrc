@@ -41,6 +41,7 @@
         <file>gui/SectionHeader.qml</file>
         <file>gui/PopupMotion.qml</file>
         <file>gui/EntranceMotion.qml</file>
+        <file>gui/BusyDots.qml</file>
         <file>gui/SettingsShell.qml</file>
         <file>gui/SettingsChoicePopup.qml</file>
         <file>gui/SettingsSliderPopup.qml</file>

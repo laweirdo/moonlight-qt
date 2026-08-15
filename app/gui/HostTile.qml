@@ -169,58 +169,15 @@ Item {
             }
         }
 
-        // Three bouncing dots on one shared clock.
-        //
-        // One looping NumberAnimation drives a phase, and each dot reads its
-        // height off that phase with an offset. No SequentialAnimation, which
-        // keeps SPEC-host-carousel.md's statement about this screen true, and no
-        // second clock -- the "animating an animation" fault noted above.
-        Item {
+        // Three bouncing dots on one shared clock. The motion itself, and the
+        // reasoning behind the single clock, now live in BusyDots.qml, which
+        // this screen's version was extracted from -- SPEC-host-carousel.md's
+        // statement about this screen stays true, and the two copies that had
+        // drifted out of StreamSegue and QuitSegue are gone.
+        BusyDots {
             id: busyDots
             anchors.centerIn: parent
             visible: tile.busy
-            width: Bulan.hostTileBusyDotSize * 3 + Bulan.hostTileBusyDotGap * 2
-            height: Bulan.hostTileBusyDotSize + Bulan.motionBusyBounceHeight
-
-            // No initializer: a declared real already defaults to 0, and giving
-            // it one here as well as the animation's own `from: 0` combines an
-            // initial-value binding with a value source on the same property,
-            // which qmllint flags as [duplicate-property-binding].
-            property real phase
-            NumberAnimation on phase {
-                running: busyDots.visible
-                from: 0
-                to: 1
-                duration: Bulan.motionBusyBounceMs
-                loops: Animation.Infinite
-                // Linear: the arch below does the easing. A curve here would ease
-                // the clock as well and the three dots would drift apart.
-                easing.type: Easing.Linear
-            }
-
-            Repeater {
-                model: 3
-                Rectangle {
-                    width: Bulan.hostTileBusyDotSize
-                    height: width
-                    radius: width / 2
-                    color: Bulan.accentPrimary
-
-                    x: index * (Bulan.hostTileBusyDotSize + Bulan.hostTileBusyDotGap)
-                    y: busyDots.height - height - lift
-
-                    // sin over half a turn is one clean arch per period: up,
-                    // over, down, with the slow part at the top where a bounce
-                    // wants it. The stagger is subtracted from the shared phase
-                    // and wrapped, so each dot is the same motion started later.
-                    property real lift: {
-                        var p = busyDots.phase
-                                - index * (Bulan.motionBusyStaggerMs / Bulan.motionBusyBounceMs)
-                        p -= Math.floor(p)
-                        return Math.sin(p * Math.PI) * Bulan.motionBusyBounceHeight
-                    }
-                }
-            }
         }
     }
 
