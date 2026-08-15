@@ -153,6 +153,52 @@ FocusScope {
         if (selectedAppId !== 0) gameOptionsRequested(selectedAppId)
     }
 
+    function tileForAppId(appId) {
+        if (mode === "library") {
+            var gridItem = libraryGrid.itemAtIndex(selectedIndex)
+            return gridItem && gridItem.gameTile
+                    && gridItem.gameTile.appId === appId
+                    ? gridItem.gameTile : null
+        }
+        for (var i = 0; i < shelfRepeater.count; i++) {
+            var shelfItem = shelfRepeater.itemAt(i)
+            if (shelfItem && shelfItem.gameTile
+                    && shelfItem.gameTile.appId === appId) {
+                return shelfItem.gameTile
+            }
+        }
+        return null
+    }
+
+    function launchSnapshotForAppId(appId) {
+        var entry = entryForAppId(appId)
+        var tile = tileForAppId(appId)
+        if (!entry || !tile) return null
+        var origin = tile.artworkItem.mapToItem(root, 0, 0)
+        return {
+            appId: entry.appId,
+            name: entry.name,
+            hostName: hostName,
+            artworkUrl: tile.boxart,
+            artworkFallback: !tile.artworkAvailable,
+            sourceRect: Qt.rect(origin.x, origin.y,
+                                tile.artworkItem.width,
+                                tile.artworkItem.height)
+        }
+    }
+
+    function revealApp(appId) {
+        var index = displayAppIds.indexOf(appId)
+        if (index < 0 || mode !== "library") {
+            mode = "library"
+            index = displayAppIds.indexOf(appId)
+        }
+        if (index < 0) return false
+        selectIndex(index)
+        libraryGrid.positionViewAtIndex(index, GridView.Contain)
+        return true
+    }
+
     Keys.onPressed: function(event) {
         var handled = true
         if (event.key === Qt.Key_Left) {
@@ -286,9 +332,11 @@ FocusScope {
         }
 
         Repeater {
+            id: shelfRepeater
             model: root.shelfEntries
 
             delegate: Item {
+                readonly property alias gameTile: shelfTile
                 readonly property bool isSelected: modelData.appId === root.selectedAppId
                 x: shelf.width / 2
                    + root.shelfOffsetForAppId(modelData.appId)
@@ -306,6 +354,7 @@ FocusScope {
                 }
 
                 BulanGameTile {
+                    id: shelfTile
                     anchors.bottom: parent.bottom
                     anchors.horizontalCenter: parent.horizontalCenter
                     gameName: modelData.name
@@ -357,10 +406,12 @@ FocusScope {
         }
 
         delegate: Item {
+            readonly property alias gameTile: gridTile
             width: libraryGrid.cellWidth
             height: libraryGrid.cellHeight
 
             BulanGameTile {
+                id: gridTile
                 anchors.top: parent.top
                 anchors.horizontalCenter: parent.horizontalCenter
                 gameName: modelData.name

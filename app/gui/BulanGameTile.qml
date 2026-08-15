@@ -14,6 +14,8 @@ Item {
     property bool appCollectorGame: false
     property real tileWidth: Bulan.gameTileWidth
     property real tileHeight: Bulan.gameTileHeight
+    readonly property alias artworkItem: artworkFrame
+    readonly property bool artworkAvailable: artwork.showArt
 
     width: tileWidth
     height: tileHeight + Bulan.gameRecentLabelGap + Bulan.lineHeightLabel

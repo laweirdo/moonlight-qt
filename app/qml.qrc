@@ -27,6 +27,8 @@
         <file>gui/BulanReflectionTray.qml</file>
         <file>gui/BulanPcSwitcher.qml</file>
         <file>gui/BulanGameMenu.qml</file>
+        <file>gui/BulanSessionFlow.qml</file>
+        <file>gui/BulanConnectionOverlay.qml</file>
         <file>gui/Atmosphere.qml</file>
         <file>gui/BulanQuitConfirmation.qml</file>
         <file>gui/ControllerGlyph.qml</file>

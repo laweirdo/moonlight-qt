@@ -469,6 +469,7 @@ QtObject {
     // A launch warning holds long enough to read once, then continues without
     // asking the player to acknowledge infrastructure they cannot act on.
     readonly property int launchWarningDurationMs: 3500
+    readonly property int sessionSwitchTimeoutMs: 20000
     // Deterministic review replay cadence; long enough for the transition to
     // finish and rest before the next captured cycle begins.
     readonly property int launchReviewCycleMs: motionTransitionMs * 4

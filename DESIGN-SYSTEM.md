@@ -54,6 +54,7 @@ a raw visual value in a product screen.
 | Press | 80 ms, immediate response |
 | Home or overlay handoff | 220 ms, interruptible |
 | Reflection | One ripple, then still |
+| Stop-and-switch watchdog | 20 seconds, then actionable recovery |
 
 - Never bounce twice, loop foreground motion, or delay the next input.
 - The host moon rises once and settles into the header. A focused game lifts

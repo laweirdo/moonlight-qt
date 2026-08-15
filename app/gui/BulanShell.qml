@@ -1,4 +1,5 @@
 import QtQuick 2.9
+import QtQuick.Window 2.2
 
 import AppModel 1.0
 import Bulan 1.0
@@ -21,11 +22,10 @@ FocusScope {
     property string appModelHostUuid: ""
     property var hostContexts: ({})
     property ComputerModel computerModel: createComputerModel()
+    property bool directLaunchHandled: false
 
     signal legacySettingsRequested()
     signal legacyPcRequested()
-    signal playRequested(int appId)
-    signal quitRequested(int appId)
 
     readonly property real compositionScale: Math.min(
             width / Bulan.referenceWidth,
@@ -90,7 +90,10 @@ FocusScope {
             if (shellReady && !pcSwitcher.opened) pcSwitcher.show()
             return
         }
-        if (appModel && appModelHostUuid === activeHostUuid) return
+        if (appModel && appModelHostUuid === activeHostUuid) {
+            Qt.callLater(attemptDirectLaunch)
+            return
+        }
 
         var computerIndex = computerModel.computerIndexForUuid(activeHostUuid)
         if (computerIndex < 0) return
@@ -200,6 +203,35 @@ FocusScope {
         scheduleHostSync()
     }
 
+    function requestPlayApp(appId, revealIfNeeded) {
+        var snapshot = home.launchSnapshotForAppId(appId)
+        if (!snapshot && revealIfNeeded !== false && home.revealApp(appId)) {
+            Qt.callLater(function() { root.requestPlayApp(appId, false) })
+            return
+        }
+        if (!snapshot) {
+            console.error("Launch artwork source disappeared for app:", appId)
+            return
+        }
+        saveHomeContext()
+        sessionFlow.requestPlay(snapshot)
+    }
+
+    function requestQuitApp(appId) {
+        var snapshot = home.launchSnapshotForAppId(appId)
+        if (!snapshot) return
+        saveHomeContext()
+        sessionFlow.requestQuit(snapshot)
+    }
+
+    function attemptDirectLaunch() {
+        if (directLaunchHandled || !shellReady || !activeHostOnline
+                || !appModel || home.gameCount === 0) return
+        directLaunchHandled = true
+        var appId = appModel.getDirectLaunchAppId()
+        if (appId !== 0) requestPlayApp(appId, true)
+    }
+
     function handleGameAction(actionId, appId) {
         if (!appModel) return
         var index = appModel.appIndexForId(appId)
@@ -224,10 +256,10 @@ FocusScope {
             reloadAppModel()
         } else if (actionId === "play" || actionId === "resume") {
             gameMenu.close()
-            playRequested(appId)
+            requestPlayApp(appId, true)
         } else if (actionId === "quit") {
             gameMenu.close()
-            quitRequested(appId)
+            requestQuitApp(appId)
         }
     }
 
@@ -268,7 +300,8 @@ FocusScope {
             id: home
             anchors.fill: parent
             visible: root.shellReady
-            focus: visible
+            focus: visible && !sessionFlow.active
+            enabled: visible && !sessionFlow.active
             gameModel: root.appModel
             hostName: root.activeHostName
             hostOnline: root.activeHostOnline
@@ -277,8 +310,11 @@ FocusScope {
             onModeChanged: root.saveHomeContext()
             onSelectedAppIdChanged: root.saveHomeContext()
             onContentYChanged: root.saveHomeContext()
-            onGameCountChanged: Qt.callLater(root.restoreHomeContext)
-            onPlayRequested: root.playRequested(appId)
+            onGameCountChanged: Qt.callLater(function() {
+                root.restoreHomeContext()
+                root.attemptDirectLaunch()
+            })
+            onPlayRequested: root.requestPlayApp(appId, true)
             onGameOptionsRequested: root.openGameMenu(appId)
             onSwitchPcRequested: root.openPcSwitcher()
             onWakeRequested: root.wakeHost(root.activeHostUuid)
@@ -331,6 +367,31 @@ FocusScope {
             onActionRequested: root.handleGameAction(actionId, appId)
             onDismissed: Qt.callLater(home.forceActiveFocus)
         }
+
+        BulanSessionFlow {
+            id: sessionFlow
+            appModel: root.appModel
+            windowTarget: root.Window.window
+            onStateChanged: {
+                if (state === "idle") Qt.callLater(home.forceActiveFocus)
+            }
+        }
+
+        BulanConnectionOverlay {
+            id: connectionOverlay
+            anchors.fill: parent
+            flowState: sessionFlow.state
+            target: sessionFlow.target
+            returning: sessionFlow.returning
+            confirmationVisible: sessionFlow.confirmationVisible
+            runningAppName: sessionFlow.runningAppName
+            onCancelRequested: sessionFlow.cancel()
+            onRetryRequested: sessionFlow.retry()
+            onDismissFailureRequested: sessionFlow.dismissFailure()
+            onConfirmSwitchRequested: sessionFlow.confirmSwitch()
+            onDismissConfirmationRequested: sessionFlow.dismissConfirmation()
+            onReturnCompleted: sessionFlow.completeReturn()
+        }
     }
 
     BulanStartup {
@@ -341,6 +402,7 @@ FocusScope {
         onCompleted: {
             root.shellReady = true
             root.scheduleHostSync()
+            Qt.callLater(root.attemptDirectLaunch)
         }
     }
 
