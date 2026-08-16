@@ -10,10 +10,9 @@ history_policy: delete-on-acceptance
 
 ## State
 
-**Stages 1–6 are merged to `master` (16 August 2026).** Stage 7, the redraw, is
-under way on the task branch `responsive-game-surface`: three commits carrying
-the responsive design frame, Recent's progressive centre, and the shared
-onboarding mark. Not merged, not pushed.
+**All seven stages are merged to `master` and pushed (16 August 2026)**, stage 7
+being the responsive design frame, Recent's progressive centre and the shared
+onboarding mark. The task branch is gone.
 
 This brief stays open because the task is not accepted: nothing in it has run on
 a Steam Deck, no controller has been driven, and the client owes the copy listed
