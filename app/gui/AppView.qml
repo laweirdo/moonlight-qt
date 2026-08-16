@@ -2965,6 +2965,21 @@ FocusScope {
             tone: "unfocused"
             glyphSize: Bulan.sizeBodyLg
         }
+
+        // How many games the library holds (client decision, 15 August 2026).
+        // A list that scrolls past the screen edge should say how far it goes;
+        // without this the grid gives no sense of its own size until you reach
+        // the bottom. Shown only on the tab it describes.
+        Text {
+            anchors.verticalCenter: parent.verticalCenter
+            leftPadding: Bulan.spaceSm
+            visible: root.activeTab === "library" && root.gameCount > 0
+            text: qsTr("%n game(s)", "", root.gameCount)
+            color: Bulan.secondary
+            font.family: Bulan.familyUi
+            font.pixelSize: Bulan.sizeCaption
+            font.letterSpacing: Bulan.trackingCaption
+        }
     }
 
     // --- Recent view -----------------------------------------------------------
@@ -3586,6 +3601,30 @@ FocusScope {
         property: "contentY"
         duration: Bulan.motionFocusMs
         easing.type: Easing.OutCubic
+    }
+
+    // The library's bottom edge, faded rather than cut (client decision,
+    // 15 August 2026). The Flickable clips, so a partially scrolled grid ended
+    // in a row sliced flat across the middle of its tiles, which reads as a
+    // rendering fault rather than as "there is more below". A scrim over the
+    // last stretch lets the row leave instead.
+    //
+    // Declared before the Flickable but lifted above it with z, since it has to
+    // paint over the grid; gated on the same tab and opacity so it fades out
+    // with the grid it belongs to rather than hanging over the Recent shelf.
+    Rectangle {
+        z: 1
+        anchors.left: libraryFlickable.left
+        anchors.right: libraryFlickable.right
+        anchors.bottom: libraryFlickable.bottom
+        height: Bulan.space3xl * 2
+        opacity: libraryFlickable.opacity
+        visible: libraryFlickable.visible
+                 && libraryFlickable.contentHeight > libraryFlickable.height
+        gradient: Gradient {
+            GradientStop { position: 0.0; color: Bulan.transparent }
+            GradientStop { position: 1.0; color: Bulan.gradientBaseBottom }
+        }
     }
 
     Flickable {

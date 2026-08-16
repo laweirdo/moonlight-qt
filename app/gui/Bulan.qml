@@ -329,7 +329,10 @@ QtObject {
     // Focused tile diameter before the 1.04 focus scale is applied: the mockup's
     // focused circle measures ~337px at 1280x800, and 337 / 1.04 is 324.
     readonly property int  hostTileSize:           324
-    readonly property real hostTileNeighbourScale: 0.64
+    // 0.56, down from 0.64 (client decision, 15 August 2026). The focused host
+    // should read as NEARER than its neighbours, not merely larger; a shallower
+    // size difference reads as two sizes of the same thing.
+    readonly property real hostTileNeighbourScale: 0.56
 
     // Horizontal distance from the focused tile's centre to a neighbour's centre.
     // Measured off the mockup, where it leaves ~86px of clear ground between the
@@ -340,7 +343,10 @@ QtObject {
     // Neighbours sit lower than the focused tile, which is what gives the row its
     // gentle arc rather than reading as three circles on a rule. Also measured off
     // the mockup.
-    readonly property int  hostTileNeighbourDrop:   75
+    // 92, up from 75 (client decision, 15 August 2026), for the same reason the
+    // neighbour scale came down: further back and further down together read as
+    // depth, where either alone reads as a layout quirk.
+    readonly property int  hostTileNeighbourDrop:   92
 
     // Clear space between the circle's drawn edge and the host's name.
     //
