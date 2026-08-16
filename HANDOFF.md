@@ -17,16 +17,16 @@ Replaced, never appended to; past states are in Git history, past evidence in
 
 | Item | State |
 |---|---|
-| Branches | `master` at `00720767`, **level with `origin/master` and pushed**. `bulan` is still at `177a58bd` and no longer matches `master` |
-| Remote | `origin` only — `laweirdo/bulan-qt`. `master` pushed 16 August 2026 on client authorization |
+| Branches | `master`, **pushed and level with `origin/master`**. `bulan` is still at `177a58bd` and no longer matches it |
+| Remote | `origin` only — `laweirdo/bulan-qt`. Pushed 16 August 2026 on client authorization |
 | Working tree | Clean apart from this file |
-| Task branch | None. `responsive-game-surface` was merged fast-forward on 16 August 2026 and deleted. Never pushed, so there is no remote copy |
-| Active task | **Yes.** `TASK-BRIEF.md`, at its stage 7 redraw |
+| Task branch | None. `responsive-game-surface` merged fast-forward 16 August 2026 and deleted; never pushed |
+| Active task | **None.** The polish brief was retired 16 August 2026; what it held is now in `BUGS.md` and `DESIGN-SYSTEM.md` |
 | Other branches | `codex/rework-core-shell` is excluded by client decision, 15 August 2026 |
 
 ## Where the product is
 
-**Alpha v0.0.1.** `ROADMAP.md` owns scope and phase.
+**Alpha v0.0.1**; `ROADMAP.md` owns scope and phase.
 
 Merged on 15–16 August 2026: the frame-rate measurement, one motion contract,
 the deletion of the inherited Moonlight shell, one shell architecture,
@@ -43,8 +43,8 @@ Merged 16 August 2026, carrying the client's decisions of that date;
   and locks there; the row draws every game that touches the screen.
 - `e6b7d5ea` — the onboarding crescent is one window-level image the two
   onboarding screens share. Also states the window children's stacking outright.
-- `00720767` — pre-merge review findings: mojibake in `main.qml`, a comment in
-  Recent stating the reverse of its own rule, an orphaned `running` property.
+- `00720767` — pre-merge review: mojibake in `main.qml`, a comment stating the
+  reverse of its own rule, an orphaned `running` property.
 
 ## Validation status
 
@@ -70,12 +70,12 @@ magnified artwork stays sharp. The three viewports above 1920×1080 exceed this
 display and were captured offscreen: true geometry, no layered effects. **No
 Deck ran**, by client decision. macOS and the WiX MSI were not built.
 
-Earlier reports: `docs/validation/2026-08-15-frame-pacing-baseline.md`,
+Earlier: `docs/validation/2026-08-15-frame-pacing-baseline.md`,
 `docs/validation/2026-08-08-osk-diagnosis-and-resolution.md`.
 
 ## Open blockers
 
-None. `BUGS.md` is empty.
+None blocking. `BUGS.md` holds three open defects, two waiting on the client.
 
 ## Next action
 

@@ -26,7 +26,7 @@ copy and must stay synchronized with the runtime token.
 
 **Every value here is measured against one composition,
 `Bulan.designWidth` × `designHeight` — 1280×800, the Deck panel.** `main.qml`
-lays the whole application out at that size and scales that one frame to fit the
+lays the application out at that size and scales that one frame to fit the
 window. **No screen asks how large the window is.** *Client decision, 16 August
 2026:* proportional only — a larger display buys breathing room down each side,
 never a column, a re-flow or a breakpoint. `main.qml` and `GameTile.qml` carry
@@ -102,7 +102,7 @@ Sizes run `sizeDisplay` 56 → `sizeCaption` 16 in `Bulan.qml`. Bind
 
 ## Motion
 
-Match Nintendo Switch 2's discipline: **fast and confident**, not elaborate.
+**Fast and confident**, not elaborate.
 
 | Interaction | Spec |
 |---|---|
@@ -153,9 +153,9 @@ owns input through `hintOwner`.
 **One element is carried across a transition instead of taking it.** The
 onboarding crescent is drawn once by the window, so crossing between first run
 and discovery moves one object while everything else takes the ordinary blur,
-fade and travel. *Client decision, 16 August 2026.* A **named exception, and it
-stays one** — no per-route animation, and a second such element needs its own
-decision. `FLOW.md` records the route.
+fade and travel. *Client decision, 16 August 2026.* A **named exception that
+stays one** — no per-route animation, and a second needs its own decision.
+`FLOW.md` records the route.
 
 **The screen transition carries a real runtime blur.** The client rejected
 opacity-as-blur on 2 August 2026 and required a real one, accepting the cost
@@ -193,4 +193,5 @@ cue list: `bulan-creative-brief.md`.
 
 - Whether ambient background motion ships enabled or disabled by default.
 - LCD appearance and banding, deferred until LCD hardware exists.
-- Three questions from the 15 August 2026 polish work, in `TASK-BRIEF.md`.
+- Whether the `lineHeight*` tokens ship or are dropped — nothing binds
+  `Text.lineHeight`, and wiring them in reflows every screen.
