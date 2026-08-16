@@ -1,4 +1,4 @@
-import QtQuick 2.9
+﻿import QtQuick 2.9
 import QtQuick.Controls 2.2
 import QtQuick.Layouts 1.3
 import QtQuick.Window 2.2
@@ -225,6 +225,13 @@ ApplicationWindow {
         // launch proxy must not inherit the StackView's transition opacity --
         // and re-nesting three hundred lines to move them one level down would
         // have buried that reasoning in an indentation change.
+        // Every child names its own `z`. Declaration order is what normally
+        // stacks siblings, and it stops meaning anything once the children
+        // arrive by reassigning `parent` -- Qt adds them in whatever order
+        // those bindings happen to be evaluated, which put the hint bar
+        // underneath an opaque screen and made it disappear. Stated outright,
+        // in the order they paint: screens, mark, launch proxy, hint bar, then
+        // the window's own panels over all of it.
         Item {
             id: designFrame
             anchors.centerIn: parent
@@ -237,6 +244,7 @@ ApplicationWindow {
         StackView {
             id: stackView
             parent: designFrame
+            z: 0
             anchors.fill: parent
         focus: true
         enabled: !quitConfirmationDialog.visible
@@ -270,7 +278,7 @@ ApplicationWindow {
                      : Bulan.motionTransitionBlurRadius
         }
 
-        // Ordinary screen navigation, brief §6 "Screen transition": content
+        // Ordinary screen navigation, brief Â§6 "Screen transition": content
         // surfaces vertically over Bulan.motionTransitionMs, ease-out with no
         // overshoot (Easing.OutCubic; motionOvershoot belongs to focus motion,
         // not this). The opacity falloff below was originally the whole of
@@ -365,7 +373,7 @@ ApplicationWindow {
             }
         }
 
-        // The ground behind the pages — gradient only, deliberately.
+        // The ground behind the pages â€” gradient only, deliberately.
         //
         // Every Bulan screen draws its own full Atmosphere, and a screen is
         // opaque, so at rest this background is completely covered: its vignette
@@ -376,7 +384,7 @@ ApplicationWindow {
         //
         // The screens keep their own copies rather than sharing this one. Theirs
         // is what hides the outgoing screen during that travel, and it sits
-        // inside the layer that blurs behind a popup — pull it out and screens
+        // inside the layer that blurs behind a popup â€” pull it out and screens
         // read through each other mid-transition, and the grain stops blurring
         // with everything else behind a modal.
         background: Atmosphere {
@@ -445,11 +453,113 @@ ApplicationWindow {
         LaunchTransition {
             id: launchTransition
             parent: designFrame
+            z: 2
             anchors.fill: parent
 
             onProxyReady: if (owner) owner.launchTransitionProxyReady()
             onFinished: if (owner) owner.launchTransitionFinished()
             onFailed: if (owner) owner.launchTransitionFailed()
+        }
+
+        // --- the onboarding mark ------------------------------------------
+        // The crescent on the first-run and discovery screens. One Image, at
+        // the window, rather than one per screen.
+        //
+        // Both screens draw it centred, and the client's requirement is that
+        // crossing between them moves that one mark rather than dissolving one
+        // and raising another, while everything else takes the ordinary screen
+        // blur and fade. A StackView child cannot opt out of its parent's
+        // transition -- the blur in particular is applied to the whole stack --
+        // so the only thing that stays sharp is something that was never in
+        // the stack. That is the same reasoning the launch proxy above and the
+        // hint bar below already follow.
+        //
+        // Because it never leaves, there is no handoff to get wrong: no proxy
+        // to strand visible, no screen left with its own mark hidden, nothing
+        // to cancel if a transition is interrupted. It simply moves to wherever
+        // the current screen says its mark belongs.
+        //
+        // A screen joins in by declaring onboardingMarkY. One that does not --
+        // every other screen in the app -- gets no mark, exactly as it gets no
+        // hint bar by not declaring hintBarVisible.
+        Image {
+            id: onboardingMark
+            parent: designFrame
+            z: 1
+            source: "qrc:/res/bulan_logomark.svg"
+            width: Bulan.onboardingMarkSize
+            height: width
+            fillMode: Image.PreserveAspectFit
+            sourceSize.width: width * 2
+            sourceSize.height: width * 2
+            smooth: true
+
+            x: (parent.width - width) / 2
+
+            readonly property var markScreen: {
+                var screen = stackView.currentItem
+                return screen && screen.onboardingMarkY !== undefined ? screen : null
+            }
+
+            // NaN while no screen wants a mark, which is what makes the
+            // assignment below hold the last real position instead of dropping
+            // the mark to the top of the frame as it fades out.
+            readonly property real slotY:
+                markScreen ? markScreen.onboardingMarkY : NaN
+            onSlotYChanged: if (!isNaN(slotY)) y = slotY
+
+            // The screen transition's own clock and curve, so the mark crosses
+            // in step with the screens moving underneath it. Off while the
+            // mark cannot be seen, so its first placement is a position rather
+            // than a journey from the top of the frame.
+            Behavior on y {
+                enabled: onboardingMark.visible
+                NumberAnimation {
+                    duration: Bulan.motionTransitionMs
+                    easing.type: Easing.OutCubic
+                }
+            }
+
+            // 0 before the mark belongs anywhere, 1 while it does. One value
+            // carries both the fade and the rise, the same shape and the same
+            // tokens EntranceMotion gives a screen's own content -- written
+            // out here rather than instantiated because this element's arrival
+            // is driven by the stack rather than by one screen's settle, and
+            // EntranceMotion starts on an edge it would never see.
+            opacity: present
+            visible: opacity > 0.01
+            transform: Translate {
+                y: (1 - onboardingMark.present) * Bulan.motionGridEntranceRise
+            }
+
+            property real present: 0
+            Behavior on present {
+                NumberAnimation {
+                    duration: Bulan.motionGridEntranceRiseMs
+                    easing.type: Easing.OutBack
+                    easing.overshoot: Bulan.motionEntranceOvershoot
+                }
+            }
+
+            // Rises in once the screen it belongs to has stopped travelling --
+            // arriving under a moving screen is the one thing every entrance
+            // in this app avoids. Crucially it does NOT drop back while the
+            // stack is busy: crossing from one onboarding screen to the other
+            // leaves this at 1 throughout, which is what makes the mark one
+            // continuous object rather than a fade out and a fade in.
+            function updatePresent() {
+                if (!markScreen) {
+                    present = 0
+                } else if (present > 0 || !stackView.busy) {
+                    present = 1
+                }
+            }
+            onMarkScreenChanged: updatePresent()
+            Component.onCompleted: updatePresent()
+            Connections {
+                target: stackView
+                function onBusyChanged() { onboardingMark.updatePresent() }
+            }
         }
 
         // Window-level hint bar, sibling of stackView for exactly the reason
@@ -469,6 +579,7 @@ ApplicationWindow {
         HintBar {
             id: sharedHintBar
             parent: designFrame
+            z: 3
             anchors.left: parent.left
             anchors.right: parent.right
             anchors.bottom: parent.bottom
@@ -648,6 +759,7 @@ ApplicationWindow {
     HostPanel {
         id: noHwDecoderDialog
         parent: designFrame
+        z: 4
         anchors.fill: parent
         // Deferred, not direct. HostPanel.close() emits dismissed() and THEN
         // calls parent.forceActiveFocus() itself -- which is right for a panel
@@ -665,6 +777,7 @@ ApplicationWindow {
     HostPanel {
         id: xWaylandDialog
         parent: designFrame
+        z: 4
         anchors.fill: parent
         // Deferred, not direct. HostPanel.close() emits dismissed() and THEN
         // calls parent.forceActiveFocus() itself -- which is right for a panel
@@ -682,6 +795,7 @@ ApplicationWindow {
     HostPanel {
         id: wow64Dialog
         parent: designFrame
+        z: 4
         anchors.fill: parent
         // The one config warning with something to agree to, so it is the one
         // that offers a confirm rather than only a way out. The confirm's
@@ -705,6 +819,7 @@ ApplicationWindow {
     HostPanel {
         id: unmappedGamepadDialog
         parent: designFrame
+        z: 4
         anchors.fill: parent
         property string unmappedGamepads: ""
         // Deferred, not direct. HostPanel.close() emits dismissed() and THEN
@@ -723,6 +838,7 @@ ApplicationWindow {
     BulanQuitConfirmation {
         id: quitConfirmationDialog
         parent: designFrame
+        z: 4
         anchors.fill: parent
         onDismissed: {
             if (stackView.currentItem) {

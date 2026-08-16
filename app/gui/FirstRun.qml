@@ -48,6 +48,10 @@ FocusScope {
 
     readonly property bool bulanScreen: true
 
+    // Where the window's shared mark should sit on this screen. main.qml reads
+    // it; a screen that does not define it simply gets no mark.
+    readonly property real onboardingMarkY: content.y + markSlot.y
+
     // --- post-transition entrance ---
     //
     // Mark, headline, supporting line, button, then the address escape hatch:
@@ -60,14 +64,16 @@ FocusScope {
     // exactly what EntranceMotion.qml says must never happen.
     property bool entranceStarted: false
 
-    EntranceMotion { id: markMotion;    order: 0; started: root.entranceStarted }
+    // The mark is not in this list. It is drawn by the window (see main.qml's
+    // onboardingMark) and owns its own arrival, on the same rise tokens with
+    // no stagger -- which is what order 0 was. So the orders here still start
+    // at 1, and the mark still lands before the headline.
     EntranceMotion { id: titleMotion;   order: 1; started: root.entranceStarted }
     EntranceMotion { id: bodyMotion;    order: 2; started: root.entranceStarted }
     EntranceMotion { id: buttonMotion;  order: 3; started: root.entranceStarted }
     EntranceMotion { id: addressMotion; order: 4; started: root.entranceStarted }
 
     function settleEntrance() {
-        markMotion.settle()
         titleMotion.settle()
         bodyMotion.settle()
         buttonMotion.settle()
@@ -100,22 +106,23 @@ FocusScope {
         }
 
         Column {
+            id: content
             anchors.centerIn: parent
             spacing: Bulan.spaceLg
             width: Math.min(parent.width - Bulan.layoutScreenMarginX * 2,
                              Bulan.hostTileSize * 2.4)
 
-            Image {
+            // The mark's place in the column, holding its space but drawing
+            // nothing. The mark itself is one window-level Image that both
+            // this screen and HostDiscovery share -- see main.qml. It stays
+            // outside the StackView so that crossing between the two screens
+            // moves one object rather than fading one out and another in, and
+            // so the transition's blur cannot touch it.
+            Item {
+                id: markSlot
                 anchors.horizontalCenter: parent.horizontalCenter
-                source: "qrc:/res/bulan_logomark.svg"
                 width: Bulan.onboardingMarkSize
                 height: width
-                fillMode: Image.PreserveAspectFit
-                sourceSize.width: width * 2
-                sourceSize.height: width * 2
-                smooth: true
-                opacity: markMotion.fadeOpacity
-                transform: Translate { y: markMotion.riseOffset }
             }
 
             Text {
