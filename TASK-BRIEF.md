@@ -8,6 +8,14 @@ history_policy: delete-on-acceptance
 
 # Polish audit and Bulan layer rework
 
+## State
+
+**The implementation is merged to `master` (16 August 2026) and the task branch
+is gone.** This brief stays open because the task is not accepted: nothing in it
+has run on a Steam Deck, and the client owes the copy and the decisions listed
+below. It is the shortest honest record of what is still outstanding; delete it
+once a Deck session closes the validation gap and those decisions are made.
+
 ## Objective
 
 Make Bulan hold 60 fps, make its motion correct and interruptible, and reduce

@@ -4,7 +4,7 @@ authority: repository-state
 read_when:
   - session-start
 history_policy: replace-not-append
-last_verified_commit: bb291747
+last_verified_commit: 0394aa26
 ---
 
 # Bulan — current state
@@ -19,10 +19,10 @@ Replaced, never appended to. Past states are in Git history, past evidence in
 
 | Item | State |
 |---|---|
-| Branches | `master` and `bulan` both at `177a58bd`. Work is on `polish-and-shell-rework`, cut from `master`, five commits ahead, **not pushed** |
+| Branches | `master` at `0394aa26`, **18 ahead of `origin/master` and not pushed**. `bulan` is still at `177a58bd`, so it no longer matches `master` |
 | Remote | `origin` only — `laweirdo/bulan-qt`. Nothing pushed this session |
 | Working tree | Clean |
-| Task branch | `polish-and-shell-rework` |
+| Task branch | None. `polish-and-shell-rework` was merged fast-forward on 16 August 2026 and deleted |
 | Active task | **Yes.** `TASK-BRIEF.md` — the polish audit and Bulan layer rework |
 | Other branches | `codex/rework-core-shell` is excluded by client decision, 15 August 2026, and is not a source for anything |
 
@@ -30,19 +30,18 @@ Replaced, never appended to. Past states are in Git history, past evidence in
 
 **Alpha v0.0.1.** `ROADMAP.md` owns scope and phase.
 
-15 August 2026, on the polish branch, in order: the frame rate was measured
-before anything changed; the busy-dots animation was unified and two broken
-copies removed; entrances now start from the transition instead of a timer and
-can be settled by input; Rename PC was ported into the host settings overlay;
-the inherited Moonlight shell — toolbar, `SettingsView.qml`, `PcView.qml` and
-every stock control only they kept alive — was deleted; the hint bar became one
-bar owned by the window; line weights got tokens and `HostPanel` finished the
-glass migration; the focus bloom became one component instead of four; the
-overdraw the measurement could justify was cut; and the last eight stock Dialogs
-became Bulan panels. **No stock visual control remains in a Bulan surface.**
+15–16 August 2026, merged to `master`: the frame rate was measured before
+anything changed; busy dots, focus bloom and the hint bar each became one
+implementation instead of three or four; entrances now start from the transition
+and can be settled by input; Rename PC moved into the host settings overlay; the
+inherited Moonlight shell — toolbar, `SettingsView.qml`, `PcView.qml` and every
+stock control only they kept alive — was deleted, as were the last eight stock
+Dialogs; line weights got tokens. **No stock visual control remains in a Bulan
+surface.**
 
-**Only the redraw is left, gated on mockups the client has not seen.**
-`TASK-BRIEF.md` carries what the client owes.
+Then five accepted mockups: the Recent shelf anchored to the screen margin,
+carousel depth, the library count and scrim, the game options card header, and
+grouped settings rows. Mockups are in the client's `Bulan` design project.
 
 ## Validation status
 
@@ -53,9 +52,10 @@ first-run screens each booted directly and rendered with zero QML errors; the
 host settings menu showing Rename PC; a settings popup showing its own hints
 rather than the shell's.
 
-One regression was introduced and fixed within the session: both overlays sized
-their surface against the hint bar they used to draw, and that binding failed
-once the bar was removed. Caught by reading the log, not the build.
+Two defects were introduced and fixed within the session: two overlays sized
+their surface against a hint bar that had been deleted, and the startup warnings
+stranded the gamepad. Neither was a build error — one needed the log read, the
+other a reviewer reading call order.
 
 **Measured:** frame pacing on the game grid —
 `docs/validation/2026-08-15-frame-pacing-baseline.md`. The reported 30 fps did
