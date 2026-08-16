@@ -11,7 +11,7 @@ import Bulan 1.0
 
 // -----------------------------------------------------------------------------
 // One game: artwork cropped to a rounded rectangle, a placeholder fallback, a
-// focus ring, and a title/running label beneath. The rectangular equivalent of
+// and a focus ring. The rectangular equivalent of
 // HostTile.qml -- read that file's comments first; the focus/press scale and
 // the label-follows-the-drawn-edge pattern are copied from it deliberately.
 //
@@ -33,7 +33,6 @@ Item {
     property string gameName: ""
     property var appId: null
     property url boxart: ""
-    property bool running: false
     property bool isCurrent: false
     property bool launchSourceHidden: false
     property bool launchMotionFreezeRequested: false

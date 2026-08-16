@@ -278,7 +278,7 @@ ApplicationWindow {
                      : Bulan.motionTransitionBlurRadius
         }
 
-        // Ordinary screen navigation, brief Â§6 "Screen transition": content
+        // Ordinary screen navigation, brief §6 "Screen transition": content
         // surfaces vertically over Bulan.motionTransitionMs, ease-out with no
         // overshoot (Easing.OutCubic; motionOvershoot belongs to focus motion,
         // not this). The opacity falloff below was originally the whole of
@@ -373,7 +373,7 @@ ApplicationWindow {
             }
         }
 
-        // The ground behind the pages â€” gradient only, deliberately.
+        // The ground behind the pages — gradient only, deliberately.
         //
         // Every Bulan screen draws its own full Atmosphere, and a screen is
         // opaque, so at rest this background is completely covered: its vignette
@@ -384,7 +384,7 @@ ApplicationWindow {
         //
         // The screens keep their own copies rather than sharing this one. Theirs
         // is what hides the outgoing screen during that travel, and it sits
-        // inside the layer that blurs behind a popup â€” pull it out and screens
+        // inside the layer that blurs behind a popup — pull it out and screens
         // read through each other mid-transition, and the grain stops blurring
         // with everything else behind a modal.
         background: Atmosphere {

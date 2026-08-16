@@ -3266,8 +3266,8 @@ FocusScope {
                 // Every non-focused VISIBLE tile stays at the same dimmed
                 // opacity the design already used (0.5) -- no per-distance
                 // gradient, which is a visual decision nobody has taken.
-                // "Visible" means the tile's whole resting rectangle is inside
-                // the screen margin. Multiplied by
+                // "Visible" is `onScreen` above: any part of the tile inside
+                // the view. Multiplied by
                 // entranceProgress so the tile fades in as it rises rather
                 // than appearing at full/dimmed opacity mid-flight.
                 // Clamped: entranceProgress overshoots above 1 on the way in
@@ -3381,7 +3381,6 @@ FocusScope {
                             root.sameAppId(model.appid, root.frozenLaunchAppId)
                         gameName: model.name
                         boxart: model.boxart
-                        running: false
                         appCollectorGame: model.appCollectorGame
                         isCurrent: recentSlot.isFocused
                         tileWidth: Bulan.gameRecentTileWidth
@@ -3695,7 +3694,6 @@ FocusScope {
                     root.sameAppId(model.appid, root.frozenLaunchAppId)
                 gameName: model.name
                 boxart: model.boxart
-                running: model.running
                 appCollectorGame: model.appCollectorGame
                 isCurrent: index === root.libraryFocusedIndex
             }
