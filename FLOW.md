@@ -203,6 +203,16 @@ hidden games, can say nothing is there with certainty.
 - **Launch shows a splash, then decides.** It holds briefly, any press skips it,
   and it replaces itself rather than being pushed, so B never returns to it. CLI
   routes and review hooks bypass it entirely.
+- **A remembered last host launches straight into its library, and the carousel
+  is never seen on the way.** The carousel remains the base of the stack, but
+  stays visually unrevealed while that host is resolved. If it becomes reachable
+  within the startup grace period, its game grid is placed immediately above the
+  carousel with no carousel-to-library screen transition, and the carousel
+  reveals itself underneath — already drawn and settled, because B still returns
+  there. If resolution fails or the grace period expires, the carousel reveals
+  normally and the auto-open is cancelled rather than fired late. This is the one
+  place a screen arrives without the vertical transition; a player pressing A on
+  the carousel still gets it.
 - **The post-pairing destination is the host carousel.** Pairing success clears
   the onboarding screens off the stack and lands on the carousel with the new
   host selected.

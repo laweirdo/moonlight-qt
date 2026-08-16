@@ -345,13 +345,37 @@ FocusScope {
                     break
                 }
                 stop()
+
+                // Only the remembered-host path bootstraps. The explicit review
+                // hook keeps the ordinary animated push: it exists to
+                // photograph the game grid arriving the way a player sees it
+                // arrive, and taking the transition away would photograph
+                // something nobody experiences.
+                var startupAutoOpen = !(typeof openAppsForHost !== "undefined"
+                                        && openAppsForHost !== "")
+
                 root.reviewAppsOpened = true
                 root.selectIndex(i)
-                // Revealed as the library goes on top of it, not before: this
-                // screen is what B comes back to, and it must be already drawn
-                // and settled by the time that happens.
+
+                // Pushed FIRST, revealed second. The library goes on immediately
+                // -- no carousel-to-library transition -- and this screen is
+                // then revealed underneath it, already drawn and settled for
+                // when B comes back to it.
+                //
+                // Revealing before the push was the whole defect: the carousel
+                // appeared for the length of one animated transition, showing
+                // the player a screen they had not asked for and then taking it
+                // away again.
+                if (root.openAppView(i, tile.uuid, tile.hostName, false,
+                                     startupAutoOpen)) {
+                    root.revealContent()
+                    return
+                }
+
+                // The open failed and messagePanel is already saying why. Reveal
+                // regardless, so that message never appears over a home screen
+                // that is deliberately blank.
                 root.revealContent()
-                root.openAppView(i, tile.uuid, tile.hostName, false)
                 return
             }
             // 80 tries at 250ms is 20 seconds, comfortably past the discovery
@@ -630,7 +654,16 @@ FocusScope {
         root.appViewContextByHostUuid[hostUuid] = context
     }
 
-    function openAppView(computerIndex, hostUuid, hostName, showHiddenGames) {
+    // Returns whether the game grid actually reached the stack. The startup
+    // bootstrap below needs that answer: it decides whether to reveal this
+    // screen underneath the library or in place of it, and a silent failure
+    // would leave the player looking at an intentionally blank home screen.
+    //
+    // "immediate" pushes without the screen transition. Only the remembered-host
+    // startup passes it -- every player-initiated open leaves it undefined and
+    // keeps the ordinary animated push, because a player who pressed A should
+    // see the movement their press caused.
+    function openAppView(computerIndex, hostUuid, hostName, showHiddenGames, immediate) {
         beginConnecting(hostUuid)
         var component = Qt.createComponent("AppView.qml")
         // Without these checks a failure to build the game grid is completely
@@ -641,7 +674,7 @@ FocusScope {
             clearConnecting()
             messagePanel.show(qsTr("Can't open %1").arg(hostName),
                               qsTr("Something went wrong loading the game list."))
-            return
+            return false
         }
 
         // Remember which PC this was, so the next launch can go straight back
@@ -671,10 +704,15 @@ FocusScope {
             clearConnecting()
             messagePanel.show(qsTr("Can't open %1").arg(hostName),
                               qsTr("Something went wrong loading the game list."))
-            return
+            return false
         }
         view.contextSaved.connect(root.rememberAppViewContext)
-        stackView.push(view)
+        if (immediate === true) {
+            stackView.push(view, StackView.Immediate)
+        } else {
+            stackView.push(view)
+        }
+        return true
     }
 
     function actConfirm() {
