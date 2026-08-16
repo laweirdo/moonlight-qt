@@ -16,10 +16,9 @@ Discarded flow designs and the upstream comparison are in
 `docs/design-rationale/flow-rationale.md`.
 
 **The Mermaid diagram below is the canonical flow artifact.** It is current and
-it is what an implementer builds against. `design/navigation-flow-board.png` is
-retained for **spatial layout and grouping only**: it predates several accepted
-decisions and has no reproducible editable source, so it is not authoritative
-for states or edges. Its known differences are listed in the rationale document.
+it is what an implementer builds against. The exported board artwork is not
+authoritative; `docs/design-rationale/flow-rationale.md` owns why, and lists
+every way it differs from what is built.
 
 ## Reading the diagram
 
@@ -42,8 +41,9 @@ timeout, not a button press. Solid edges are deliberate player actions.
 | Red — `failure` | A recoverable failure |
 | Amber — `decision` | A decision |
 
-**Onboarding runs once.** After the first pairing, launch goes straight to the
-host carousel and the first third of the diagram is skipped for good.
+**Onboarding runs once.** After the first pairing the first third of the diagram
+is skipped for good: launch lands on the host carousel, or passes straight
+through it into the last host's library — see the settled decisions below.
 
 ## Bulan, as built
 
@@ -174,24 +174,24 @@ every route out of it comes back to it, including the two that leave the app's
 own UI entirely, a stream that ends and a host that goes away.
 
 **The goal state is a stream, and A goes straight there when no different game
-is running.** From either Recent or Library, A first checks that condition. If it
+is running.** From either Recent or Library, A checks that condition first. If it
 is clear, the selected tile moves toward the centre and hands off to the
-launch-or-resume path. Otherwise the quit-and-switch decision comes first. There
+launch-or-resume path; otherwise the quit-and-switch decision comes first. There
 is no inspection screen in between.
 
 **X opens the Game Options modal.** B closes it and restores the same tab,
 selected game, and Library scroll position. Play/Resume makes the same
-different-game check and then uses A's selected-tile launch path. Hide Game and
-Direct Launch remain menu actions. Quit Game enters the quit path, and
-quit-and-switch does not enter launch until quitting has succeeded.
+different-game check and then uses A's launch path. Hide Game and Direct Launch
+remain menu actions. Quit Game enters the quit path, and quit-and-switch does
+not enter launch until quitting has succeeded.
 
 **Failures are recoverable and they land you back where you were.** No red state
 is a dead end. *Couldn't reach PC* retries into the grid; *Couldn't start*
-returns to the retained grid so the player can try the same game again. The
-popup-origin quit-and-switch case returns to Game Options, because that is the
-decision context it left; so does a Quit Game failure. A direct-A
-quit-and-switch failure returns to the retained grid. Nothing sends the player
-back to launch or loses the selected game merely because an operation failed.
+returns to the retained grid, so the same game can be tried again. Failures that
+began in Game Options — the popup-origin quit-and-switch, and Quit Game — return
+there, that being the decision context they left; a direct-A quit-and-switch
+failure returns to the grid. Nothing sends the player back to launch or loses
+the selected game merely because an operation failed.
 
 **An empty library is not the same as a broken one.** It names the host and
 points at Host Settings, because a library that looks empty is usually one where
@@ -203,16 +203,10 @@ hidden games, can say nothing is there with certainty.
 - **Launch shows a splash, then decides.** It holds briefly, any press skips it,
   and it replaces itself rather than being pushed, so B never returns to it. CLI
   routes and review hooks bypass it entirely.
-- **A remembered last host launches straight into its library, and the carousel
-  is never seen on the way.** The carousel remains the base of the stack, but
-  stays visually unrevealed while that host is resolved. If it becomes reachable
-  within the startup grace period, its game grid is placed immediately above the
-  carousel with no carousel-to-library screen transition, and the carousel
-  reveals itself underneath — already drawn and settled, because B still returns
-  there. If resolution fails or the grace period expires, the carousel reveals
-  normally and the auto-open is cancelled rather than fired late. This is the one
-  place a screen arrives without the vertical transition; a player pressing A on
-  the carousel still gets it.
+- **A remembered last host goes straight to its library, unseen.** The carousel
+  stays the stack base but is not revealed on the way: the grid is placed above
+  it with no transition, then the carousel reveals underneath, settled, for B. A
+  failed or timed-out resolution cancels the auto-open and reveals normally.
 - **The post-pairing destination is the host carousel.** Pairing success clears
   the onboarding screens off the stack and lands on the carousel with the new
   host selected.
