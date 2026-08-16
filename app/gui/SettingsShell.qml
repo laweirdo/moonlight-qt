@@ -576,10 +576,18 @@ FocusScope {
                 contentHeight: rowsColumn.implicitHeight
                 boundsBehavior: Flickable.StopAtBounds
 
+                // Asks the delegate where it actually is rather than assuming
+                // every row is the same height. Rows carrying a group heading
+                // are taller than the ones under them, so the old
+                // index * rowHeight arithmetic drifted further out of place with
+                // every heading above the focused row.
                 function ensureRowVisible(index) {
-                    var rowH = Bulan.targetRowHeight + Bulan.spaceMd
-                    var top = index * rowH
-                    var bottom = top + rowH
+                    var item = rowsRepeater.itemAt(index)
+                    if (!item) {
+                        return
+                    }
+                    var top = item.y
+                    var bottom = top + item.height + Bulan.spaceMd
                     var newY = contentY
                     if (top < contentY) {
                         newY = top
@@ -612,9 +620,35 @@ FocusScope {
                     spacing: Bulan.spaceMd
 
                     Repeater {
+                        id: rowsRepeater
                         model: root.currentRows
 
-                        delegate: Rectangle {
+                        // A row and the heading that may sit above it are one
+                        // delegate, not two list entries (client decision,
+                        // 15 August 2026). Headings as their own rows would put
+                        // unselectable items in the middle of the list and force
+                        // every index to know which of its neighbours can hold
+                        // focus; this way the model stays one entry per settable
+                        // thing and navigation is untouched.
+                        delegate: Column {
+                            width: rowsColumn.width
+                            spacing: Bulan.spaceXs
+
+                            // Quiet, uppercase, and only where a group starts.
+                            // A category is then a few short related lists
+                            // rather than one long undifferentiated column.
+                            Text {
+                                visible: modelData.group !== undefined
+                                height: visible ? implicitHeight + Bulan.spaceXs : 0
+                                leftPadding: Bulan.spaceLg
+                                text: visible ? modelData.group : ""
+                                color: Bulan.secondary
+                                font.family: Bulan.familyUi
+                                font.pixelSize: Bulan.sizeCaption
+                                font.letterSpacing: Bulan.trackingCaption
+                            }
+
+                        Rectangle {
                             id: rowSurface
                             width: rowsColumn.width
                             height: Bulan.targetRowHeight
@@ -807,6 +841,7 @@ FocusScope {
                                     root.activateCurrent()
                                 }
                             }
+                        }
                         }
                     }
                 }
@@ -1108,6 +1143,7 @@ FocusScope {
         var basicRows = [
             {
                 id: "resolution", type: "choice",
+                group: qsTr("Picture"),
                 label: qsTr("Resolution"),
                 popupTitle: qsTr("Choose a Resolution"),
                 valueLabel: function() { return StreamingPreferences.width + "×" + StreamingPreferences.height },
@@ -1169,6 +1205,7 @@ FocusScope {
             },
             {
                 id: "windowMode", type: "choice",
+                group: qsTr("Display"),
                 label: qsTr("Display Mode"),
                 popupTitle: qsTr("Choose a Display Mode"),
                 visible: function() { return SystemProperties.hasDesktopEnvironment },
@@ -1400,6 +1437,7 @@ FocusScope {
         var inputRows = [
             {
                 id: "absoluteMouseMode", type: "toggle",
+                group: qsTr("Mouse"),
                 label: qsTr("Optimize mouse for remote desktop"),
                 checked: function() { return StreamingPreferences.absoluteMouseMode },
                 toggle: function() { StreamingPreferences.absoluteMouseMode = !StreamingPreferences.absoluteMouseMode }
@@ -1482,6 +1520,7 @@ FocusScope {
         var advancedRows = [
             {
                 id: "videoDecoder", type: "choice",
+                group: qsTr("Video"),
                 label: qsTr("Video Decoder"),
                 popupTitle: qsTr("Choose a Video Decoder"),
                 valueLabel: function() {

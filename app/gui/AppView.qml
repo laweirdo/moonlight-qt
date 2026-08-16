@@ -560,6 +560,11 @@ FocusScope {
                 // second path into the model.
                 readonly property bool isHidden: model.hidden
                 readonly property bool isDirectLaunch: model.directLaunch
+                // The options card shows the game's own artwork, so the snapshot
+                // carries it from this same mirror rather than reaching into the
+                // tile that happens to be on screen -- the tile can be recycled,
+                // the mirror row cannot.
+                readonly property string boxartUrl: model.boxart
                 readonly property var appId: model.appid
                 onIsRunningChanged: root.recomputeRunning()
                 onLastPlayedValueChanged: root.recomputeRecentOrder()
@@ -2377,6 +2382,7 @@ FocusScope {
         return {
             appId: it.appId,
             gameName: it.gameName,
+            boxart: it.boxartUrl,
             running: it.isRunning,
             hidden: it.isHidden,
             directLaunch: it.isDirectLaunch,

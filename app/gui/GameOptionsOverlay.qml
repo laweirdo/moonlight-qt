@@ -24,6 +24,12 @@ FocusScope {
     id: overlay
 
     property string gameName: ""
+    // The artwork of the game this menu belongs to, so the card names what it
+    // is acting on rather than opening as an anonymous list of verbs over a
+    // blurred screen (client decision, 15 August 2026). Empty is normal --
+    // plenty of games have no box art -- and the thumbnail simply does not
+    // appear, exactly as a tile falls back to its name.
+    property string boxart: ""
     property bool   running: false
     property bool   hidden: false
     property bool   directLaunch: false
@@ -90,6 +96,7 @@ FocusScope {
 
     function applySnapshot(snapshot) {
         gameName = snapshot.gameName
+        boxart = snapshot.boxart !== undefined ? snapshot.boxart : ""
         running = snapshot.running
         hidden = snapshot.hidden
         directLaunch = snapshot.directLaunch
@@ -345,15 +352,71 @@ FocusScope {
             width: parent.width - Bulan.spaceXl * 2
             spacing: Bulan.spaceMd
 
-            Text {
+            // The card's head: the artwork, the name, and what the game is
+            // actually doing. It used to be the name alone, which made every
+            // menu look the same and left "Quit game" sitting under a title
+            // with no indication of whether anything was running to quit.
+            Row {
                 width: parent.width
-                text: overlay.gameName
-                color: Bulan.textPrimary
-                font.family: Bulan.familyDisplay
-                font.pixelSize: Bulan.sizeTitle
-                font.letterSpacing: Bulan.trackingTitle
-                elide: Text.ElideRight
+                height: Math.max(headThumb.height, headText.height)
+                spacing: Bulan.spaceLg
                 visible: overlay.page === "menu"
+
+                Rectangle {
+                    id: headThumb
+                    width: Bulan.gameTileWidth / 2.25
+                    height: Bulan.gameTileHeight / 2.25
+                    radius: Bulan.radiusMd
+                    color: Bulan.bgSurface
+                    border.width: Bulan.hairlineWidth
+                    border.color: Bulan.hairline
+                    visible: headArt.status === Image.Ready
+                    clip: true
+
+                    Image {
+                        id: headArt
+                        anchors.fill: parent
+                        anchors.margins: Bulan.hairlineWidth
+                        source: overlay.boxart
+                        asynchronous: true
+                        fillMode: Image.PreserveAspectCrop
+                    }
+                }
+
+                Column {
+                    id: headText
+                    width: parent.width - (headThumb.visible
+                                           ? headThumb.width + Bulan.spaceLg
+                                           : 0)
+                    spacing: Bulan.space2xs
+                    anchors.verticalCenter: parent.verticalCenter
+
+                    Text {
+                        width: parent.width
+                        text: overlay.gameName
+                        color: Bulan.textPrimary
+                        font.family: Bulan.familyDisplay
+                        font.pixelSize: Bulan.sizeTitle
+                        font.letterSpacing: Bulan.trackingTitle
+                        elide: Text.ElideRight
+                    }
+
+                    // The state the menu is acting on, in the app's own voice.
+                    // "Another game is running" is the one worth saying plainly:
+                    // it is the reason Play will ask before it launches.
+                    Text {
+                        width: parent.width
+                        text: overlay.running
+                              ? qsTr("Running now")
+                              : (overlay.anotherRunning && overlay.runningName !== ""
+                                 ? qsTr("%1 is running").arg(overlay.runningName)
+                                 : qsTr("Not running"))
+                        color: overlay.running ? Bulan.statusSuccess : Bulan.textSecondary
+                        font.family: Bulan.familyUi
+                        font.pixelSize: Bulan.sizeBody
+                        elide: Text.ElideRight
+                    }
+                }
             }
 
             Rectangle {
