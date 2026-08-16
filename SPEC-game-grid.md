@@ -17,7 +17,13 @@ defined:
 - **Provisional** — unfinished or awaiting a later client decision.
 - **Superseded** — retained as history but no longer authoritative.
 
-Screen targets **1280×800**, the Steam Deck panel.
+Screen is composed at **1280×800**, the Steam Deck panel, and that composition
+is what ships at every resolution. `main.qml` lays the whole application out at
+those numbers and scales that one frame to fit the window
+(`min(width / 1280, height / 800)`), so this screen never asks how large it is.
+A wider window buys breathing room down each side, never an extra grid column
+and never a re-flow. Client decision, 16 August 2026; the design frame is
+`Bulan.designWidth` / `designHeight` and `DESIGN-SYSTEM.md` owns the rule.
 
 Four commits carry the original game-grid work order's stages 1–4:
 
@@ -42,7 +48,7 @@ now merged into `bulan`.
 | File | What it is |
 |---|---|
 | `app/gui/AppView.qml` | The screen. Owns the model, tabs, the Recent ordering, all input, launching, and focus recovery for one host's Recent and Library views. |
-| `app/gui/GameTile.qml` | One game: artwork cropped to a rounded rectangle, placeholder fallback, focus ring and bloom, title, running marker. |
+| `app/gui/GameTile.qml` | One game: artwork cropped to a rounded rectangle, placeholder fallback carrying the game's name, focus ring and bloom. Nothing is drawn below the artwork. |
 | `app/gui/GameOptionsOverlay.qml` | Modal overlay: Play/Resume, Quit Game, Hide Game, Direct Launch, plus the quit-confirm and quit-and-switch-confirm pages it owns internally. |
 | `app/gui/Bulan.qml` | Design tokens. The game-grid token block retains its historical `PROPOSED` source comment, but the screen was subsequently reviewed against the real `Steambox` library and accepted with the changes recorded below. |
 
@@ -54,7 +60,7 @@ Supporting, not part of this screen but changed for it:
 | `app/gui/appmodel.h` / `.cpp` | `LastPlayedRole` added to the model's role set. `AppModel::createSessionForApp()` stamps `lastPlayed` on both the computer's own app list and the model's visible-apps copy, then emits `dataChanged` for that role. |
 | `app/gui/HostCarousel.qml` | `openAppView()`, the two call sites unchanged in contract; the `MOONLIGHT_OPEN_APPS_FOR_HOST` review hook (a timer that finds a real host by name and opens the grid on it once discovery reports it reachable). |
 | `app/gui/sdlgamepadkeynavigation.cpp` | `SDL_CONTROLLER_BUTTON_LEFTSHOULDER`/`RIGHTSHOULDER`, previously unmapped (`default: break` on every screen), now send `Key_Context2`/`Key_Context3`. |
-| `app/main.cpp` | Review hooks: `MOONLIGHT_FAKE_GAMES`, `MOONLIGHT_FAKE_GAMES_ART`, `MOONLIGHT_OPEN_APPS_FOR_HOST`, `MOONLIGHT_GAME_REVIEW`, `MOONLIGHT_SCREENSHOT_DELAY_MS`. |
+| `app/main.cpp` | Review hooks: `MOONLIGHT_FAKE_GAMES`, `MOONLIGHT_FAKE_GAMES_ART`, `MOONLIGHT_OPEN_APPS_FOR_HOST`, `MOONLIGHT_GAME_REVIEW`, `MOONLIGHT_GAME_REVIEW_INDEX`, `MOONLIGHT_SCREENSHOT_DELAY_MS`, `MOONLIGHT_SCREENSHOT_WIDTH`, `MOONLIGHT_SCREENSHOT_HEIGHT`. |
 | `app/qml.qrc` | `GameTile.qml` (stage 2) and `GameOptionsOverlay.qml` (stage 3) registered. |
 
 ---
@@ -210,22 +216,52 @@ top and bottom of most of the client's own real library.
 **Accepted evolution — Recent's focused tile is 256×384, smaller than the
 mockup's ~320×440.** The mockup's proportion is neither 2:3 nor 3:4, and a
 320-wide tile at the accepted 2:3 ratio would be 480 tall, which does not fit
-under the tab strip with room left for the title and, on a running game, the
-tagline beneath it. The first attempt at 288×432 was measured on screen and
-still landed the title exactly on the hint bar's hairline. Working back from
-the space genuinely available — after `gameRecentLabelGap`, the title line,
-and the running-game tagline — gives 256×384. **The ratio was decided on
-evidence and the copy underneath has to stay legible, so width is what gave
-way**, not the ratio.
+under the tab strip. An attempt at 288×432 was measured on screen and ran off
+the bottom of the band Recent occupies. **The ratio was decided on evidence, so
+width is what gave way**, not the ratio. The height was originally cut further
+still to leave room for a title and tagline underneath; that copy is gone (see
+below) and the size is kept because the client has accepted it on screen, not
+because anything still needs the space below it.
 
-**v1 decision — labels sit on a fixed baseline, not following the tile's
-drawn edge.** `HostTile.qml`'s label follows its circle's scaled edge because
-a carousel tile is alone on its own line. Here, five `GameTile` labels sit
-side by side and form a visible row: letting the focused one drop by the few
-pixels the 1.04 focus scale adds would break that row every time the
-selection moved, and the eye reads a ragged baseline before it reads a tile
-being slightly larger. The focus scale is left free to grow the artwork over
-the gap (`Bulan.spaceMd`) instead of pushing the label down.
+**Accepted evolution — no text below artwork, in either view.** Client
+instruction, 16 August 2026. Box art names its own game, and a row of captions
+under a grid of posters is the application repeating what the picture already
+says. Removed: `GameTile`'s title and "Running" row, and Recent's focused-game
+title, "Running" line and per-neighbour last-played date. A `GameTile` is now
+exactly its artwork tall.
+
+The game's name **survives inside the artwork rectangle**, where it is the
+fallback shown while art is loading, missing, or detected as a GFE/Sunshine
+placeholder — the one case where the picture cannot speak for itself. Long
+names wrap and elide inside the tile as they always did. "Running" is still
+said once on this screen, in the header, and A still reads Resume rather than
+Play for a running game.
+
+This supersedes the earlier v1 decision that labels sat on a fixed baseline
+rather than following the tile's scaled edge. That decision existed to stop a
+row of five captions going ragged as focus moved; there is no row of captions.
+
+**Accepted evolution — Recent starts left, walks to the centre, then locks
+there.** Client decision, 16 August 2026, replacing Direction B's permanently
+left-anchored shelf. The focused tile sits on `layoutScreenMarginX` for the
+first game — the same margin every other screen's content starts on, so the
+shelf opens with no void down the left — and moves one `gameRecentSpread`
+toward the middle for each earlier game behind it, until it reaches the middle
+and stays there while the row scrolls under it.
+
+One equation owns all of it, so the index at which it locks is wherever the
+clamp bites rather than a number of its own; at 1280 that is the third game.
+Delegate position stays a pure function of rank measured from that anchor —
+this remains the existing custom carousel, not a `PathView` or `ListView`.
+
+**Accepted evolution — Recent draws every game that touches the screen.**
+Same instruction. The row runs past both edges and reads as one continuous
+queue. This reverses the 1 August 2026 rule that a game was drawn only if its
+tile landed whole inside the screen margin: with the focus anchored left that
+rule ended the row in bare ground, and once the anchor centres it left bare
+ground on both sides. A tile cut by the window edge is what says the queue
+continues. Games entirely off screen park one step beyond the edge, invisible,
+so nothing is rendered that cannot be seen.
 
 **v1 decision — artwork is inset inside the focus ring (`artInset: 2`), not
 drawn to the tile's edge.** Box art is almost always a full-bleed poster; drawn
@@ -405,7 +441,9 @@ MOONLIGHT_FAKE_GAMES=mixed MOONLIGHT_INITIAL_VIEW=qrc:/gui/AppView.qml ^
 | `MOONLIGHT_FAKE_GAMES_ART=<dir>` | Fake games take real box art (`1.jpg`, `2.jpg`, … in call order, consistent across every preset) instead of always falling back to the placeholder tile. Unset, every fake game has no artwork at all — the common review case. |
 | `MOONLIGHT_OPEN_APPS_FOR_HOST=<name>` | Opens the game grid for a **real, paired** host by name once the carousel settles, through `HostCarousel`'s ordinary `openAppView()` — so an offline, unpaired, or unsupported host is refused exactly as a real A-press would refuse it. The opposite of `MOONLIGHT_FAKE_GAMES`, and the two must not be combined: only a real host proves box art actually arriving from `BoxArtManager` — real files, real aspect ratios, real load timing, real GFE placeholder detection. **Needs `MOONLIGHT_SCREENSHOT_DELAY_MS`** because a saved host loads offline at startup and only reports itself reachable once the discovery poll answers; without extra delay, the screenshot grabs the carousel instead of the grid. |
 | `MOONLIGHT_GAME_REVIEW=<case>` | Keeps `options`, `switch`, and `library`, and adds fake-only launch/quit routes: Recent, Library, scrolled Library, resume, warning, launch failure, valid/no-source fallback, repeated launch cycles, quit progress/failure, quit-and-switch success/failure, and popup-origin switch-then-launch failure. These routes exercise QML state and navigation without touching a real host; they do not prove a real stream or quit. |
+| `MOONLIGHT_GAME_REVIEW_INDEX=<n>` | Which tile the review lands on, applied to whichever tab is showing and clamped through the same functions a real press goes through. Recent's focused game walks from the screen margin to the middle as earlier games appear behind it, and the screenshot hook grabs on a timer and cannot press Right, so without this only the first of those positions could be photographed. Zero unless set, which is the first tile either way. |
 | `MOONLIGHT_SCREENSHOT_DELAY_MS=<ms>` | Extra wait added to the screenshot timer's base interval (2500 ms) before the grab. The base interval is enough for any screen built from state the app already has; it is not enough for one that has to wait on the network, which is exactly `MOONLIGHT_OPEN_APPS_FOR_HOST`'s case — a saved host loads offline and only becomes reachable when the discovery poll answers. Zero unless set, so every existing recipe times exactly as before. |
+| `MOONLIGHT_SCREENSHOT_WIDTH` / `_HEIGHT` | The viewport the grab is laid out at. The application scales one 1280×800 composition to whatever window it is given, so reviewing another resolution means resizing the window rather than changing any screen. Both default to the design frame, so every recipe written before the application could be scaled grabs exactly what it always did. |
 
 Existing carousel hooks (`MOONLIGHT_FAKE_HOSTS`, `MOONLIGHT_INITIAL_VIEW`,
 `MOONLIGHT_SCREENSHOT`, `QT_QPA_PLATFORM=offscreen`) apply unchanged.
@@ -482,7 +520,13 @@ Existing carousel hooks (`MOONLIGHT_FAKE_HOSTS`, `MOONLIGHT_INITIAL_VIEW`,
 ## Client review, 1 August 2026 — four changes
 
 The client drove the deployed review build against the real `Steambox` library
-and reported four faults. All four are fixed.
+and reported four faults. All four were fixed.
+
+**Dated history, kept for the reasoning it records.** Three of the four have
+since been overtaken by the 16 August 2026 instructions above: there is no
+title block under a tile any more (1 and 3), and a game is now drawn whenever
+any part of it is on screen rather than only when it fits whole inside the
+margin (2). Read the durable decisions above for what the screen does today.
 
 **1. The focused game's title block broke on a running game.** `Running` was
 drawn in a `Row` beside a much larger title, and a `Row` aligns tops, so the

@@ -229,6 +229,13 @@ hidden games, can say nothing is there with certainty.
   to any one screen, because nothing about it changes between the carousel and
   the grid except its labels. Overlay hint bars are unaffected — an overlay is
   not a screen change.
+- **The onboarding crescent does not travel with the screen either.** First run
+  and discovery both centre the same mark; it belongs to the window, and each
+  screen only says where it sits. Moving between them carries one object across
+  rather than dissolving it and raising it again, forward and back alike, while
+  the rest of both screens takes the ordinary vertical transition, blur and fade.
+  Client decision, 16 August 2026. One named exception, not a licence for
+  per-route animation — `DESIGN-SYSTEM.md` owns the bar for adding another.
 
 ## Open flow questions
 
