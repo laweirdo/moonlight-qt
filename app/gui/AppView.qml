@@ -3840,17 +3840,16 @@ FocusScope {
               { action: "back", label: qsTr("Back") }
           ]
 
-    // Switch tab: L1/R1 carry a keycode (Key_Context2 / Key_Context3, added
-    // to sdlgamepadkeynavigation.cpp in stage 3), so the hint is not
-    // promising a button that does nothing.
+    // No "Switch tab" entry here. L1/R1 still switch tabs, but the Recent and
+    // Library labels already carry their own shoulder glyphs, sitting directly
+    // on the thing they act on. Saying it a second time down here taught
+    // nothing and cost a slot in a bar whose whole job is to be scannable.
     //
-    // Host Settings (SELECT) is no longer a gap -- see actHostSettings()
-    // above and TASK-BRIEF.md stage 4 / ROADMAP.md's "second Phase B gap".
-    // Offered unconditionally, including on an empty library: that is
-    // exactly where a player checking "did I hide everything?" needs it
-    // most.
+    // Host Settings (SELECT) is no longer a gap -- see actHostSettings() above
+    // and ROADMAP.md's "second Phase B gap". Offered unconditionally, including
+    // on an empty library: that is exactly where a player checking "did I hide
+    // everything?" needs it most.
     readonly property var hintRightHints: [
-        { action: "l1",     label: qsTr("Switch tab") },
         { action: "start",  label: qsTr("Client Settings") },
         { action: "select", label: qsTr("Host Settings") }
     ]
