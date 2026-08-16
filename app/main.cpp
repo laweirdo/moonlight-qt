@@ -1250,6 +1250,15 @@ int main(int argc, char *argv[])
         // is not on screen yet at the default four seconds. Zero unless set.
         engine.rootContext()->setContextProperty("screenshotDelayMs",
                                                  qEnvironmentVariableIntValue("MOONLIGHT_SCREENSHOT_DELAY_MS"));
+        // Companions to the screenshot hook: the viewport the grab is laid out
+        // at. The app scales one 1280x800 composition to whatever window it is
+        // given, so reviewing another resolution means resizing the window
+        // rather than changing any screen. Zero unless set, and main.qml reads
+        // zero as "the design frame", so every existing recipe is unchanged.
+        engine.rootContext()->setContextProperty("screenshotWidth",
+                                                 qEnvironmentVariableIntValue("MOONLIGHT_SCREENSHOT_WIDTH"));
+        engine.rootContext()->setContextProperty("screenshotHeight",
+                                                 qEnvironmentVariableIntValue("MOONLIGHT_SCREENSHOT_HEIGHT"));
         // Review hooks for SettingsShell.qml (private v1 finalisation, stage 5).
         // MOONLIGHT_SETTINGS_REVIEW_CATEGORY=<id> selects a rail category (e.g.
         // "basic", "about") once the screen settles, and the companion

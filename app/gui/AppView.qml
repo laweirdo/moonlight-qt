@@ -429,38 +429,11 @@ FocusScope {
         return isNaN(t) ? 0 : Math.max(t, 0)
     }
 
-    // A relative last-played line for a Recent neighbour tile, or "" for a
-    // game that has never been played -- which must show no second line at
-    // all, not invented copy (client decision, TASK-BRIEF.md #1).
-    //
-    // Qt.formatDate/Qt.locale() rather than hand-rolled day names, per the
-    // brief. "Today" is not in the brief's own list (Yesterday / weekday /
-    // short date) -- it only describes neighbour tiles, and the one game
-    // played today is normally also the running game, which takes the
-    // Running/tagline treatment instead of a date line. It is filled in here
-    // as the only sane reading for a same-day, non-running play; a judgement
-    // call, noted in the stage 3 report.
-    function relativePlayed(value) {
-        var t = root.playedAt(value)
-        if (t === 0) {
-            return ""
-        }
-        var played = new Date(t)
-        var now = new Date()
-        var startOfToday = new Date(now.getFullYear(), now.getMonth(), now.getDate())
-        var startOfPlayed = new Date(played.getFullYear(), played.getMonth(), played.getDate())
-        var diffDays = Math.round((startOfToday - startOfPlayed) / 86400000)
-        if (diffDays <= 0) {
-            return qsTr("Today")
-        }
-        if (diffDays === 1) {
-            return qsTr("Yesterday")
-        }
-        if (diffDays < 7) {
-            return Qt.locale().dayName(played.getDay(), Locale.LongFormat)
-        }
-        return Qt.formatDate(played, "d MMM")
-    }
+    // relativePlayed() lived here: the "Yesterday"/weekday/short-date line a
+    // Recent neighbour tile carried under its artwork. Nothing is drawn under
+    // a tile any more (client instruction, 16 August 2026) and it had no other
+    // caller, so it is gone rather than kept warm for a screen that no longer
+    // exists. playedAt() above stays -- the Recent ORDER is built on it.
 
     function computerLost() {
         // Go back to the host carousel on PC loss, exactly as upstream did.
@@ -3029,25 +3002,15 @@ FocusScope {
             NumberAnimation { duration: Bulan.motionFocusMs; easing.type: Easing.InOutQuad }
         }
 
-        // Where the focused tile's centre sits. spaceLg matches the gap the
-        // Library's own Flickable uses below the tab strip, so the two views'
-        // art starts at a visually consistent height.
-        // Where the focused tile's centre sits. Derived from the space actually
-        // available rather than measured down from the top, so the title block
-        // underneath cannot be pushed through the hint bar.
+        // Where the focused tile's centre sits: the middle of the band this
+        // view actually occupies, between the tab strip and the hint bar.
         //
-        // It was a fixed offset, and the running game's extra "Pick up where
-        // you left off." line overran the bar's hairline -- twice, at two
-        // different tile heights. Reserving the block's height and centring the
-        // tile in what is left means the composition corrects itself if the
-        // tile size, the type ramp or the panel ever changes, instead of
-        // needing another measured constant.
-        readonly property int labelReserve: Bulan.gameRecentLabelGap
-                                            + Bulan.lineHeightTitleLg
-                                            + Bulan.lineHeightBodyLg
-        readonly property real focusCenterY: Math.max(
-            Bulan.gameRecentTileHeight * Bulan.motionFocusScale / 2,
-            (height - labelReserve) / 2)
+        // It used to hold back the height of the title block underneath, after
+        // that block twice overran the hint bar's hairline at two different
+        // tile heights. There is no block to hold room for any more (client
+        // instruction, 16 August 2026), so the reservation went with it and the
+        // artwork simply sits in the middle of its own space.
+        readonly property real focusCenterY: height / 2
 
         // --- warm halo behind the focused tile -------------------------------
         // Recent had none (client review, 3 August 2026). The Library grid and
@@ -3234,25 +3197,12 @@ FocusScope {
                                        : (distance === 0 ? 1.0
                                                          : Bulan.gameRecentNeighbourScale)
 
-                // 0 while a neighbour, 1 while focused, animated below on the
-                // same clock as the tile's travel -- HostCarousel.qml's
-                // HostTile.focusAmount exactly. Everything that differs
-                // between the neighbour and focused title presentation
-                // interpolates on this instead of the title element being
-                // swapped for another one; see the label block below.
-                property real focusAmount: distance === 0 ? 1.0 : 0.0
-
-                // Linear blend between two colours, copied from
-                // HostTile.qml's mix() -- QML interpolates colours in
-                // animations but gives no expression for it, and the title
-                // needs to follow focusAmount rather than run a colour
-                // animation of its own.
-                function mix(a, b, f) {
-                    return Qt.rgba(a.r + (b.r - a.r) * f,
-                                   a.g + (b.g - a.g) * f,
-                                   a.b + (b.b - a.b) * f,
-                                   a.a + (b.a - a.a) * f)
-                }
+                // focusAmount and mix() lived here: the 0-to-1 blend the
+                // focused title's size and colour interpolated along. The
+                // titles are gone (client instruction, 16 August 2026) and
+                // nothing else read either, so both went with them. The tile
+                // itself still distinguishes focus by tileScale and opacity
+                // below, on the same clock focusAmount used.
 
                 width: Bulan.gameRecentTileWidth
                 height: Bulan.gameRecentTileHeight
@@ -3343,19 +3293,6 @@ FocusScope {
                         easing.type: Easing.InOutQuad
                     }
                 }
-                // The ONE place focusAmount is animated. The title's pixel
-                // size and colour below read this value directly, with no
-                // Behavior of their own -- giving them one would be
-                // animating an animation, the fault HostTile.qml's
-                // interactionScale comment describes.
-                Behavior on focusAmount {
-                    enabled: recentSlot.settled
-                    NumberAnimation {
-                        duration: Bulan.motionFocusMs
-                        easing.type: Easing.InOutQuad
-                    }
-                }
-
                 // False until this tile has been placed once, so the first
                 // frame is a position rather than a journey from wherever the
                 // bindings above would otherwise animate from. Bindings are
@@ -3380,18 +3317,21 @@ FocusScope {
                     }
                 }
 
-                // Clips away GameTile's own built-in label row (title +
-                // Running), which is not used for the Recent presentation --
-                // the label block below draws the Recent-specific copy
-                // instead. Inset by spaceXs, following the exact reasoning
-                // Library's libraryFocusInset gives: the focused tile's own
-                // small internal focus pulse must not be cut by this clip.
+                // Carries the carousel's own travel scale, so GameTile's
+                // internal focus pulse animates against a steady parent
+                // instead of chasing a moving one. Inset by spaceXs on every
+                // side, following the exact reasoning Library's
+                // libraryFocusInset gives: room for that pulse to grow into.
+                //
+                // It used to clip as well, to cut away GameTile's built-in
+                // title row. The tile has no text under it any more (client
+                // instruction, 16 August 2026), so there is nothing left to
+                // cut and the clip is gone with it.
                 Item {
                     id: artClip
                     anchors.centerIn: parent
                     width: Bulan.gameRecentTileWidth + 2 * Bulan.spaceXs
                     height: Bulan.gameRecentTileHeight + 2 * Bulan.spaceXs
-                    clip: true
                     scale: recentSlot.tileScale
                     transformOrigin: Item.Center
 
@@ -3414,106 +3354,27 @@ FocusScope {
                     }
                 }
 
-                // The label block. Positioned from the tile's own VISUAL
-                // (scaled) bottom edge, not its unscaled one -- artClip
-                // scales about its own centre, so a neighbour's true bottom
-                // sits higher than recentSlot.height would suggest.
-                Column {
-                    anchors.horizontalCenter: parent.horizontalCenter
-                    y: recentSlot.height * (1 + recentSlot.tileScale) / 2
-                       + (recentSlot.isFocused ? Bulan.gameRecentLabelGap : Bulan.spaceMd)
-                    spacing: Bulan.space2xs
-
-                    // ONE title element, always Bulan.familyDisplay, never
-                    // swapped for a second one drawn in Bulan.familyUi --
-                    // HostTile.qml's labelBlock solved exactly this jarring
-                    // typeface-swap-on-scroll defect already, and its own
-                    // comment gives the reason: a text that grows into
-                    // another cannot change typeface on the way, so the
-                    // branded face wins throughout. Pixel size, colour and
-                    // the bound it elides against all interpolate on
-                    // recentSlot.focusAmount instead.
-                    //
-                    // The width bound is itself interpolated: neighbourScale
-                    // of the tile width at focusAmount 0, matching what the
-                    // narrower neighbour tile used to bound its own separate
-                    // title to, and the full gameRecentTileWidth (256, the
-                    // tile's own accepted width) at focusAmount 1 -- which is
-                    // also the bound the title needs while focused, so the
-                    // pair with "Running" reads as centred under the tile
-                    // per the mockup rather than drifting off it.
-                    Item {
-                        id: titleRow
-                        anchors.horizontalCenter: parent.horizontalCenter
-                        width: Bulan.gameRecentTileWidth
-                               * (Bulan.gameRecentNeighbourScale
-                                  + (1 - Bulan.gameRecentNeighbourScale) * recentSlot.focusAmount)
-                        height: titleText.height
-
-                        Text {
-                            id: titleText
-                            anchors.horizontalCenter: parent.horizontalCenter
-                            width: parent.width
-                            horizontalAlignment: Text.AlignHCenter
-                            text: model.name
-                            color: recentSlot.mix(Bulan.textSecondary, Bulan.textPrimary,
-                                                   recentSlot.focusAmount)
-                            font.family: Bulan.familyDisplay
-                            font.pixelSize: Bulan.sizeLabel
-                                            + (Bulan.sizeTitleLg - Bulan.sizeLabel) * recentSlot.focusAmount
-                            elide: Text.ElideRight
-                        }
-
-                    }
-
-                    // "Running" sits on its own line under the game's name,
-                    // centred with it (client review, 3 August 2026). It used
-                    // to hang off the right-hand edge of the title's painted
-                    // glyphs on the same baseline, which read as misaligned
-                    // rather than as a status: at the focused title's size the
-                    // pair was visibly lopsided, and a long name pushed the
-                    // label off the tile entirely.
-                    //
-                    // This replaces the "Pick up where you left off." line
-                    // rather than being added above it. Stacking name,
-                    // "Running" AND a tagline put three lines under the tile,
-                    // which is what crowded the hint bar; the client's call was
-                    // to drop the tagline if the status could not otherwise
-                    // fit. "Running" is the load-bearing half -- it says the
-                    // game is live, which is also what changes A from Play to
-                    // Resume.
-                    Text {
-                        visible: recentSlot.isFocused && model.running
-                        anchors.horizontalCenter: parent.horizontalCenter
-                        text: qsTr("Running")
-                        color: Bulan.statusSuccess
-                        font.family: Bulan.familyUi
-                        font.pixelSize: Bulan.sizeBody
-                    }
-
-                    Text {
-                        id: neighbourDateText
-                        readonly property string dateLabel: root.relativePlayed(model.lastPlayed)
-                        visible: !recentSlot.isFocused && dateLabel.length > 0
-                        anchors.horizontalCenter: parent.horizontalCenter
-                        text: dateLabel
-                        color: Bulan.textSecondary
-                        font.family: Bulan.familyUi
-                        font.pixelSize: Bulan.sizeCaption
-                    }
-                }
+                // The label block that used to sit here -- the focused game's
+                // name, its "Running" status and each neighbour's last-played
+                // date -- is gone on the client's instruction of 16 August
+                // 2026. Recent shows artwork and nothing else; the name lives
+                // inside the tile, as the fallback for art that is missing.
+                // "Running" is still said once on this screen, in the header.
             }
         }
     }
 
     // --- library grid --------------------------------------------------------
-    // A cell is the tile plus its label plus the gap to the next row. Kept as
-    // one number so the Flickable's contentHeight and each delegate's y are
-    // computed from the same arithmetic rather than two similar-looking sums
-    // drifting apart.
+    // A cell is the tile plus the gap to the next row. Kept as one number so
+    // the Flickable's contentHeight and each delegate's y are computed from the
+    // same arithmetic rather than two similar-looking sums drifting apart.
+    //
+    // It used to carry a title line and the space above it as well. Nothing is
+    // drawn under a tile any more (client instruction, 16 August 2026), so the
+    // rows close up by exactly that much and the grid gains a band of height it
+    // was spending on captions.
     readonly property int libraryCellWidth: Bulan.gameTileWidth + Bulan.gameGridGap
-    readonly property int libraryCellHeight: Bulan.gameTileHeight + Bulan.spaceMd
-                                              + Bulan.lineHeightLabel + Bulan.gameGridGap
+    readonly property int libraryCellHeight: Bulan.gameTileHeight + Bulan.gameGridGap
     readonly property int libraryRowCount: Math.ceil(root.gameCount / Bulan.gameGridColumns)
 
     // Breathing room inside the Flickable's clip rectangle.

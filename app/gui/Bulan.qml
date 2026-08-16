@@ -99,6 +99,20 @@ QtObject {
     readonly property int targetMin:           64
     readonly property int targetRowHeight:     88
 
+    // --- The design frame ----------------------------------------------------
+    // Every measurement in this file, and every screen that reads them, is drawn
+    // against this one composition -- the Deck's own panel size. It is not a
+    // minimum window size and not a breakpoint: main.qml lays the whole app out
+    // at exactly these numbers and then scales that frame to fit whatever window
+    // it is given, so a screen never has to ask how large it is.
+    //
+    // Proportional only, by client decision of 16 August 2026. A wider window
+    // buys breathing room down each side, never an extra grid column, so the
+    // composition the mockups were drawn as is the composition that ships at
+    // every resolution.
+    readonly property int designWidth:  1280
+    readonly property int designHeight: 800
+
     // --- Line weights --------------------------------------------------------
     // Two, because the app draws exactly two kinds of line: one that divides a
     // surface from what is behind it, and one that says where the focus is.
@@ -433,15 +447,16 @@ QtObject {
     // 3:4, and at 2:3 a 320-wide tile would be 480 tall -- which does not fit.
     // The tile keeps the accepted 2:3 ratio and gives up width instead.
     //
-    // Sized against what is actually left rather than what was estimated. The
-    // first attempt at 288x432 was measured on screen: the tile starts 223px
-    // down, the focus scale adds 4% to its height, and the title landed exactly
-    // on the hint bar's hairline. Working back from the 489px that genuinely
-    // remain -- minus gameRecentLabelGap, the title line, and the tagline the
-    // running game adds under it -- gives 396, and 264 is that at 2:3.
+    // Sized against what is actually left rather than what was estimated: the
+    // tile starts 223px down and the focus scale adds 4% to its height, so an
+    // earlier 288x432 attempt ran off the bottom of the band Recent occupies.
     //
-    // Smaller than the mockup drew. The ratio was decided on evidence and the
-    // copy beneath has to be readable, so the width is what gives way.
+    // Smaller than the mockup drew. The ratio was decided on evidence, so the
+    // width is what gives way. The height was originally cut further still to
+    // leave room for a title and a tagline underneath; that copy is gone
+    // (client instruction, 16 August 2026) and the size is kept because the
+    // client has accepted it on screen, not because anything still needs the
+    // space below it.
     readonly property int  gameRecentTileWidth:      256
     readonly property int  gameRecentTileHeight:     384
 
@@ -464,8 +479,10 @@ QtObject {
     // seeing more of the library beats air around the selected game.
     readonly property int  gameRecentSpread:         250
 
-    // Clear space under the focused tile before its title block.
-    readonly property int  gameRecentLabelGap:        16
+    // gameRecentLabelGap lived here -- the clear space under the focused tile
+    // before its title block. There is no title block (client instruction,
+    // 16 August 2026), so the token went with the thing it measured rather
+    // than staying on as a number no screen reads.
 
     // --- Selected-game launch ------------------------------------------------
     // Measured from the client's 1867x1153 normal-launch raster and normalized

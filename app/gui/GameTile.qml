@@ -3,6 +3,9 @@ import QtQuick 2.9
 // same module HostCarousel.qml and main.qml already use for the popup blur.
 // Not a Qt Quick Control; nothing here is a stock visual control.
 import QtQuick.Effects
+// For the Window attached property only -- see uiScale below. No window or
+// stock control is instantiated here.
+import QtQuick.Window 2.2
 
 import Bulan 1.0
 
@@ -15,6 +18,13 @@ import Bulan 1.0
 // Sized by the caller: tileWidth/tileHeight default to the Library dimensions
 // but Recent (stage 3) passes its own larger pair. Nothing below hardcodes
 // either size.
+//
+// Nothing is drawn under the artwork. The title and the "Running" label that
+// used to sit there were removed on the client's instruction of 16 August 2026:
+// box art names its own game, and a row of captions under a grid of posters is
+// the app repeating what the picture already says. The name survives inside the
+// artwork rectangle, where it is the fallback for a game whose art is missing --
+// which is the only case where the picture cannot speak for itself.
 // -----------------------------------------------------------------------------
 
 Item {
@@ -84,7 +94,16 @@ Item {
     signal activated()
 
     width: tile.tileWidth
-    height: tile.tileHeight + Bulan.spaceMd + Bulan.lineHeightLabel
+    height: tile.tileHeight
+
+    // How much larger than its design size the window is drawing this tile.
+    // main.qml scales one 1280x800 frame to fit the window, and everything in
+    // the subtree re-renders at the window's real resolution -- except an item
+    // that rasterises itself into a texture first. The artwork below is one of
+    // those, so without this its texture would be cut at design size and then
+    // magnified, and a 4K library would show soft posters on a sharp screen.
+    readonly property real uiScale: Math.min(Window.width / Bulan.designWidth,
+                                             Window.height / Bulan.designHeight)
 
     // Press feedback, following HostTile.qml's mechanism exactly so stage 3 has
     // it ready to wire up. Nothing calls flashPress() yet -- with no MouseArea
@@ -189,6 +208,10 @@ Item {
             radius: Bulan.radiusMd
             visible: false
             layer.enabled: art.showArt
+            // Matched to the artwork's own texture below, so the corners the
+            // mask rounds are cut at the resolution they are drawn at.
+            layer.textureSize: Qt.size(Math.round(width * tile.uiScale),
+                                       Math.round(height * tile.uiScale))
         }
 
         // The artwork sits inside the border rather than under it. Box art
@@ -246,6 +269,8 @@ Item {
             // round the corners of something invisible. A library of mostly
             // artless games was paying full price for every one of them.
             layer.enabled: art.showArt
+            layer.textureSize: Qt.size(Math.round(width * tile.uiScale),
+                                       Math.round(height * tile.uiScale))
             layer.effect: MultiEffect {
                 maskEnabled: true
                 maskSource: artMask
@@ -253,50 +278,4 @@ Item {
         }
     }
 
-    // --- the label block ---------------------------------------------------
-    // Fixed to the tile's UNSCALED bottom edge, deliberately NOT to its drawn
-    // edge the way HostTile.qml's label follows its circle.
-    //
-    // That difference is the difference between a carousel and a grid. On the
-    // carousel a tile is alone on its own line, so a label that tracks the
-    // drawn edge reads as belonging to it. Here five tiles sit side by side and
-    // their labels form a visible row: letting the focused one drop by the few
-    // pixels the 1.04 focus scale adds would break that row every time the
-    // selection moved, and the eye reads a ragged baseline long before it reads
-    // a tile being slightly larger.
-    //
-    // So the focus scale grows the artwork over the gap instead of pushing the
-    // label down. Bulan.spaceMd is wider than the scale can consume.
-    Row {
-        id: labelRow
-        anchors.top: artRect.bottom
-        anchors.topMargin: Bulan.spaceMd
-        anchors.horizontalCenter: parent.horizontalCenter
-        width: tile.tileWidth
-        spacing: Bulan.spaceXs
-
-        // Gives way to "Running" rather than pushing it off the tile: its width
-        // is capped to what's left after the running label when running is
-        // true, so it elides instead of overflowing.
-        Text {
-            id: titleText
-            elide: Text.ElideRight
-            width: tile.running
-                   ? (labelRow.width - runningText.width - labelRow.spacing)
-                   : labelRow.width
-            text: tile.gameName
-            color: tile.isCurrent ? Bulan.textPrimary : Bulan.textSecondary
-            font.family: Bulan.familyUi
-            font.pixelSize: Bulan.sizeLabel
-        }
-
-        Text {
-            id: runningText
-            visible: tile.running
-            text: qsTr("Running")
-            color: Bulan.statusSuccess
-            font.family: Bulan.familyUi
-            font.pixelSize: Bulan.sizeLabel
-        }
-    }
 }

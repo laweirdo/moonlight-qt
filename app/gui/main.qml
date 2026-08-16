@@ -155,8 +155,12 @@ ApplicationWindow {
         running: screenshotPath !== ""
         onTriggered: {
             window.showNormal()
-            window.width = 1280
-            window.height = 800
+            // MOONLIGHT_SCREENSHOT_WIDTH/_HEIGHT review the same composition at
+            // another viewport. Both default to the design frame, so every
+            // recipe written before the app could be scaled grabs exactly what
+            // it always did.
+            window.width = screenshotWidth > 0 ? screenshotWidth : Bulan.designWidth
+            window.height = screenshotHeight > 0 ? screenshotHeight : Bulan.designHeight
             shotTimer.start()
         }
     }
@@ -188,8 +192,51 @@ ApplicationWindow {
         id: contentCapture
         anchors.fill: parent
 
+        // The ground the design frame is centred on. A window wider than 16:10
+        // leaves a band down each side that no screen reaches; without this it
+        // would be the window's flat base colour, and the seam against the
+        // screens' own gradient would read as a rendering fault rather than as
+        // margin. The frame is always full height -- the scale below is limited
+        // by whichever axis is tighter and 16:10 is the widest composition --
+        // so this gradient and the screens' own line up exactly.
+        Atmosphere {
+            anchors.fill: parent
+        }
+
+        // --- the design frame --------------------------------------------------
+        // Every Bulan screen is drawn against Bulan.designWidth x designHeight
+        // and nothing inside this item ever asks how large the window is. This
+        // lays that composition out at its true size and scales it to fit, so a
+        // 4K window gets the same picture as the Deck, larger -- never more grid
+        // columns, never a re-flow (client decision, 16 August 2026).
+        //
+        // A scale on the frame rather than a scale factor threaded through every
+        // measurement: the scene graph applies it to the whole subtree, so text
+        // and shapes re-render at the window's real resolution rather than being
+        // magnified, and input coordinates map back through it for free. The one
+        // thing it does NOT re-render is an item that rasterises itself into a
+        // texture (layer.enabled) -- those hold their own resolution and are
+        // magnified, which is why the artwork layer in GameTile.qml sizes its
+        // texture against this scale.
+        //
+        // Its children are declared below rather than nested inside it, each
+        // naming this item as its `parent`. They were already siblings of one
+        // another for reasons their own comments give -- the hint bar and the
+        // launch proxy must not inherit the StackView's transition opacity --
+        // and re-nesting three hundred lines to move them one level down would
+        // have buried that reasoning in an indentation change.
+        Item {
+            id: designFrame
+            anchors.centerIn: parent
+            width: Bulan.designWidth
+            height: Bulan.designHeight
+            transformOrigin: Item.Center
+            scale: Math.min(parent.width / width, parent.height / height)
+        }
+
         StackView {
             id: stackView
+            parent: designFrame
             anchors.fill: parent
         focus: true
         enabled: !quitConfirmationDialog.visible
@@ -397,6 +444,7 @@ ApplicationWindow {
         // all nested transforms while the proxy itself inherits none of them.
         LaunchTransition {
             id: launchTransition
+            parent: designFrame
             anchors.fill: parent
 
             onProxyReady: if (owner) owner.launchTransitionProxyReady()
@@ -420,6 +468,7 @@ ApplicationWindow {
         // exactly as before.
         HintBar {
             id: sharedHintBar
+            parent: designFrame
             anchors.left: parent.left
             anchors.right: parent.right
             anchors.bottom: parent.bottom
@@ -598,11 +647,12 @@ ApplicationWindow {
 
     HostPanel {
         id: noHwDecoderDialog
+        parent: designFrame
         anchors.fill: parent
         // Deferred, not direct. HostPanel.close() emits dismissed() and THEN
         // calls parent.forceActiveFocus() itself -- which is right for a panel
         // parented to a screen, and wrong for these four, whose parent is the
-        // window's content item and runs no key handlers. A synchronous handler
+        // window's design frame and runs no key handlers. A synchronous handler
         // here is overwritten by that trailing call and the gamepad is left
         // navigating nothing. callLater runs on the next pass, after it.
         onDismissed: Qt.callLater(function() { stackView.forceActiveFocus() })
@@ -614,11 +664,12 @@ ApplicationWindow {
 
     HostPanel {
         id: xWaylandDialog
+        parent: designFrame
         anchors.fill: parent
         // Deferred, not direct. HostPanel.close() emits dismissed() and THEN
         // calls parent.forceActiveFocus() itself -- which is right for a panel
         // parented to a screen, and wrong for these four, whose parent is the
-        // window's content item and runs no key handlers. A synchronous handler
+        // window's design frame and runs no key handlers. A synchronous handler
         // here is overwritten by that trailing call and the gamepad is left
         // navigating nothing. callLater runs on the next pass, after it.
         onDismissed: Qt.callLater(function() { stackView.forceActiveFocus() })
@@ -630,6 +681,7 @@ ApplicationWindow {
 
     HostPanel {
         id: wow64Dialog
+        parent: designFrame
         anchors.fill: parent
         // The one config warning with something to agree to, so it is the one
         // that offers a confirm rather than only a way out. The confirm's
@@ -639,7 +691,7 @@ ApplicationWindow {
         // Deferred, not direct. HostPanel.close() emits dismissed() and THEN
         // calls parent.forceActiveFocus() itself -- which is right for a panel
         // parented to a screen, and wrong for these four, whose parent is the
-        // window's content item and runs no key handlers. A synchronous handler
+        // window's design frame and runs no key handlers. A synchronous handler
         // here is overwritten by that trailing call and the gamepad is left
         // navigating nothing. callLater runs on the next pass, after it.
         onDismissed: Qt.callLater(function() { stackView.forceActiveFocus() })
@@ -652,12 +704,13 @@ ApplicationWindow {
 
     HostPanel {
         id: unmappedGamepadDialog
+        parent: designFrame
         anchors.fill: parent
         property string unmappedGamepads: ""
         // Deferred, not direct. HostPanel.close() emits dismissed() and THEN
         // calls parent.forceActiveFocus() itself -- which is right for a panel
         // parented to a screen, and wrong for these four, whose parent is the
-        // window's content item and runs no key handlers. A synchronous handler
+        // window's design frame and runs no key handlers. A synchronous handler
         // here is overwritten by that trailing call and the gamepad is left
         // navigating nothing. callLater runs on the next pass, after it.
         onDismissed: Qt.callLater(function() { stackView.forceActiveFocus() })
@@ -669,6 +722,7 @@ ApplicationWindow {
     // This dialog appears when quitting via keyboard or gamepad button
     BulanQuitConfirmation {
         id: quitConfirmationDialog
+        parent: designFrame
         anchors.fill: parent
         onDismissed: {
             if (stackView.currentItem) {
