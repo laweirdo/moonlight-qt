@@ -58,6 +58,18 @@ Layout, spacing and composition are stage 7 and are the client's call.
 Branch `polish-and-shell-rework`, cut from `master` at `177a58bd`, working tree
 clean. `master` and `bulan` are both at that commit.
 
+## Accepted redraw direction
+
+**Direction B, "Shelf", client decision 15 August 2026.** The Recent row starts
+at the screen margin and runs off the right edge instead of being centred with a
+permanent void down the left third, and its metadata left-aligns under the
+focused tile rather than centring under the row. The navigation model is
+unchanged — focus stays a ring that moves — which is why this was chosen over
+the "Hero" alternative, which would have redefined Left/Right.
+
+Mockups are in the client's `Bulan` design project on claude.ai/design, under
+Screens. They render in fallback faces, not Fraunces and Inter.
+
 ## Copy the client owes
 
 The four configuration warnings in `main.qml` and the CLI routes' messages are
