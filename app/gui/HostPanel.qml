@@ -48,11 +48,6 @@ FocusScope {
     // for anything else, and this panel is now used for more than one thing.
     property string confirmLabel: qsTr("Add")
 
-    // The dismiss hint's wording. "Close" everywhere unless a caller says
-    // otherwise -- deliberately NOT switched to "Cancel" on confirmable panels,
-    // which would have quietly reworded the address panel the client has
-    // already reviewed. Copy is the client's, including this word.
-    property string dismissLabel: qsTr("Close")
 
     signal submitted(string text)
 
@@ -101,11 +96,13 @@ FocusScope {
         title = t
         body = b
         confirmed = false
-        field.text = panel.initialText
-        // Selected, not just placed: the whole point of starting from the
-        // current name is that typing replaces it, while a deliberate press
-        // still lets it be edited.
-        field.selectAll()
+        if (editable) {
+            field.text = panel.initialText
+            // Selected, not just placed: the whole point of starting from the
+            // current name is that typing replaces it, while a deliberate press
+            // still lets it be edited.
+            field.selectAll()
+        }
         opened = true
         panel.forceActiveFocus()
     }
@@ -301,7 +298,12 @@ FocusScope {
                     }
                     Text {
                         anchors.verticalCenter: parent.verticalCenter
-                        text: panel.dismissLabel
+                        // "Close" on every panel, including the confirmable
+                        // ones. Not "Cancel": that would have reworded the
+                        // address panel the client has already reviewed, and
+                        // copy is the client's. A property to vary it existed
+                        // briefly and no caller ever set it.
+                        text: qsTr("Close")
                         color: Bulan.textSecondary
                         font.family: Bulan.familyUi
                         font.pixelSize: Bulan.sizeLabel

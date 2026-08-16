@@ -203,14 +203,22 @@ ApplicationWindow {
         // the instant a screen settles (client override, 2 August 2026
         // review: real blur during the transition, on top of the existing
         // opacity falloff, accepting the Deck performance cost).
-        layer.enabled: quitConfirmationDialog.visible || stackView.busy
+        // The startup warnings blur what is behind them too. They became Bulan
+        // panels like every other modal, and a modal that scrims but does not
+        // blur is the one visual inconsistency this rework set out to remove.
+        readonly property bool windowModalOpen:
+            quitConfirmationDialog.visible || noHwDecoderDialog.visible
+            || xWaylandDialog.visible || wow64Dialog.visible
+            || unmappedGamepadDialog.visible
+
+        layer.enabled: windowModalOpen || stackView.busy
         layer.effect: MultiEffect {
             autoPaddingEnabled: false
             blurEnabled: true
-            blur: quitConfirmationDialog.visible
+            blur: stackView.windowModalOpen
                   ? Bulan.popupBackdropBlurStrength
                   : Bulan.motionTransitionBlurStrength
-            blurMax: quitConfirmationDialog.visible
+            blurMax: stackView.windowModalOpen
                      ? Bulan.popupBackdropBlurRadius
                      : Bulan.motionTransitionBlurRadius
         }
@@ -591,7 +599,13 @@ ApplicationWindow {
     HostPanel {
         id: noHwDecoderDialog
         anchors.fill: parent
-        onDismissed: stackView.forceActiveFocus()
+        // Deferred, not direct. HostPanel.close() emits dismissed() and THEN
+        // calls parent.forceActiveFocus() itself -- which is right for a panel
+        // parented to a screen, and wrong for these four, whose parent is the
+        // window's content item and runs no key handlers. A synchronous handler
+        // here is overwritten by that trailing call and the gamepad is left
+        // navigating nothing. callLater runs on the next pass, after it.
+        onDismissed: Qt.callLater(function() { stackView.forceActiveFocus() })
         function open() {
             show("", qsTr("No functioning hardware accelerated video decoder was detected by Moonlight. " +
                           "Your streaming performance may be severely degraded in this configuration."))
@@ -601,7 +615,13 @@ ApplicationWindow {
     HostPanel {
         id: xWaylandDialog
         anchors.fill: parent
-        onDismissed: stackView.forceActiveFocus()
+        // Deferred, not direct. HostPanel.close() emits dismissed() and THEN
+        // calls parent.forceActiveFocus() itself -- which is right for a panel
+        // parented to a screen, and wrong for these four, whose parent is the
+        // window's content item and runs no key handlers. A synchronous handler
+        // here is overwritten by that trailing call and the gamepad is left
+        // navigating nothing. callLater runs on the next pass, after it.
+        onDismissed: Qt.callLater(function() { stackView.forceActiveFocus() })
         function open() {
             show("", qsTr("Hardware acceleration doesn't work on XWayland. Continuing on XWayland may result in poor streaming performance. " +
                           "Try running with QT_QPA_PLATFORM=wayland or switch to X11."))
@@ -616,7 +636,13 @@ ApplicationWindow {
         // wording is the client's, like the message itself; until then it keeps
         // the panel's default.
         confirmable: true
-        onDismissed: stackView.forceActiveFocus()
+        // Deferred, not direct. HostPanel.close() emits dismissed() and THEN
+        // calls parent.forceActiveFocus() itself -- which is right for a panel
+        // parented to a screen, and wrong for these four, whose parent is the
+        // window's content item and runs no key handlers. A synchronous handler
+        // here is overwritten by that trailing call and the gamepad is left
+        // navigating nothing. callLater runs on the next pass, after it.
+        onDismissed: Qt.callLater(function() { stackView.forceActiveFocus() })
         onAccepted: Qt.openUrlExternally("https://github.com/moonlight-stream/moonlight-qt/releases")
         function open() {
             show("", qsTr("This version of Moonlight isn't optimized for your PC. Please download the '%1' version of Moonlight for the best streaming performance.")
@@ -628,7 +654,13 @@ ApplicationWindow {
         id: unmappedGamepadDialog
         anchors.fill: parent
         property string unmappedGamepads: ""
-        onDismissed: stackView.forceActiveFocus()
+        // Deferred, not direct. HostPanel.close() emits dismissed() and THEN
+        // calls parent.forceActiveFocus() itself -- which is right for a panel
+        // parented to a screen, and wrong for these four, whose parent is the
+        // window's content item and runs no key handlers. A synchronous handler
+        // here is overwritten by that trailing call and the gamepad is left
+        // navigating nothing. callLater runs on the next pass, after it.
+        onDismissed: Qt.callLater(function() { stackView.forceActiveFocus() })
         function open() {
             show("", qsTr("Moonlight detected gamepads without a mapping:") + "\n\n" + unmappedGamepads)
         }
