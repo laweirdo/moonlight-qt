@@ -6,7 +6,28 @@
 
 #include "settings/mappingmanager.h"
 
-#define AXIS_NAVIGATION_REPEAT_DELAY 150
+// The left stick's navigation thresholds, with hysteresis.
+//
+// ENTER is the long-standing value and is unchanged: it takes a deliberate
+// shove, well clear of the resting drift of a controller sitting on a desk.
+// RELEASE is lower so that a stick held near the edge stays HELD instead of
+// flickering in and out of the threshold -- each flicker used to be a fresh
+// press, which restarted the initial delay and made a steady hold produce a
+// stutter of single moves rather than a repeat.
+constexpr qint16 AXIS_NAV_ENTER = 30000;
+constexpr qint16 AXIS_NAV_RELEASE = 24000;
+
+static constexpr quint8 directionBit(NavigationDirection direction)
+{
+    return static_cast<quint8>(1u << static_cast<int>(direction));
+}
+
+static const NavigationDirection ALL_NAVIGATION_DIRECTIONS[NAVIGATION_DIRECTION_COUNT] = {
+    NavigationDirection::Up,
+    NavigationDirection::Down,
+    NavigationDirection::Left,
+    NavigationDirection::Right
+};
 
 // -----------------------------------------------------------------------------
 // Controller glyph family detection
@@ -78,7 +99,8 @@ SdlGamepadKeyNavigation::SdlGamepadKeyNavigation(StreamingPreferences* prefs)
       m_NavModeSuspended(false),
       m_FirstPoll(false),
       m_HasFocus(false),
-      m_LastAxisNavigationEventTime(0),
+      m_NavigationRepeat(NAV_REPEAT_INITIAL_DELAY_MS, NAV_REPEAT_INTERVAL_MS),
+      m_DirectionalInputSuppressed(false),
       // Nothing attached yet. Xbox lettering is the neutral default, and is what
       // "fallback" resolves to anyway.
       m_GlyphFamily(QLatin1String("xinput")),
@@ -256,6 +278,13 @@ void SdlGamepadKeyNavigation::disable()
     updateTimerState();
     Q_ASSERT(!m_PollingTimer->isActive());
 
+    // Let go of anything still held before the controllers go away. A stream
+    // session starting while a direction is down would otherwise inherit a key
+    // that nothing left alive can ever release.
+    cancelHeldNavigation();
+    m_DpadHeldMasks.clear();
+    m_AnalogDirections.clear();
+
     while (!m_Gamepads.isEmpty()) {
         SDL_GameControllerClose(m_Gamepads[0]);
         m_Gamepads.removeAt(0);
@@ -266,6 +295,13 @@ void SdlGamepadKeyNavigation::disable()
 
 void SdlGamepadKeyNavigation::notifyWindowFocus(bool hasFocus)
 {
+    // Losing focus stops the poll, so nothing would ever release a direction
+    // that was down at the time -- and nothing would notice it had been let go
+    // while the window was in the background either.
+    if (!hasFocus) {
+        cancelHeldNavigation();
+    }
+
     m_HasFocus = hasFocus;
     updateTimerState();
 }
@@ -325,28 +361,47 @@ void SdlGamepadKeyNavigation::onPollingTimerFired()
 
             switch (event.cbutton.button) {
             case SDL_CONTROLLER_BUTTON_DPAD_UP:
-                if (uiNavActive()) {
-                    // Back-tab
-                    sendKey(type, Qt::Key_Tab, Qt::ShiftModifier);
-                }
-                else {
-                    sendKey(type, Qt::Key_Up);
-                }
-                break;
             case SDL_CONTROLLER_BUTTON_DPAD_DOWN:
-                if (uiNavActive()) {
-                    sendKey(type, Qt::Key_Tab);
+            case SDL_CONTROLLER_BUTTON_DPAD_LEFT:
+            case SDL_CONTROLLER_BUTTON_DPAD_RIGHT:
+            {
+                // The d-pad no longer sends keystrokes of its own. It records
+                // which directions this pad is holding; the shared repeat clock
+                // below decides what that means. This is the whole reason a
+                // held d-pad now behaves like a held arrow key instead of
+                // moving exactly once and stopping -- SDL generates no
+                // auto-repeat for controller buttons, and nothing here ever
+                // supplied one.
+                NavigationDirection direction;
+                switch (event.cbutton.button) {
+                case SDL_CONTROLLER_BUTTON_DPAD_UP:
+                    direction = NavigationDirection::Up;
+                    break;
+                case SDL_CONTROLLER_BUTTON_DPAD_DOWN:
+                    direction = NavigationDirection::Down;
+                    break;
+                case SDL_CONTROLLER_BUTTON_DPAD_LEFT:
+                    direction = NavigationDirection::Left;
+                    break;
+                default:
+                    direction = NavigationDirection::Right;
+                    break;
+                }
+
+                quint8& mask = m_DpadHeldMasks[event.cbutton.which];
+                if (type == QEvent::Type::KeyPress) {
+                    mask = static_cast<quint8>(mask | directionBit(direction));
                 }
                 else {
-                    sendKey(type, Qt::Key_Down);
+                    mask = static_cast<quint8>(mask & ~directionBit(direction));
                 }
+
+                // Refreshed here rather than once at the end of the poll: a tap
+                // short enough that its press and release arrive in the same
+                // batch would otherwise cancel itself out and be lost.
+                refreshLogicalDirection(direction);
                 break;
-            case SDL_CONTROLLER_BUTTON_DPAD_LEFT:
-                sendKey(type, Qt::Key_Left);
-                break;
-            case SDL_CONTROLLER_BUTTON_DPAD_RIGHT:
-                sendKey(type, Qt::Key_Right);
-                break;
+            }
             case SDL_CONTROLLER_BUTTON_A:
                 if (uiNavActive()) {
                     sendKey(type, Qt::Key_Space);
@@ -445,6 +500,17 @@ void SdlGamepadKeyNavigation::onPollingTimerFired()
             // m_Gamepads was only used for axis polling -- a closed controller
             // reads as zero -- but it leaked the handle, and it would have left
             // the glyphs showing a controller that had already been unplugged.
+            // Whatever this pad was holding, it is holding nothing now. Dropped
+            // before the handle is closed so the refresh below can release any
+            // direction that has just lost its last source -- an unplugged pad
+            // must not leave an arrow key stuck down. A direction another
+            // controller is still pushing survives, because the refresh asks
+            // every remaining source rather than assuming this one spoke for
+            // all of them.
+            m_DpadHeldMasks.remove(event.cdevice.which);
+            m_AnalogDirections.remove(event.cdevice.which);
+            refreshAllDirections();
+
             SDL_GameController* gc = SDL_GameControllerFromInstanceID(event.cdevice.which);
             if (gc != nullptr) {
                 int idx = m_Gamepads.indexOf(gc);
@@ -473,58 +539,228 @@ void SdlGamepadKeyNavigation::onPollingTimerFired()
         // pad. The threshold matters: it is a deliberate shove, well clear of
         // the resting drift that would otherwise let an idle controller on the
         // desk keep stealing the glyphs back.
-        if (leftX < -30000 || leftX > 30000 || leftY < -30000 || leftY > 30000) {
+        if (leftX < -AXIS_NAV_ENTER || leftX > AXIS_NAV_ENTER ||
+                leftY < -AXIS_NAV_ENTER || leftY > AXIS_NAV_ENTER) {
             noteGamepadUsed(SDL_JoystickInstanceID(SDL_GameControllerGetJoystick(gc)));
         }
 
-        if (SDL_GetTicks() - m_LastAxisNavigationEventTime < AXIS_NAVIGATION_REPEAT_DELAY) {
-            // Do nothing
+        // Resolve this stick to at most one direction, then let the shared
+        // repeat clock time it. The stick no longer emits keystrokes itself:
+        // it used to send a press and a release every 150 ms for as long as it
+        // was pushed, which is neither a tap nor a hold and matched neither the
+        // d-pad nor the keyboard.
+        const SDL_JoystickID id = SDL_JoystickInstanceID(SDL_GameControllerGetJoystick(gc));
+        auto existing = m_AnalogDirections.constFind(id);
+        const bool hadDirection = (existing != m_AnalogDirections.constEnd());
+
+        // An established direction survives on the lower release threshold, so
+        // a stick held near the edge stays held rather than chattering.
+        bool keepExisting = false;
+        if (hadDirection) {
+            switch (existing.value()) {
+            case NavigationDirection::Up:
+                keepExisting = leftY <= -AXIS_NAV_RELEASE;
+                break;
+            case NavigationDirection::Down:
+                keepExisting = leftY >= AXIS_NAV_RELEASE;
+                break;
+            case NavigationDirection::Left:
+                keepExisting = leftX <= -AXIS_NAV_RELEASE;
+                break;
+            case NavigationDirection::Right:
+                keepExisting = leftX >= AXIS_NAV_RELEASE;
+                break;
+            }
         }
-        else if (leftY < -30000) {
-            if (uiNavActive()) {
-                // Back-tab
-                sendKey(QEvent::Type::KeyPress, Qt::Key_Tab, Qt::ShiftModifier);
-                sendKey(QEvent::Type::KeyRelease, Qt::Key_Tab, Qt::ShiftModifier);
+
+        bool haveDirection = false;
+        NavigationDirection direction = NavigationDirection::Up;
+        if (keepExisting) {
+            haveDirection = true;
+            direction = existing.value();
+        }
+        // Acquiring a NEW direction takes the full entry threshold, and Y still
+        // beats X so a diagonal resolves vertically -- unchanged from the
+        // original ordering.
+        else if (leftY < -AXIS_NAV_ENTER) {
+            haveDirection = true;
+            direction = NavigationDirection::Up;
+        }
+        else if (leftY > AXIS_NAV_ENTER) {
+            haveDirection = true;
+            direction = NavigationDirection::Down;
+        }
+        else if (leftX < -AXIS_NAV_ENTER) {
+            haveDirection = true;
+            direction = NavigationDirection::Left;
+        }
+        else if (leftX > AXIS_NAV_ENTER) {
+            haveDirection = true;
+            direction = NavigationDirection::Right;
+        }
+
+        const NavigationDirection previous = hadDirection ? existing.value() : direction;
+        if (hadDirection != haveDirection || previous != direction) {
+            if (haveDirection) {
+                m_AnalogDirections.insert(id, direction);
             }
             else {
-                sendKey(QEvent::Type::KeyPress, Qt::Key_Up);
-                sendKey(QEvent::Type::KeyRelease, Qt::Key_Up);
+                m_AnalogDirections.remove(id);
             }
 
-            m_LastAxisNavigationEventTime = SDL_GetTicks();
+            // Both ends of the move: the direction being left may have lost its
+            // last source, and the one being entered may have gained its first.
+            if (hadDirection) {
+                refreshLogicalDirection(previous);
+            }
+            if (haveDirection) {
+                refreshLogicalDirection(direction);
+            }
         }
-        else if (leftY > 30000) {
-            if (uiNavActive()) {
-                sendKey(QEvent::Type::KeyPress, Qt::Key_Tab);
-                sendKey(QEvent::Type::KeyRelease, Qt::Key_Tab);
-            }
-            else {
-                sendKey(QEvent::Type::KeyPress, Qt::Key_Down);
-                sendKey(QEvent::Type::KeyRelease, Qt::Key_Down);
-            }
+    }
 
-            m_LastAxisNavigationEventTime = SDL_GetTicks();
-        }
-        else if (leftX < -30000) {
-            sendKey(QEvent::Type::KeyPress, Qt::Key_Left);
-            sendKey(QEvent::Type::KeyRelease, Qt::Key_Left);
-            m_LastAxisNavigationEventTime = SDL_GetTicks();
-        }
-        else if (leftX > 30000) {
-            sendKey(QEvent::Type::KeyPress, Qt::Key_Right);
-            sendKey(QEvent::Type::KeyRelease, Qt::Key_Right);
-            m_LastAxisNavigationEventTime = SDL_GetTicks();
+    // Everything physical has been read. Lift any suppression the sticks and
+    // d-pads have now cleared, then pay out whatever repeats are due.
+    updateDirectionalSuppression();
+
+    const quint32 nowMs = SDL_GetTicks();
+    for (NavigationDirection direction : ALL_NAVIGATION_DIRECTIONS) {
+        if (m_NavigationRepeat.repeatDue(direction, nowMs)) {
+            sendDirectionKey(direction, QEvent::Type::KeyPress, true);
         }
     }
 }
 
-void SdlGamepadKeyNavigation::sendKey(QEvent::Type type, Qt::Key key, Qt::KeyboardModifiers modifiers)
+bool SdlGamepadKeyNavigation::anySourceHolds(NavigationDirection direction) const
+{
+    const quint8 bit = directionBit(direction);
+
+    for (auto it = m_DpadHeldMasks.constBegin(); it != m_DpadHeldMasks.constEnd(); ++it) {
+        if (it.value() & bit) {
+            return true;
+        }
+    }
+
+    for (auto it = m_AnalogDirections.constBegin(); it != m_AnalogDirections.constEnd(); ++it) {
+        if (it.value() == direction) {
+            return true;
+        }
+    }
+
+    return false;
+}
+
+void SdlGamepadKeyNavigation::refreshLogicalDirection(NavigationDirection direction)
+{
+    // A source moving is also evidence about whether everything has gone
+    // neutral, which is what ends a suppression.
+    updateDirectionalSuppression();
+
+    const bool held = !m_DirectionalInputSuppressed && anySourceHolds(direction);
+
+    switch (m_NavigationRepeat.setHeld(direction, held, SDL_GetTicks())) {
+    case NavigationRepeatState::Edge::Press:
+        sendDirectionKey(direction, QEvent::Type::KeyPress, false);
+        break;
+    case NavigationRepeatState::Edge::Release:
+        sendDirectionKey(direction, QEvent::Type::KeyRelease, false);
+        break;
+    case NavigationRepeatState::Edge::None:
+        break;
+    }
+}
+
+void SdlGamepadKeyNavigation::refreshAllDirections()
+{
+    for (NavigationDirection direction : ALL_NAVIGATION_DIRECTIONS) {
+        refreshLogicalDirection(direction);
+    }
+}
+
+void SdlGamepadKeyNavigation::cancelHeldNavigation()
+{
+    for (NavigationDirection direction : ALL_NAVIGATION_DIRECTIONS) {
+        if (m_NavigationRepeat.held(direction)) {
+            // Released through the mapping still in force. Callers change the
+            // navigation mode AFTER this returns for exactly that reason: a
+            // release that translated differently from its own press would
+            // leave the first key down forever.
+            sendDirectionKey(direction, QEvent::Type::KeyRelease, false);
+        }
+    }
+
+    m_NavigationRepeat.reset();
+
+    // Refuse the next directional input until the hardware says the player has
+    // let go and started again. updateDirectionalSuppression() lifts this
+    // immediately when nothing is actually being held.
+    m_DirectionalInputSuppressed = true;
+    updateDirectionalSuppression();
+}
+
+void SdlGamepadKeyNavigation::updateDirectionalSuppression()
+{
+    if (!m_DirectionalInputSuppressed) {
+        return;
+    }
+
+    for (auto it = m_DpadHeldMasks.constBegin(); it != m_DpadHeldMasks.constEnd(); ++it) {
+        if (it.value() != 0) {
+            return;
+        }
+    }
+
+    if (!m_AnalogDirections.isEmpty()) {
+        return;
+    }
+
+    m_DirectionalInputSuppressed = false;
+}
+
+void SdlGamepadKeyNavigation::sendKey(QEvent::Type type, Qt::Key key,
+                                      Qt::KeyboardModifiers modifiers, bool autoRepeat)
 {
     QGuiApplication* app = static_cast<QGuiApplication*>(QGuiApplication::instance());
     QWindow* focusWindow = app->focusWindow();
     if (focusWindow != nullptr) {
-        QKeyEvent keyPressEvent(type, key, modifiers);
+        // The auto-repeat flag is what tells anything downstream that this is a
+        // key being HELD rather than pressed afresh. A synthesized repeat that
+        // claimed to be a new press would be indistinguishable from the player
+        // tapping very fast, which is a different intention.
+        QKeyEvent keyPressEvent(type, key, modifiers, QString(), autoRepeat);
         app->sendEvent(focusWindow, &keyPressEvent);
+    }
+}
+
+// Every navigation keystroke leaves through here, so a press, its repeats and
+// its release cannot disagree about which key they are.
+void SdlGamepadKeyNavigation::sendDirectionKey(NavigationDirection direction,
+                                               QEvent::Type type, bool autoRepeat)
+{
+    switch (direction) {
+    case NavigationDirection::Up:
+        if (uiNavActive()) {
+            // Back-tab
+            sendKey(type, Qt::Key_Tab, Qt::ShiftModifier, autoRepeat);
+        }
+        else {
+            sendKey(type, Qt::Key_Up, Qt::NoModifier, autoRepeat);
+        }
+        break;
+    case NavigationDirection::Down:
+        if (uiNavActive()) {
+            sendKey(type, Qt::Key_Tab, Qt::NoModifier, autoRepeat);
+        }
+        else {
+            sendKey(type, Qt::Key_Down, Qt::NoModifier, autoRepeat);
+        }
+        break;
+    case NavigationDirection::Left:
+        sendKey(type, Qt::Key_Left, Qt::NoModifier, autoRepeat);
+        break;
+    case NavigationDirection::Right:
+        sendKey(type, Qt::Key_Right, Qt::NoModifier, autoRepeat);
+        break;
     }
 }
 
@@ -542,13 +778,31 @@ void SdlGamepadKeyNavigation::updateTimerState()
     }
 }
 
+// Both of these cancel BEFORE the mode moves, and only when it actually moves.
+//
+// Two reasons. The release has to translate the same way its own press did, and
+// after this point it would not -- Down means Tab on the settings page and
+// Key_Down everywhere else. And a screen change must not arrive holding a
+// direction the player was aiming at the screen they just left: opening
+// Settings with the stick still pushed used to be the surest way to watch a
+// list scroll on its own.
 void SdlGamepadKeyNavigation::setUiNavMode(bool uiNavMode)
 {
+    if (m_UiNavMode == uiNavMode) {
+        return;
+    }
+
+    cancelHeldNavigation();
     m_UiNavMode = uiNavMode;
 }
 
 void SdlGamepadKeyNavigation::setNavModeSuspended(bool suspended)
 {
+    if (m_NavModeSuspended == suspended) {
+        return;
+    }
+
+    cancelHeldNavigation();
     m_NavModeSuspended = suspended;
 }
 

@@ -2,9 +2,11 @@
 
 #include <QTimer>
 #include <QEvent>
+#include <QHash>
 
 #include "SDL_compat.h"
 
+#include "navigationrepeat.h"
 #include "settings/streamingpreferences.h"
 
 class SdlGamepadKeyNavigation : public QObject
@@ -57,7 +59,42 @@ private:
     // it suspended. Every input decision reads this, never m_UiNavMode directly.
     bool uiNavActive() const { return m_UiNavMode && !m_NavModeSuspended; }
 
-    void sendKey(QEvent::Type type, Qt::Key key, Qt::KeyboardModifiers modifiers = Qt::NoModifier);
+    void sendKey(QEvent::Type type, Qt::Key key,
+                 Qt::KeyboardModifiers modifiers = Qt::NoModifier,
+                 bool autoRepeat = false);
+
+    // The ONE place a navigation direction becomes a keystroke. Both the mode
+    // translation (the settings tab chain versus plain arrows) and the
+    // auto-repeat flag live here, so a press, a repeat and a release of the
+    // same direction can never disagree about which key they are.
+    void sendDirectionKey(NavigationDirection direction, QEvent::Type type, bool autoRepeat);
+
+    // --- held-direction bookkeeping ---
+    //
+    // A logical direction is held while ANY attached controller source holds
+    // it. Sources are tracked per instance ID rather than merged, because the
+    // Deck's built-in sticks and a plugged-in DualSense are both live at once:
+    // letting go on one pad must not cancel a direction the other is still
+    // pushing, and unplugging one must not leave the key stuck down.
+    bool anySourceHolds(NavigationDirection direction) const;
+
+    // Recomputes one direction from its sources and emits the press or release
+    // edge if that moved. Every path that changes a source calls this.
+    void refreshLogicalDirection(NavigationDirection direction);
+
+    void refreshAllDirections();
+
+    // Releases everything currently held, resets the repeat clocks, and refuses
+    // further directional input until the sticks and d-pads return to neutral.
+    //
+    // That last part is the point. Without it, holding the stick while a
+    // dialog opens would hand the new screen a direction that is already down
+    // and start it navigating on arrival -- the player never asked the new
+    // screen to move, they were still talking to the old one.
+    void cancelHeldNavigation();
+
+    // Lifts the suppression above once every physical source reads neutral.
+    void updateDirectionalSuppression();
 
     void updateTimerState();
 
@@ -90,7 +127,18 @@ private:
     bool m_NavModeSuspended;
     bool m_FirstPoll;
     bool m_HasFocus;
-    Uint32 m_LastAxisNavigationEventTime;
+    // Which d-pad directions each controller currently holds, as a bit per
+    // NavigationDirection. Kept rather than derived because SDL reports d-pad
+    // buttons as events, not as pollable state.
+    QHash<SDL_JoystickID, quint8> m_DpadHeldMasks;
+    // The direction each controller's left stick is currently pushed to.
+    // Absent means neutral; one direction at most, so a diagonal resolves the
+    // same way it always has.
+    QHash<SDL_JoystickID, NavigationDirection> m_AnalogDirections;
+    NavigationRepeatState m_NavigationRepeat;
+    // True between a context change and the moment every physical source reads
+    // neutral again. See cancelHeldNavigation().
+    bool m_DirectionalInputSuppressed;
     QString m_GlyphFamily;
     // What detection actually returned, before art availability collapses it
     // into m_GlyphFamily. "deck" and "fallback" both draw the Xbox set, so this

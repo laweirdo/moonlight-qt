@@ -239,6 +239,7 @@ HEADERS += \
     backend/autoupdatechecker.h \
     path.h \
     settings/mappingmanager.h \
+    gui/navigationrepeat.h \
     gui/sdlgamepadkeynavigation.h \
     streaming/video/overlaymanager.h \
     backend/systemproperties.h
