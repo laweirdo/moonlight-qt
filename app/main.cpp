@@ -1245,6 +1245,14 @@ int main(int argc, char *argv[])
         // only ever been reasoned about. Fake games only.
         engine.rootContext()->setContextProperty("gameReviewAction",
                                                  QString::fromUtf8(qgetenv("MOONLIGHT_GAME_REVIEW")));
+        // Companion to the above: which tile the review lands on. Recent's
+        // focused game walks from the screen margin to the middle of the
+        // screen as earlier games appear behind it, and the screenshot hook
+        // grabs on a timer and cannot press Right, so without this only the
+        // first of those positions could ever be photographed. Zero unless
+        // set, which is the first tile either way.
+        engine.rootContext()->setContextProperty("gameReviewIndex",
+                                                 qEnvironmentVariableIntValue("MOONLIGHT_GAME_REVIEW_INDEX"));
         // Companion to the screenshot hook: extra milliseconds before the grab.
         // See the Timer in main.qml -- a screen that has to wait on discovery
         // is not on screen yet at the default four seconds. Zero unless set.

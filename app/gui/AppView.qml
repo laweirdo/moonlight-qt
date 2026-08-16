@@ -1080,6 +1080,13 @@ FocusScope {
         typeof gameReviewAction !== "undefined"
             ? String(gameReviewAction).trim().toLowerCase() : ""
 
+    // Which tile the review lands on -- see app/main.cpp. 0, the first tile,
+    // unless MOONLIGHT_GAME_REVIEW_INDEX says otherwise. Named apart from the
+    // context property it reads, exactly as gameReviewCase is: a property that
+    // shadows its own source binds to itself.
+    readonly property int gameReviewFocusIndex:
+        typeof gameReviewIndex !== "undefined" ? Number(gameReviewIndex) : 0
+
     function stageOneReviewRoute(action) {
         var route = {
             kind: "launch",
@@ -2022,6 +2029,23 @@ FocusScope {
         // could never be photographed against real box art.
         if (root.gameReviewCase === "library") {
             root.switchTab("library")
+        }
+
+        // Companion review hook: MOONLIGHT_GAME_REVIEW_INDEX moves the
+        // selection before the grab, the only way to photograph Recent's
+        // focused game part-way to the middle or locked in it. Clamped through
+        // the same functions a real press goes through, so it can no more
+        // select a game that is not there than the player can.
+        if (root.gameReviewFocusIndex > 0) {
+            if (root.activeTab === "library") {
+                root.libraryFocusedIndex = root.gameReviewFocusIndex
+                root.clampLibraryIndex()
+                Qt.callLater(root.ensureLibraryFocusVisible)
+            } else {
+                root.recentFocusedIndex =
+                    Math.min(root.gameReviewFocusIndex,
+                             root.recentOrder.length - 1)
+            }
         }
 
         var stageOneRoute = root.stageOneReviewRoute(root.gameReviewCase)
@@ -3019,59 +3043,58 @@ FocusScope {
         // switching to Library, which read as the effect being broken rather
         // than absent.
         //
-        // Stationary like the carousel's, not moved like the Library's: the
-        // focused tile in this view is always the one at the left margin, so
-        // there is nothing for the halo to follow -- it sits over slot 0.
+        // Follows the focused tile, like the Library's and unlike the
+        // carousel's. It used to sit still because the focused tile did.
         // Declared before the Repeater below so it paints behind every tile.
+        //
+        // Same clock and curve as the tiles' own travel, so the halo and the
+        // game it belongs to arrive together rather than one chasing the other.
         FocusBloom {
             id: recentFocusBloom
             width: Bulan.gameRecentTileWidth * 2.2
             height: Bulan.gameRecentTileHeight * 2.2
-            x: Bulan.layoutScreenMarginX + Bulan.gameRecentTileWidth / 2 - width / 2
+            x: recentView.focusAnchorX + Bulan.gameRecentTileWidth / 2 - width / 2
             y: recentView.focusCenterY - height / 2
             visible: root.recentOrder.length > 0
+
+            Behavior on x {
+                NumberAnimation { duration: Bulan.motionFocusMs; easing.type: Easing.InOutQuad }
+            }
         }
 
-        // How many neighbour slots fit on each side of the focused tile,
-        // worked out from the space actually on screen rather than the fixed
-        // ±2 this was copied from. That clamp is right for HostCarousel.qml,
-        // where three circular host tiles is the whole design; it is wrong
-        // here -- the client's instruction is that Recent shows as many
-        // games as the screen width and the spacing permit.
+        // --- where the focused tile sits ---------------------------------------
+        // Left start, progressive centre, centre lock (client decision,
+        // 16 August 2026). The first game keeps the screen margin every other
+        // screen's content starts on, so the shelf opens with no void down the
+        // left. Each step right then moves the whole row one spread LESS than
+        // it otherwise would, which walks the selection toward the middle;
+        // once it reaches the middle it stays there and the row scrolls under
+        // it instead.
         //
-        // One slot's worth of screen half-width divided by the spread
-        // between slot centres gives how many whole steps fit from the
-        // centre to the edge. Floors rather than rounds, so a slot only
-        // counts as visible if it genuinely fits; clamped to a minimum of 1
-        // so there is always at least one neighbour each side even on a
-        // narrow window.
-        // A slot counts as visible only if the WHOLE tile lands inside the
-        // screen margin. Dividing the bare half-width by the spread counted a
-        // slot whose centre fits but whose outer half hangs over the edge, and
-        // the client saw exactly that: the last game on each side sliced in
-        // half by the window. A tile cut by the screen edge reads as a bug
-        // rather than as "there is more this way".
-        //
-        // So the width gives up both screen margins and one whole tile -- the
-        // focused one, which owns the left margin -- before the division, and
-        // floors: a partial step is not a slot.
-        //
-        // Measured from the left margin rather than from the centre, because
-        // the shelf is anchored there (client decision, 15 August 2026,
-        // Direction B). The focused tile sits at the margin and the rest run
-        // right, so the space a neighbour can occupy is what remains after it,
-        // not half a screen either side.
-        readonly property int recentVisibleRadius:
-            Math.max(1, Math.floor(
-                (width - Bulan.layoutScreenMarginX * 2
-                 - Bulan.gameRecentTileWidth)
-                / Bulan.gameRecentSpread))
+        // One equation, no per-index cases: the lock index is wherever the
+        // clamp bites, so changing the tile size, the spread or the margin
+        // moves it without anything here being retuned. At 1280 that is the
+        // third game.
+        readonly property real recentLeftAnchorX: Bulan.layoutScreenMarginX
+        readonly property real recentCentreAnchorX:
+            (width - Bulan.gameRecentTileWidth) / 2
+        readonly property real focusAnchorX:
+            Math.min(recentCentreAnchorX,
+                     recentLeftAnchorX
+                     + root.recentFocusedIndex * Bulan.gameRecentSpread)
 
-        // One extra slot beyond what is visible, kept as an off-screen
-        // parking slot -- see HostCarousel.qml's own `slot` comment for why:
-        // a tile leaving needs somewhere to travel to and fade, rather than
-        // being cut because it had nowhere further to go.
-        readonly property int recentParkSlot: recentVisibleRadius + 1
+        // How far a tile may travel from the focused one before it is parked.
+        // Every game that can show any part of itself gets its true position;
+        // the rest pile up one step past the edge, where they are invisible
+        // and cost nothing, and still have somewhere to travel to and fade
+        // rather than being cut -- see HostCarousel.qml's own `slot` comment.
+        //
+        // A whole screen plus a whole tile is the furthest any visible slot
+        // can be from the anchor, whichever end of its travel the anchor is
+        // at, so this is that in whole steps with one to spare.
+        readonly property int recentParkSlot:
+            Math.ceil((width + Bulan.gameRecentTileWidth)
+                      / Bulan.gameRecentSpread) + 1
 
         Repeater {
             id: recentRepeater
@@ -3116,8 +3139,8 @@ FocusScope {
                         ? root.recentRankBySourceIndex[index] : index
                 // Clamped to recentView.recentParkSlot either side -- computed
                 // from the screen width, not the fixed ±2 this was copied
-                // from. See recentView.recentVisibleRadius/recentParkSlot
-                // above for why and how many that is. Beyond the park slot is
+                // from. See recentView.recentParkSlot above for why and how
+                // many that is. Beyond the park slot is
                 // off-screen and invisible, which is what gives a departing
                 // tile somewhere to go rather than being cut.
                 readonly property int slot: {
@@ -3207,16 +3230,29 @@ FocusScope {
                 width: Bulan.gameRecentTileWidth
                 height: Bulan.gameRecentTileHeight
 
-                // Anchored to the left screen margin, not to the middle of the
-                // view (client decision, 15 August 2026, Direction B). Centring
-                // the focused tile left the whole left third of the play-loop
-                // hub permanently empty, because neighbours only ever extend
-                // right. Anchored here the row reads as a list that continues
-                // off the right edge, and slot 0 -- the focused game -- lands on
-                // the same margin as every other screen's content.
-                x: launchMotionFrozen ? frozenLaunchX
-                                      : Bulan.layoutScreenMarginX
-                                        + slot * Bulan.gameRecentSpread
+                // Position is a pure function of rank: where the focused tile
+                // currently sits (recentView.focusAnchorX, which starts at the
+                // screen margin and walks to the middle) plus this tile's
+                // distance from it. No per-index cases -- the anchor carries
+                // the whole behaviour.
+                readonly property real restX:
+                    recentView.focusAnchorX + slot * Bulan.gameRecentSpread
+
+                // Drawn if any part of the tile is on screen at all, so the
+                // shelf reads as one long queue running past both edges rather
+                // than a row that stops.
+                //
+                // This replaces a rule that drew a game only if it fitted
+                // WHOLE inside the screen margin (client decision, 3 August
+                // 2026 -- a sliced tile read as a bug). Reversed by the client
+                // on 16 August 2026: with the focus anchored left that rule
+                // ended the row in bare ground, and once the anchor centres it
+                // left bare ground on both sides. A tile cut by the window
+                // edge is what says the queue continues.
+                readonly property bool onScreen:
+                    restX + width > 0 && restX < recentView.width
+
+                x: launchMotionFrozen ? frozenLaunchX : restX
                 // Rises from Bulan.motionGridEntranceRise px below its
                 // resting position while entranceProgress travels 0 -> 1;
                 // settled (entranceProgress === 1) this is exactly the old
@@ -3230,8 +3266,8 @@ FocusScope {
                 // Every non-focused VISIBLE tile stays at the same dimmed
                 // opacity the design already used (0.5) -- no per-distance
                 // gradient, which is a visual decision nobody has taken.
-                // "Visible" now means "within recentVisibleRadius" rather
-                // than the old fixed distance === 1. Multiplied by
+                // "Visible" means the tile's whole resting rectangle is inside
+                // the screen margin. Multiplied by
                 // entranceProgress so the tile fades in as it rises rather
                 // than appearing at full/dimmed opacity mid-flight.
                 // Clamped: entranceProgress overshoots above 1 on the way in
@@ -3239,8 +3275,7 @@ FocusScope {
                 // carry that -- a tile must not flash brighter than its
                 // settled opacity on arrival.
                 opacity: launchMotionFrozen ? frozenLaunchOpacity
-                       : (distance === 0 ? 1.0
-                       : (distance <= recentView.recentVisibleRadius ? 0.5 : 0.0))
+                       : (distance === 0 ? 1.0 : (onScreen ? 0.5 : 0.0))
                          * Math.min(1, entranceProgress)
                 visible: opacity > 0.01
 
