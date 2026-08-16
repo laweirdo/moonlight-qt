@@ -3035,15 +3035,15 @@ FocusScope {
         // switching to Library, which read as the effect being broken rather
         // than absent.
         //
-        // Centred and stationary like the carousel's, not moved like the
-        // Library's: the focused tile in this view is always the centre one,
-        // so there is nothing for the halo to follow. Declared before the
-        // Repeater below so it paints behind every tile.
+        // Stationary like the carousel's, not moved like the Library's: the
+        // focused tile in this view is always the one at the left margin, so
+        // there is nothing for the halo to follow -- it sits over slot 0.
+        // Declared before the Repeater below so it paints behind every tile.
         FocusBloom {
             id: recentFocusBloom
             width: Bulan.gameRecentTileWidth * 2.2
             height: Bulan.gameRecentTileHeight * 2.2
-            x: recentView.width / 2 - width / 2
+            x: Bulan.layoutScreenMarginX + Bulan.gameRecentTileWidth / 2 - width / 2
             y: recentView.focusCenterY - height / 2
             visible: root.recentOrder.length > 0
         }
@@ -3068,12 +3068,19 @@ FocusScope {
         // half by the window. A tile cut by the screen edge reads as a bug
         // rather than as "there is more this way".
         //
-        // So the half-width gives up the screen margin and half a neighbour
-        // before the division, and floors -- a partial step is not a slot.
+        // So the width gives up both screen margins and one whole tile -- the
+        // focused one, which owns the left margin -- before the division, and
+        // floors: a partial step is not a slot.
+        //
+        // Measured from the left margin rather than from the centre, because
+        // the shelf is anchored there (client decision, 15 August 2026,
+        // Direction B). The focused tile sits at the margin and the rest run
+        // right, so the space a neighbour can occupy is what remains after it,
+        // not half a screen either side.
         readonly property int recentVisibleRadius:
             Math.max(1, Math.floor(
-                (width / 2 - Bulan.layoutScreenMarginX
-                 - (Bulan.gameRecentTileWidth * Bulan.gameRecentNeighbourScale) / 2)
+                (width - Bulan.layoutScreenMarginX * 2
+                 - Bulan.gameRecentTileWidth)
                 / Bulan.gameRecentSpread))
 
         // One extra slot beyond what is visible, kept as an off-screen
@@ -3229,8 +3236,15 @@ FocusScope {
                 width: Bulan.gameRecentTileWidth
                 height: Bulan.gameRecentTileHeight
 
+                // Anchored to the left screen margin, not to the middle of the
+                // view (client decision, 15 August 2026, Direction B). Centring
+                // the focused tile left the whole left third of the play-loop
+                // hub permanently empty, because neighbours only ever extend
+                // right. Anchored here the row reads as a list that continues
+                // off the right edge, and slot 0 -- the focused game -- lands on
+                // the same margin as every other screen's content.
                 x: launchMotionFrozen ? frozenLaunchX
-                                      : recentView.width / 2 - width / 2
+                                      : Bulan.layoutScreenMarginX
                                         + slot * Bulan.gameRecentSpread
                 // Rises from Bulan.motionGridEntranceRise px below its
                 // resting position while entranceProgress travels 0 -> 1;
