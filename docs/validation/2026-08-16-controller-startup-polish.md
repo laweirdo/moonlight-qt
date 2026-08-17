@@ -23,6 +23,7 @@ tool for a review station, as that guide records.
 | `7a0123c4` | Held d-pad and analogue navigation repeat like a held arrow key |
 | `462699ec` | The redundant L1 "Switch tab" entry leaves the hint bar |
 | `207894c7` | A remembered host's library is placed without revealing the carousel |
+| `1b5fe61b` | Defects found reviewing the above (see "Review", below) |
 
 ## Passed — machine checks
 
@@ -117,6 +118,45 @@ on the review station's stored preferences, which were left untouched
 deliberately. Only the reachable case was exercised.
 
 **macOS and the WiX MSI were not built.**
+
+## Review, 17 August 2026
+
+The branch was reviewed against `master` by a separate reader before merge. It
+found one blocking defect, which is fixed in `1b5fe61b`.
+
+**Focus loss taken mid-hold could kill controller navigation outright.** Holding
+a d-pad direction, losing window focus, releasing while unfocused, and returning
+left that direction recorded as held forever: the first poll's
+`SDL_JoystickUpdate()` generates the queued release and the stale-input flush on
+the following line discards it. One stale bit prevents the suppression flag from
+lifting, and the flag is global, so every direction on every controller went
+dead until that one button was pressed and released again. Reachable by an
+ordinary alt-tab, and routinely by the Steam overlay on a Deck. **Introduced by
+this branch** — the previous code kept no state that could go stale.
+
+Two smaller items were fixed with it: `disable()` cleared its held-source tables
+after cancelling rather than before, latching the same flag on with nothing left
+to lift it (self-healing, but latent), and the startup bootstrap carried a branch
+whose two arms were identical.
+
+**One behaviour change the branch had not noticed it made.** Because an
+established analogue direction is tested before the vertical-first chain, rolling
+from a held Right into down-right now continues right until the stick re-centres;
+the old code re-resolved every 150 ms and switched to Down at once. The client
+accepted the new behaviour on 17 August 2026 as the intended trade for not
+chattering near the diagonal. The comment that claimed the ordering was unchanged
+has been corrected — it was true only for a direction acquired from neutral.
+
+Review points **not** acted on, deliberately: a request to cut the comment volume
+in `navigationrepeat.h` and the bridge, which is the established style of the
+surrounding file and mostly predates this task; the tests' literal timing values;
+and `NavigationRepeatState`'s constructor parameters. The latter two are the
+interface the accepted plan specified.
+
+After the fixes: release build clean, 12 unit tests passing, `qmllint` exit 0 on
+`HostCarousel.qml` with one fewer `[unqualified]` warning than before. **The
+repro was not driven on hardware** — alt-tab away and back while holding the
+d-pad is the check that proves it, and it is not yet confirmed.
 
 ## Documentation
 
