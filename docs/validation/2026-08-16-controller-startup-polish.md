@@ -158,6 +158,31 @@ After the fixes: release build clean, 12 unit tests passing, `qmllint` exit 0 on
 repro was not driven on hardware** — alt-tab away and back while holding the
 d-pad is the check that proves it, and it is not yet confirmed.
 
+## Confirmed after the review, 17 August 2026
+
+Appended rather than folded into the sections above, which record what was true
+when they were written.
+
+The client ran four checks against the final merged build and reported all four
+good: **alt-tab away and back while holding the d-pad** (the repro for the defect
+`1b5fe61b` fixed, and the one thing on this branch that had only ever been
+reasoned about), **A after visiting Client Settings**, **A after opening and
+closing the Resolution dropdown**, and **a held direction moving, pausing, then
+repeating**. That closes the stop-the-review item `REVIEW-CHECKLIST.md` names.
+
+The stage 3 startup checks listed above — the launch watched live for a carousel
+frame, B landing on a settled carousel, and A keeping the ordinary transition —
+were **not** part of that set and remain unconfirmed.
+
+A portable package was built from `f314ae84` and smoke-tested: launched from
+outside the build tree with no Qt on `PATH`, rendered, exited 0. The settings
+file that run wrote — containing a freshly generated client certificate and its
+private key — and the two runtime cache directories were deleted before the
+folder was kept, per `BUILDING-WINDOWS.md`.
+
+`master` was fast-forwarded to `f314ae84` and pushed to `origin` on client
+authorization, 17 August 2026. The task branch was deleted; it was never pushed.
+
 ## Documentation
 
 `FLOW.md` gained the remembered-host startup as a settled flow decision, which

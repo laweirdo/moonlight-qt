@@ -4,7 +4,7 @@ authority: repository-state
 read_when:
   - session-start
 history_policy: replace-not-append
-last_verified_commit: 1b5fe61b
+last_verified_commit: f314ae84
 ---
 
 # Bulan — current state
@@ -17,10 +17,10 @@ Replaced, never appended to; past states are in Git history, past evidence in
 
 | Item | State |
 |---|---|
-| Branch | **`polish-input-startup`**, five commits ahead of `master`. Not merged, **not pushed** |
-| `master` | At `e05adf7b`, level with `origin/master` |
-| Remote | `origin` only — `laweirdo/bulan-qt`. No push authorized since 16 August 2026 |
-| Working tree | Clean apart from this file and the new validation report |
+| `master` | At `f314ae84`, **pushed and level with `origin/master`** |
+| Task branch | None. `polish-input-startup` merged fast-forward 17 August 2026 on client sign-off, then deleted; never pushed |
+| Remote | `origin` only — `laweirdo/bulan-qt`. Pushed 17 August 2026 on client authorization |
+| Working tree | Clean apart from this file |
 | Active task | **None.** The brief was deleted on acceptance of all three fixes |
 | Other branches | `bulan` at `177a58bd`; `codex/rework-core-shell` excluded by client decision, 15 August 2026 |
 
@@ -31,22 +31,20 @@ Replaced, never appended to; past states are in Git history, past evidence in
 Everything in the 16 August merge still stands — see that day's commits and
 `docs/validation/2026-08-16-windows-responsive-polish.md`.
 
-On the task branch, three defects reported after that merge are fixed:
+Merged 17 August 2026, fixing three defects reported after that merge:
 
-- `7a0123c4` — the d-pad, the analogue stick and the keyboard now share one
-  hold contract: move, pause, repeat, release. Timing lives in a testable
-  helper with no SDL or Qt in it; the stick gained hysteresis; held directions
-  are tracked per controller; screen and mode changes release what is held and
-  refuse input until the hardware returns to neutral.
-- `462699ec` — the hint bar drops "Switch tab". The Recent/Library labels
-  already carry the shoulder glyphs.
+- `7a0123c4` — d-pad, stick and keyboard share one hold contract: move, pause,
+  repeat, release. Timing lives in a testable helper with no SDL or Qt in it;
+  the stick gained hysteresis; held directions are tracked per controller; and
+  screen or mode changes release what is held, refusing input until the hardware
+  returns to neutral.
+- `462699ec` — the hint bar drops "Switch tab"; the tab labels already carry the
+  shoulder glyphs.
 - `207894c7` — a remembered host's library is pushed without a transition and
-  the carousel reveals underneath it, so launch no longer flashes a screen the
-  player did not ask for. `FLOW.md` records the route semantics.
+  the carousel reveals underneath it. `FLOW.md` records the route semantics.
 - `1b5fe61b` — defects found reviewing the three above. Chiefly: losing focus
   mid-hold could kill controller navigation outright, the release arriving on
-  the next poll being discarded as stale input. Introduced by `7a0123c4`, fixed
-  before merge.
+  the next poll being discarded as stale input. Introduced by `7a0123c4`.
 
 ## Validation status
 
@@ -57,17 +55,18 @@ changed QML files, categories unchanged against `master`; the hint bar captured
 on Recent and Library; a real launch reaching `Steambox`'s actual library, which
 also settles real box art at a scaled resolution.
 
-**Passed on hardware.** With a controller attached, the client walked the
-hold-navigation matrix across the carousel, Recent, Library and Settings on both
-the d-pad and the stick, plus the Settings-hold and disconnect-while-held
-regressions.
+**Passed on hardware.** The client walked the hold-navigation matrix across the
+carousel, Recent, Library and Settings on both the d-pad and the stick, plus the
+Settings-hold and disconnect-while-held regressions — and, against the merged
+build, the four pre-merge checks: the focus-loss repro for `1b5fe61b`, A after
+Client Settings, A after the Resolution dropdown, and a held direction repeating.
 
-**Not established.** The stage 3 live checks, the post-Settings A-button
-regression and the focus-loss repro for `1b5fe61b` were not reported as
-performed; the validation report lists them individually. **No Deck ran**, in
-either mode — Game Mode is the larger gap, Steam Input sitting between the
-hardware and the app there. Two controllers at once was never driven. Three of
-the four startup cases were not run. macOS and the MSI were not built.
+A portable package built from `f314ae84` launched with no Qt on `PATH` and
+exited 0; the certificate and caches that run wrote were deleted.
+
+**Not established.** The stage 3 startup checks were never separately reported.
+**No Deck ran**, in either mode. Two controllers at once was never driven. Three
+of the four startup cases were not run. macOS and the MSI were not built.
 
 ## Open blockers
 
@@ -76,14 +75,13 @@ none of them is among the three fixed here.
 
 ## Next action
 
-1. **The unconfirmed checks in the validation report** — chiefly A still working
-   after Client Settings and after the Resolution dropdown, and **alt-tabbing
-   away and back while holding the d-pad**, which is the repro for the defect
-   `1b5fe61b` fixed. Cheapest thing outstanding, and the checklist calls losing
-   A a stop-the-review failure.
-2. **Merge `polish-input-startup` into `master`** once those pass, then delete
-   the branch. No push is authorized.
-3. **A Deck session.** Nothing in this pass, or the two before it, has run on
-   the target device.
+1. **A Deck session**, in Desktop and Game Mode. Nothing in this pass, or the
+   two before it, has run on the target device, and Game Mode is where Steam
+   Input sits between the hardware and the application.
+2. **The three unrun startup cases** — remembered host offline, remembered UUID
+   gone, no remembered host. Each needs the review station's stored preferences
+   changed, which no session has been willing to do casually.
+3. **Two controllers at once**, the case the per-controller held-direction
+   tracking exists for and the only part of it never driven by real hardware.
 4. `FLOW.md` sits ~14 tokens below the point where `context-audit.py` fails.
    Trim it before adding anything.
