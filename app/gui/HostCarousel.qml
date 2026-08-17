@@ -325,15 +325,19 @@ FocusScope {
         repeat: true
         onTriggered: {
             root.reviewAppsAttempts++
+
+            // Which of the two waiting jobs this is. The explicit review hook
+            // matches a host NAME; the remembered last-used host matches a UUID.
+            // One timer serves both, because the waiting problem is identical:
+            // a saved host loads OFFLINE and only reports itself reachable once
+            // the discovery poll answers, so neither target exists on the first
+            // frame.
+            var reviewHook = (typeof openAppsForHost !== "undefined"
+                              && openAppsForHost !== "")
+
             for (var i = 0; i < hostRepeater.count; i++) {
                 var tile = hostRepeater.itemAt(i)
-                // Matches either the review hook's host NAME or the remembered
-                // last-used host's UUID -- one timer serving both, because the
-                // waiting problem is identical: a saved host loads OFFLINE and
-                // only reports itself reachable once the discovery poll
-                // answers, so neither target exists on the first frame.
-                var wanted = (typeof openAppsForHost !== "undefined"
-                              && openAppsForHost !== "")
+                var wanted = reviewHook
                         ? (tile && tile.hostName === openAppsForHost)
                         : (tile && tile.uuid === root.autoOpenUuid)
                 if (!wanted) {
@@ -351,8 +355,7 @@ FocusScope {
                 // photograph the game grid arriving the way a player sees it
                 // arrive, and taking the transition away would photograph
                 // something nobody experiences.
-                var startupAutoOpen = !(typeof openAppsForHost !== "undefined"
-                                        && openAppsForHost !== "")
+                var startupAutoOpen = !reviewHook
 
                 root.reviewAppsOpened = true
                 root.selectIndex(i)
@@ -366,15 +369,13 @@ FocusScope {
                 // appeared for the length of one animated transition, showing
                 // the player a screen they had not asked for and then taking it
                 // away again.
-                if (root.openAppView(i, tile.uuid, tile.hostName, false,
-                                     startupAutoOpen)) {
-                    root.revealContent()
-                    return
-                }
+                root.openAppView(i, tile.uuid, tile.hostName, false,
+                                 startupAutoOpen)
 
-                // The open failed and messagePanel is already saying why. Reveal
-                // regardless, so that message never appears over a home screen
-                // that is deliberately blank.
+                // Revealed either way. On success the library is already on top
+                // of this screen; on failure messagePanel is showing why, and
+                // that message must never appear over a home screen that is
+                // deliberately blank.
                 root.revealContent()
                 return
             }
@@ -654,10 +655,11 @@ FocusScope {
         root.appViewContextByHostUuid[hostUuid] = context
     }
 
-    // Returns whether the game grid actually reached the stack. The startup
-    // bootstrap below needs that answer: it decides whether to reveal this
-    // screen underneath the library or in place of it, and a silent failure
-    // would leave the player looking at an intentionally blank home screen.
+    // Returns whether the game grid actually reached the stack. Nothing branches
+    // on it today -- every caller reveals the carousel either way -- but the
+    // two failure paths below are silent to their caller otherwise, and a caller
+    // that needs to tell "opened" from "showed an error" should not have to
+    // rediscover that.
     //
     // "immediate" pushes without the screen transition. Only the remembered-host
     // startup passes it -- every player-initiated open leaves it undefined and

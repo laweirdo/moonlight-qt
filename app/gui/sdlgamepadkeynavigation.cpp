@@ -281,9 +281,14 @@ void SdlGamepadKeyNavigation::disable()
     // Let go of anything still held before the controllers go away. A stream
     // session starting while a direction is down would otherwise inherit a key
     // that nothing left alive can ever release.
-    cancelHeldNavigation();
+    //
+    // Cleared BEFORE cancelling, not after: cancelHeldNavigation() evaluates
+    // whether the hardware reads neutral, and doing that against tables it is
+    // about to discard would latch the suppression flag on with nothing left to
+    // lift it.
     m_DpadHeldMasks.clear();
     m_AnalogDirections.clear();
+    cancelHeldNavigation();
 
     while (!m_Gamepads.isEmpty()) {
         SDL_GameControllerClose(m_Gamepads[0]);
@@ -315,10 +320,29 @@ void SdlGamepadKeyNavigation::onPollingTimerFired()
 
     // Discard any pending button events on the first poll to avoid picking up
     // stale input data from the stream session (like the quit combo).
+    //
+    // The held-source tables have to be dropped with them, and this is the only
+    // place that can be done safely. SDL_JoystickUpdate() above is what
+    // GENERATES the queued button events, including the release of anything the
+    // player let go of while the window was unfocused and this timer was
+    // stopped. Flushing that release without clearing the mask it belongs to
+    // leaves a direction recorded as held by hardware that is not touching it,
+    // and since a single stale bit keeps updateDirectionalSuppression() from
+    // ever lifting, every direction on every controller goes dead until that
+    // exact button is pressed and released again. Alt-tabbing away mid-hold is
+    // enough to reach it, and on a Deck the overlay does that routinely.
+    //
+    // Clearing is safe even if a button genuinely is still down: it stays inert
+    // until re-pressed, which is the same "do not inherit a held direction
+    // across a context change" rule the suppression flag already enforces.
     if (m_FirstPoll) {
         SDL_FlushEvent(SDL_CONTROLLERBUTTONDOWN);
         SDL_FlushEvent(SDL_CONTROLLERBUTTONUP);
         m_FirstPoll = false;
+
+        m_DpadHeldMasks.clear();
+        m_AnalogDirections.clear();
+        refreshAllDirections();
     }
 
     // Peep events rather than polling to avoid calling SDL_PumpEvents()
@@ -579,9 +603,17 @@ void SdlGamepadKeyNavigation::onPollingTimerFired()
             haveDirection = true;
             direction = existing.value();
         }
-        // Acquiring a NEW direction takes the full entry threshold, and Y still
-        // beats X so a diagonal resolves vertically -- unchanged from the
-        // original ordering.
+        // Acquiring a NEW direction takes the full entry threshold, and Y beats
+        // X, so a diagonal pushed from neutral still resolves vertically.
+        //
+        // Mid-hold it does not, and that is deliberate (client decision, 17
+        // August 2026). Because keepExisting is tested first, rolling from a
+        // held Right into down-right keeps going right until the stick comes
+        // back inside the release threshold. The old code re-resolved from
+        // scratch every 150 ms and would have switched to Down immediately --
+        // which is the same freedom to flip that made a stick parked near the
+        // diagonal chatter between two directions. Changing axis mid-hold now
+        // costs a deliberate re-centre.
         else if (leftY < -AXIS_NAV_ENTER) {
             haveDirection = true;
             direction = NavigationDirection::Up;
