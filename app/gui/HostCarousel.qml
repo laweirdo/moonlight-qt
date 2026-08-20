@@ -407,8 +407,9 @@ FocusScope {
     // replacing the lot. What the player saw was a screen they did not ask for,
     // doing something, then being taken away.
     //
-    // So while an auto-open is pending, the screen draws its atmosphere and
-    // nothing else. It reveals itself when the auto-open fires (by which point
+    // So while an auto-open is pending, the screen draws nothing at all and
+    // what the player sees is the window's own persistent atmosphere,
+    // undisturbed. It reveals itself when the auto-open fires (by which point
     // the library is on top and this is underneath, where B expects it), when
     // the grace period expires, or immediately when there is nothing to wait
     // for.
@@ -1164,10 +1165,6 @@ FocusScope {
             blurEnabled: true
             blur: Bulan.popupBackdropBlurStrength
             blurMax: Bulan.popupBackdropBlurRadius
-        }
-
-        Atmosphere {
-            anchors.fill: parent
         }
 
         // --- header ----------------------------------------------------------

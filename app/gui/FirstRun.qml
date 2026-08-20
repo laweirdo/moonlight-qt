@@ -101,10 +101,6 @@ FocusScope {
     Item {
         anchors.fill: parent
 
-        Atmosphere {
-            anchors.fill: parent
-        }
-
         Column {
             id: content
             anchors.centerIn: parent

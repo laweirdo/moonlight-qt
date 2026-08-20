@@ -125,10 +125,6 @@ FocusScope {
     Item {
         anchors.fill: parent
 
-        Atmosphere {
-            anchors.fill: parent
-        }
-
         Column {
             anchors.centerIn: parent
             spacing: Bulan.spaceLg

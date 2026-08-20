@@ -50,8 +50,6 @@ Item {
     readonly property int cellW: 62
     readonly property int glyphPx: 32
 
-    Atmosphere { anchors.fill: parent }
-
     // The real HintBar, in situ, with this screen's own hint set.
     HintBar {
         id: previewBar

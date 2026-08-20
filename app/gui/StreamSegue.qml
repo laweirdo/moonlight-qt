@@ -288,10 +288,6 @@ FocusScope {
         sourceComponent: Item {}
     }
 
-    Atmosphere {
-        anchors.fill: parent
-    }
-
     Item {
         id: launchContent
         anchors.fill: parent

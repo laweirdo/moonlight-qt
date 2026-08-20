@@ -2787,11 +2787,6 @@ FocusScope {
         root.openSwitchConfirmation(appId, origin, returnTarget)
     }
 
-    // --- screen --------------------------------------------------------------
-    Atmosphere {
-        anchors.fill: parent
-    }
-
     // --- header ----------------------------------------------------------------
     Item {
         id: header

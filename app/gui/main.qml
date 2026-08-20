@@ -52,6 +52,25 @@ ApplicationWindow {
 
     color: Bulan.gradientBaseTop
 
+    // --- window-level modals -------------------------------------------------
+    // The one place the app asks "is a window modal up". Two unrelated things
+    // need the answer -- the scene's popup blur and the shared hint bar -- and
+    // they used to keep two copies of the same list of dialogs, which is two
+    // places to forget a sixth one. The hint bar needs the dialog itself, not
+    // just a yes or no, so the owner is what is resolved and the boolean is
+    // derived from it.
+    //
+    // Resolved in the order they stack; the quit confirmation is above
+    // everything.
+    readonly property var windowModalOwner: {
+        if (quitConfirmationDialog.visible) return quitConfirmationDialog
+        if (noHwDecoderDialog.visible) return noHwDecoderDialog
+        if (xWaylandDialog.visible) return xWaylandDialog
+        if (wow64Dialog.visible) return wow64Dialog
+        if (unmappedGamepadDialog.visible) return unmappedGamepadDialog
+        return null
+    }
+    readonly property bool windowModalOpen: windowModalOwner !== null
 
     // This function runs prior to creation of the initial StackView item
     function doEarlyInit() {
@@ -192,53 +211,115 @@ ApplicationWindow {
         id: contentCapture
         anchors.fill: parent
 
-        // The ground the design frame is centred on. A window wider than 16:10
-        // leaves a band down each side that no screen reaches; without this it
-        // would be the window's flat base colour, and the seam against the
-        // screens' own gradient would read as a rendering fault rather than as
-        // margin. The frame is always full height -- the scale below is limited
-        // by whichever axis is tighter and 16:10 is the widest composition --
-        // so this gradient and the screens' own line up exactly.
-        Atmosphere {
+        // --- the scene ---------------------------------------------------------
+        // The whole composed world: the persistent atmosphere and every screen
+        // drawn over it. It exists to be one blur target. A modal blurs the
+        // scene it interrupts, and that scene is the background as much as the
+        // screen -- so the effect belongs here, above both, rather than on the
+        // StackView, which is only the screens.
+        //
+        // The window modals themselves are NOT in here. They are in
+        // overlayFrame below, for the obvious reason that a panel cannot blur
+        // the picture it is sitting on if it is part of that picture.
+        //
+        // Gated on visibility, so a settled screen with nothing open carries no
+        // layer and no effect at all. Strength and radius are the same popup
+        // backdrop tokens this blur has always used.
+        Item {
+            id: sceneRoot
+            z: 0
             anchors.fill: parent
+
+            layer.enabled: window.windowModalOpen
+            layer.effect: MultiEffect {
+                autoPaddingEnabled: false
+                blurEnabled: true
+                blur: Bulan.popupBackdropBlurStrength
+                blurMax: Bulan.popupBackdropBlurRadius
+            }
+
+            // --- the world ------------------------------------------------
+            // The one atmosphere in the application. Every screen used to draw
+            // its own copy inside the StackView, which meant the background
+            // travelled, faded and blurred with whatever screen was moving:
+            // the whole picture slid, rather than the screens sliding over a
+            // world that stays put (client decision, 20 August 2026). Routes
+            // are transparent now and this is what is underneath all of them,
+            // so a transition can never expose a bare stack.
+            //
+            // It is also what fills the band down each side of a window wider
+            // than 16:10, which no screen reaches. The frame below is always
+            // full height -- its scale is limited by whichever axis is tighter
+            // and 16:10 is the widest composition -- so nothing can leave a
+            // seam across this.
+            //
+            // A future ambient gradient movement animates this item and only
+            // this item. Nothing here implements one.
+            Atmosphere {
+                anchors.fill: parent
+            }
+
+            // --- the design frame ---------------------------------------------
+            // Every Bulan screen is drawn against Bulan.designWidth x
+            // designHeight and nothing inside this item ever asks how large the
+            // window is. This lays that composition out at its true size and
+            // scales it to fit, so a 4K window gets the same picture as the
+            // Deck, larger -- never more grid columns, never a re-flow (client
+            // decision, 16 August 2026).
+            //
+            // A scale on the frame rather than a scale factor threaded through
+            // every measurement: the scene graph applies it to the whole
+            // subtree, so text and shapes re-render at the window's real
+            // resolution rather than being magnified, and input coordinates map
+            // back through it for free. The one thing it does NOT re-render is
+            // an item that rasterises itself into a texture (layer.enabled) --
+            // those hold their own resolution and are magnified, which is why
+            // the artwork layer in GameTile.qml sizes its texture against this
+            // scale.
+            //
+            // Its children are declared below rather than nested inside it,
+            // each naming this item as its `parent`. They were already siblings
+            // of one another for reasons their own comments give -- the hint
+            // bar and the launch proxy must not inherit the StackView's
+            // transition opacity -- and re-nesting three hundred lines to move
+            // them one level down would have buried that reasoning in an
+            // indentation change.
+            // Every child names its own `z`. Declaration order is what normally
+            // stacks siblings, and it stops meaning anything once the children
+            // arrive by reassigning `parent` -- Qt adds them in whatever order
+            // those bindings happen to be evaluated, which put the hint bar
+            // underneath an opaque screen and made it disappear. Stated
+            // outright, in the order they paint: screens, mark, launch proxy,
+            // hint bar. The window's own panels are above all of it and above
+            // this whole scene, in overlayFrame.
+            Item {
+                id: designFrame
+                anchors.centerIn: parent
+                width: Bulan.designWidth
+                height: Bulan.designHeight
+                transformOrigin: Item.Center
+                scale: Math.min(parent.width / width, parent.height / height)
+            }
         }
 
-        // --- the design frame --------------------------------------------------
-        // Every Bulan screen is drawn against Bulan.designWidth x designHeight
-        // and nothing inside this item ever asks how large the window is. This
-        // lays that composition out at its true size and scales it to fit, so a
-        // 4K window gets the same picture as the Deck, larger -- never more grid
-        // columns, never a re-flow (client decision, 16 August 2026).
+        // The design frame again, above the scene rather than inside it, for
+        // the window modals alone. They are laid out in design coordinates like
+        // everything else and must scale with the composition, but they must
+        // not be part of what they blur. Same geometry, same scale, taken
+        // straight off designFrame so the two can never drift apart.
         //
-        // A scale on the frame rather than a scale factor threaded through every
-        // measurement: the scene graph applies it to the whole subtree, so text
-        // and shapes re-render at the window's real resolution rather than being
-        // magnified, and input coordinates map back through it for free. The one
-        // thing it does NOT re-render is an item that rasterises itself into a
-        // texture (layer.enabled) -- those hold their own resolution and are
-        // magnified, which is why the artwork layer in GameTile.qml sizes its
-        // texture against this scale.
-        //
-        // Its children are declared below rather than nested inside it, each
-        // naming this item as its `parent`. They were already siblings of one
-        // another for reasons their own comments give -- the hint bar and the
-        // launch proxy must not inherit the StackView's transition opacity --
-        // and re-nesting three hundred lines to move them one level down would
-        // have buried that reasoning in an indentation change.
-        // Every child names its own `z`. Declaration order is what normally
-        // stacks siblings, and it stops meaning anything once the children
-        // arrive by reassigning `parent` -- Qt adds them in whatever order
-        // those bindings happen to be evaluated, which put the hint bar
-        // underneath an opaque screen and made it disappear. Stated outright,
-        // in the order they paint: screens, mark, launch proxy, hint bar, then
-        // the window's own panels over all of it.
+        // Nothing else belongs up here. The onboarding mark, the launch proxy
+        // and the hint bar are all foreground content, and a modal is meant to
+        // blur the complete composed scene -- background, screens and all three
+        // of those.
         Item {
-            id: designFrame
+            id: overlayFrame
+            z: 1
             anchors.centerIn: parent
-            width: Bulan.designWidth
-            height: Bulan.designHeight
+            width: designFrame.width
+            height: designFrame.height
             transformOrigin: Item.Center
-            scale: Math.min(parent.width / width, parent.height / height)
+            scale: designFrame.scale
         }
 
         StackView {
@@ -248,34 +329,29 @@ ApplicationWindow {
             anchors.fill: parent
         focus: true
         enabled: !quitConfirmationDialog.visible
-        // One layer, one effect, claimed by whichever of the two blur
-        // callers is actually active -- they never overlap in practice
-        // (the quit dialog opens over a settled screen, never mid
-        // transition), and this OR keeps them from being able to fight
-        // over the layer even if that ever changed. `busy` is StackView's
-        // own signal that a push/pop transition is currently animating, so
-        // this leaves nothing enabled -- no layer, no effect, no cost --
-        // the instant a screen settles (client override, 2 August 2026
-        // review: real blur during the transition, on top of the existing
-        // opacity falloff, accepting the Deck performance cost).
-        // The startup warnings blur what is behind them too. They became Bulan
-        // panels like every other modal, and a modal that scrims but does not
-        // blur is the one visual inconsistency this rework set out to remove.
-        readonly property bool windowModalOpen:
-            quitConfirmationDialog.visible || noHwDecoderDialog.visible
-            || xWaylandDialog.visible || wow64Dialog.visible
-            || unmappedGamepadDialog.visible
-
-        layer.enabled: windowModalOpen || stackView.busy
+        // Navigation blur, and only navigation blur. This layer covers the
+        // screens; it does not cover the world they move over, which is the
+        // whole point of the split (client decision, 20 August 2026). The other
+        // scope -- a modal blurring the complete scene, background included --
+        // belongs to sceneRoot above.
+        //
+        // `busy` is StackView's own signal that a push/pop transition is
+        // currently animating, so this leaves nothing enabled -- no layer, no
+        // effect, no cost -- the instant a screen settles (client override,
+        // 2 August 2026 review: real blur during the transition, on top of the
+        // existing opacity falloff, accepting the Deck performance cost).
+        //
+        // Stood down while a modal is up. The two scopes are nested -- this
+        // layer is inside sceneRoot's -- so leaving both on would blur the
+        // screens twice, at two different strengths, for the one case where a
+        // dialog happens to open mid transition. The modal wins; when it
+        // closes, this returns to following `busy` on its own.
+        layer.enabled: stackView.busy && !window.windowModalOpen
         layer.effect: MultiEffect {
             autoPaddingEnabled: false
             blurEnabled: true
-            blur: stackView.windowModalOpen
-                  ? Bulan.popupBackdropBlurStrength
-                  : Bulan.motionTransitionBlurStrength
-            blurMax: stackView.windowModalOpen
-                     ? Bulan.popupBackdropBlurRadius
-                     : Bulan.motionTransitionBlurRadius
+            blur: Bulan.motionTransitionBlurStrength
+            blurMax: Bulan.motionTransitionBlurRadius
         }
 
         // Ordinary screen navigation, brief §6 "Screen transition": content
@@ -373,24 +449,18 @@ ApplicationWindow {
             }
         }
 
-        // The ground behind the pages — gradient only, deliberately.
+        // No background. There used to be a gradient here, covering the band of
+        // bare stack that shows during a vertical transition while one screen
+        // has risen and the next has not yet landed. The persistent atmosphere
+        // in sceneRoot is behind every screen now, at every moment, so there is
+        // nothing left for a second ground to cover.
         //
-        // Every Bulan screen draws its own full Atmosphere, and a screen is
-        // opaque, so at rest this background is completely covered: its vignette
-        // and its tiled grain were two full-screen textured quads that no one
-        // could ever see. What it is actually for is the band of bare stack that
-        // shows during a vertical transition, while one screen has risen and the
-        // next has not yet landed, and a flat gradient covers that.
-        //
-        // The screens keep their own copies rather than sharing this one. Theirs
-        // is what hides the outgoing screen during that travel, and it sits
-        // inside the layer that blurs behind a popup — pull it out and screens
-        // read through each other mid-transition, and the grain stops blurring
-        // with everything else behind a modal.
-        background: Atmosphere {
-            vignetteEnabled: false
-            grainEnabled: false
-        }
+        // What the screens' own copies also did was hide the outgoing screen
+        // during that travel. Transparent routes do not, so for the length of
+        // motionTransitionFadeMs both screens' content is faintly visible at
+        // once. That is the accepted shape of the approved design -- foreground
+        // content keeps the opacity behaviour it always had, over a world that
+        // no longer moves with it -- not an oversight.
 
         Component.onCompleted: {
             // Perform our early initialization before constructing
@@ -576,6 +646,11 @@ ApplicationWindow {
         // properties, so `currentItem.hintBarVisible === true` is false
         // (undefined) for all of them and this bar stays hidden there,
         // exactly as before.
+        // Shared scene furniture, under designFrame with the screens, the mark
+        // and the launch proxy. It is part of the composed picture, so a modal
+        // blurs it along with everything else it interrupts (client decision,
+        // 20 August 2026); only the window-modal panels themselves stand
+        // outside that picture, in overlayFrame.
         HintBar {
             id: sharedHintBar
             parent: designFrame
@@ -585,10 +660,16 @@ ApplicationWindow {
             anchors.bottom: parent.bottom
 
             // Whoever owns the input owns the hints. Three things could be that
-            // owner and they are resolved in the order they stack: the quit
-            // confirmation, which is parented to the window and sits above
-            // everything; whichever popup the current screen reports as open;
-            // and otherwise the screen itself.
+            // owner and they are resolved in the order they stack: a window
+            // modal, which is parented above everything; whichever popup the
+            // current screen reports as open; and otherwise the screen itself.
+            //
+            // The window modals -- the quit confirmation and the startup
+            // configuration warnings -- are not in any screen's hintOwner
+            // chain, so they have to be asked about separately. Each carries
+            // its hints inside its own card, so naming one as the owner is what
+            // takes the screen's bar off the screen beneath it. That list lives
+            // once, on the window, as windowModalOwner.
             //
             // Popups used to draw hint bars of their own, so a second bar
             // appeared over the first and every screen had to remember to
@@ -597,25 +678,8 @@ ApplicationWindow {
             // popup that wants no hints (HostPanel, which carries its own in
             // its card) simply says so.
             readonly property var owner: {
-                if (quitConfirmationDialog.visible) {
-                    return quitConfirmationDialog
-                }
-                // The startup configuration warnings are parented to the window
-                // rather than to a screen, so they are not in any screen's
-                // hintOwner chain and have to be asked about here. Each carries
-                // its hints inside its own card, so naming one as the owner is
-                // what takes the screen's bar off the screen beneath it.
-                if (noHwDecoderDialog.visible) {
-                    return noHwDecoderDialog
-                }
-                if (xWaylandDialog.visible) {
-                    return xWaylandDialog
-                }
-                if (wow64Dialog.visible) {
-                    return wow64Dialog
-                }
-                if (unmappedGamepadDialog.visible) {
-                    return unmappedGamepadDialog
+                if (window.windowModalOwner) {
+                    return window.windowModalOwner
                 }
                 var screen = stackView.currentItem
                 if (!screen) {
@@ -758,7 +822,9 @@ ApplicationWindow {
 
     HostPanel {
         id: noHwDecoderDialog
-        parent: designFrame
+        // overlayFrame, not designFrame: the same composition and the same
+        // scale, but above the scene these panels blur rather than inside it.
+        parent: overlayFrame
         z: 4
         anchors.fill: parent
         // Deferred, not direct. HostPanel.close() emits dismissed() and THEN
@@ -776,7 +842,7 @@ ApplicationWindow {
 
     HostPanel {
         id: xWaylandDialog
-        parent: designFrame
+        parent: overlayFrame
         z: 4
         anchors.fill: parent
         // Deferred, not direct. HostPanel.close() emits dismissed() and THEN
@@ -794,7 +860,7 @@ ApplicationWindow {
 
     HostPanel {
         id: wow64Dialog
-        parent: designFrame
+        parent: overlayFrame
         z: 4
         anchors.fill: parent
         // The one config warning with something to agree to, so it is the one
@@ -818,7 +884,7 @@ ApplicationWindow {
 
     HostPanel {
         id: unmappedGamepadDialog
-        parent: designFrame
+        parent: overlayFrame
         z: 4
         anchors.fill: parent
         property string unmappedGamepads: ""
@@ -837,7 +903,7 @@ ApplicationWindow {
     // This dialog appears when quitting via keyboard or gamepad button
     BulanQuitConfirmation {
         id: quitConfirmationDialog
-        parent: designFrame
+        parent: overlayFrame
         z: 4
         anchors.fill: parent
         onDismissed: {

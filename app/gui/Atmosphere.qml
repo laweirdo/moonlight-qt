@@ -35,9 +35,12 @@ Item {
     // Defaults come from the real, persisted preference (Settings > UI), added
     // in private v1 finalisation stage 5. Bulan.qml's own atmosphere*Enabled
     // tokens now only describe StreamingPreferences' own out-of-the-box
-    // default and are read by nothing at runtime; override per instance as
-    // needed -- main.qml's toolbar instance still forces gradient/vignette off
-    // regardless of the user's preference.
+    // default and are read by nothing at runtime; override per instance if a
+    // second instance ever needs it.
+    //
+    // There is exactly one instance, in main.qml's sceneRoot: the persistent
+    // world layer behind every screen (client decision, 20 August 2026). Screens
+    // used to draw their own copies, which is why these overrides exist at all.
     property bool gradientEnabled: StreamingPreferences.atmosphereGradientEnabled
     property bool vignetteEnabled: StreamingPreferences.atmosphereVignetteEnabled
     property bool grainEnabled:    StreamingPreferences.atmosphereGrainEnabled

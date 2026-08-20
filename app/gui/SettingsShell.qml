@@ -283,10 +283,6 @@ FocusScope {
             blurMax: Bulan.popupBackdropBlurRadius
         }
 
-        Atmosphere {
-            anchors.fill: parent
-        }
-
         // --- title -----------------------------------------------------------
         Text {
             id: titleLabel

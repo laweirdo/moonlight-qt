@@ -128,10 +128,6 @@ FocusScope {
 
     Component.onDestruction: disconnectQuitSignal()
 
-    Atmosphere {
-        anchors.fill: parent
-    }
-
     Item {
         anchors.fill: parent
 
