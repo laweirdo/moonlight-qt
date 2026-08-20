@@ -111,8 +111,9 @@ and needs a migration and a client decision. Each is commented where defined.
 
 ## Branches, commits, and remotes
 
-- `master` is Bulan's primary integration and default branch. `bulan` is the
-  historical development branch, kept until the client retires it.
+- `master` is Bulan's primary integration and default branch. The historical
+  `bulan` branch was retired on 20 August 2026, locally and on the fork; its
+  history is wholly contained in `master`.
 - Work on a short, clearly named task branch cut from `master`. Merge only after
   the client signs off, then delete it locally and on the fork.
 - `origin` is the client's fork. Never push to upstream Moonlight. Upstream is

@@ -22,7 +22,7 @@ Replaced, never appended to; past states are in Git history, past evidence in
 | Working tree | Clean apart from this file |
 | Active task | **None.** The brief was deleted on acceptance |
 | Remote | `origin` only — `laweirdo/bulan-qt`. Pushed 20 August 2026 on client authorization |
-| Other branches | `bulan` at `177a58bd`; `codex/rework-core-shell` excluded by client decision, 15 August 2026 |
+| Other branches | `codex/rework-core-shell`, excluded 15 August 2026, held by the `archive/codex-rework-core-shell` tag. `bulan` retired 20 August 2026 |
 
 ## Where the product is
 
@@ -43,9 +43,8 @@ Merged 20 August 2026, in three stages:
   two phases that can act on it.
 - `e1b5246c`, `ce98ebc2` — documentation.
 
-`DESIGN-SYSTEM.md` owns the rules. `FLOW.md` needed no change: the routes
-themselves are unchanged. The plan and its orchestration handoff are in
-`docs/superpowers/plans/`.
+`DESIGN-SYSTEM.md` owns the rules; `FLOW.md` needed none, the routes being
+unchanged. Plans: `docs/superpowers/plans/`.
 
 ## Validation status
 
@@ -76,11 +75,13 @@ none of them is touched here.
    three before it, has run on the target device, and Game Mode is where Steam
    Input sits between the hardware and the application.
 2. **The visual checks no screenshot could reach** — the splash dissolve and its
-   skip, a window modal over a settled screen, and rapid push/back. All four
-   need a person watching, and all four are consequences the client accepted
-   without seeing.
-3. **The three unrun startup cases** — remembered host offline, remembered UUID
+   skip, a window modal over a settled screen, rapid push/back. All accepted
+   without being seen.
+3. **The QML test harness** in the `archive/codex-rework-core-shell` tag. It is
+   the only QML scaffolding the project has, and the splash phase machine is
+   exactly what it could cover.
+4. **The three unrun startup cases** — remembered host offline, remembered UUID
    gone, no remembered host.
-4. **Two controllers at once**, still never driven by real hardware.
-5. `HANDOFF.md` and `DESIGN-SYSTEM.md` both sit close to their context budgets.
+5. **Two controllers at once**, still never driven by real hardware.
+6. `HANDOFF.md` and `DESIGN-SYSTEM.md` both sit close to their context budgets.
    Trim before adding.
