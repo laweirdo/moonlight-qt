@@ -1074,7 +1074,7 @@ int main(int argc, char *argv[])
             // continues to the host carousel (a host is already known and
             // paired) or to first run. It always replaces itself rather than
             // being pushed under either, so it is never left on the stack --
-            // see Splash.qml's proceed(). The host carousel replaced PcView's
+            // see Splash.qml's handOff(). The host carousel replaced PcView's
             // grid, and now owns every host flow it once held -- rename,
             // forget, network test, wake and details -- through the host
             // settings overlay, so PcView itself is gone.

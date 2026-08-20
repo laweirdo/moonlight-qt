@@ -52,7 +52,7 @@ FocusScope {
         // succeeds, and HostCarousel is the only thing left on the stack.
         //
         // clear() then push(), not replace() in any form -- see
-        // Splash.qml's proceed() for what actual key-delivery testing found
+        // Splash.qml's handOff() for what actual key-delivery testing found
         // wrong with replace(null, ...) and its self-replace equivalent.
         // The push runs a normal forward transition since this is a real
         // screen change the player should see happen, not a boot-time swap.

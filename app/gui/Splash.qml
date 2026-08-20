@@ -1,4 +1,9 @@
-import QtQuick 2.9
+// 2.12, not the 2.9 the rest of the app inherited from upstream: Animation's
+// `finished` signal arrived in that version, and it is the one signal that
+// separates "the fade ran out" from "the fade was stopped" -- which is exactly
+// the distinction the splash sequence below turns on. `stopped` fires for both
+// and would have the fade-in start the hold on its way out.
+import QtQuick 2.12
 // Imported for the StackView attached properties only -- no stock control
 // from this module is instantiated anywhere on this screen.
 import QtQuick.Controls 2.2
@@ -12,12 +17,24 @@ import Bulan 1.0
 // S0: the vertical lockup, alone, on the atmosphere. Nothing else.
 //
 // This is the app's very first screen, pushed by main.qml's initial
-// push(initialView, StackView.Immediate) -- so, like that push, it must not
-// animate on arrival. It holds for onboardingSplashHoldMs, skippable by any
-// key, then decides where the app actually starts: the host carousel if a
-// host is already known and paired, first run otherwise.
+// push(initialView, StackView.Immediate) -- so, like that push, the SCREEN must
+// not animate on arrival. The atmosphere behind it is the window's own and is
+// already on screen before this exists.
 //
-// It REPLACES itself (clear() then push(); see proceed() below) rather than
+// The logo does animate, and is the only thing here that does. It dissolves in
+// over motionSplashFadeMs, holds for onboardingSplashHoldMs, dissolves out
+// again, and only once it has actually reached nothing does the app decide
+// where it really starts: the host carousel if a host is already known and
+// paired, first run otherwise (client decision, 20 August 2026 -- the logo used
+// to cut in and cut out).
+//
+// Four phases, in one `phase` property: fadingIn, holding, fadingOut,
+// handedOff. Any input during the first two goes straight to fadingOut from
+// wherever the logo currently is, at a duration scaled by that opacity so the
+// dissolve keeps the same speed rather than jumping; reversing mid-fade-in is
+// therefore continuous, not a cut. Input after that changes nothing.
+//
+// It REPLACES itself (clear() then push(); see handOff() below) rather than
 // pushing on top, so it is never left on the stack for the next screen's B
 // to return to, and it is gone before that screen's own Escape/B handling
 // could ever matter.
@@ -88,13 +105,48 @@ FocusScope {
         }
     }
 
-    property bool proceeded: false
-    function proceed() {
-        if (proceeded) {
+    // --- the splash sequence -------------------------------------------------
+    // "fadingIn" -> "holding" -> "fadingOut" -> "handedOff", in that order and
+    // never backwards. Leaving early skips straight from one of the first two
+    // to "fadingOut"; nothing skips the fade-out itself.
+    property string phase: "fadingIn"
+
+    // Asking to leave. Separate from actually leaving, which is the whole point
+    // of the rework: a skip used to swap the stack out from under the logo, so
+    // whatever the logo was doing at the time simply stopped existing. This
+    // only ever starts the dissolve. handOff() below is what leaves, and it
+    // runs when the dissolve is finished and not before.
+    function requestExit() {
+        // Only the two interruptible phases answer. During the fade-out the
+        // request has already been made and is being carried out; after the
+        // handoff there is nothing left to ask.
+        if (phase !== "fadingIn" && phase !== "holding") {
             return
         }
-        proceeded = true
+        fadeIn.stop()
         holdTimer.stop()
+        // Scaled by where the logo actually is, so opacity keeps roughly the
+        // same speed through the reversal instead of the fade-out starting
+        // slower than the fade-in it interrupted. A quarter of the way in is a
+        // quarter of the time back out. No floor: at opacity 0 this is a 0ms
+        // fade, which is exactly right -- there is nothing on screen to
+        // dissolve.
+        startFadeOut(Math.round(Bulan.motionSplashFadeMs * logo.opacity))
+    }
+
+    function startFadeOut(duration) {
+        phase = "fadingOut"
+        fadeOut.duration = duration
+        fadeOut.start()
+    }
+
+    // Leaving. Guarded so it can only ever run once, as the old handoff guard
+    // was.
+    function handOff() {
+        if (phase === "handedOff") {
+            return
+        }
+        phase = "handedOff"
         // Stop reacting to the live ComputerModel before leaving. This
         // screen's own StackView removal is not guaranteed to run within the
         // same tick, and while it is still technically alive it would
@@ -110,47 +162,95 @@ FocusScope {
         // StackView 1.x idiom carrying real ambiguity about what a null or
         // self target means; clear()+push() is two separately well-defined
         // operations instead. Immediate, matching the app's very first push
-        // in main.qml -- there is nothing on screen yet to move from.
+        // in main.qml -- and the logo has already reached nothing by the time
+        // this runs, so there is no crossfade between the two screens and
+        // nothing for a transition to do.
         stackView.clear(StackView.Immediate)
         stackView.push(target, StackView.Immediate)
     }
 
+    // Both animations drive the logo's opacity and nothing else. Neither names
+    // a `from`: each starts from wherever the logo currently is, which is what
+    // makes an interrupted fade-in reverse continuously rather than jump.
+    //
+    // `finished` is emitted on natural completion only, not on stop(), so
+    // interrupting the fade-in cannot also fire its completion. The phase
+    // guard below is belt and braces.
+    NumberAnimation {
+        id: fadeIn
+        target: logo
+        property: "opacity"
+        to: 1
+        duration: Bulan.motionSplashFadeMs
+        easing.type: Easing.OutCubic
+        onFinished: {
+            if (root.phase === "fadingIn") {
+                root.phase = "holding"
+                holdTimer.start()
+            }
+        }
+    }
+
+    NumberAnimation {
+        id: fadeOut
+        target: logo
+        property: "opacity"
+        to: 0
+        duration: Bulan.motionSplashFadeMs
+        easing.type: Easing.OutCubic
+        onFinished: root.handOff()
+    }
+
+    // Not `running: true`. The hold no longer begins at startup; it begins when
+    // the logo has finished arriving.
     Timer {
         id: holdTimer
         interval: Bulan.onboardingSplashHoldMs
-        running: true
-        onTriggered: root.proceed()
+        onTriggered: root.startFadeOut(Bulan.motionSplashFadeMs)
     }
 
     // Skippable by any button press. This screen carries no interaction of
     // its own for a press to conflict with, so nothing here needs to
     // distinguish one key from another.
     //
-    // Guarded on `proceeded` rather than accepting unconditionally: this
-    // item's removal from the stack (clear()/push() in proceed() above) is
-    // not guaranteed to destroy it within the same tick, and a QML item
-    // that is visually gone but not yet destroyed can still sit in the
-    // key-event delivery chain for the next event or two. An unconditional
+    // Guarded on the phase rather than accepting unconditionally: this item's
+    // removal from the stack (clear()/push() in handOff() above) is not
+    // guaranteed to destroy it within the same tick, and a QML item that is
+    // visually gone but not yet destroyed can still sit in the key-event
+    // delivery chain for the next event or two. An unconditional
     // `event.accepted = true` here would silently swallow a press meant for
-    // whatever screen replaced this one, with proceed()'s own re-entry
-    // guard making the swallow invisible from this function's own behaviour
-    // (the second call does nothing observable either way). Once already
-    // proceeded, this stale instance must let a press fall through
-    // untouched rather than consume it. Defensive rather than observed: no
-    // swallowed press was ever measured here, but an already-departed screen
-    // holding onto input is the kind of thing that only shows up as an
-    // occasional dead button much later.
+    // whatever screen replaced this one, with the re-entry guard making the
+    // swallow invisible from the function's own behaviour (the second call does
+    // nothing observable either way). Once handed off, this stale instance must
+    // let a press fall through untouched rather than consume it. Defensive
+    // rather than observed: no swallowed press was ever measured here, but an
+    // already-departed screen holding onto input is the kind of thing that only
+    // shows up as an occasional dead button much later.
+    //
+    // The fade-out is guarded the same way and for the same reason. Once the
+    // dissolve has begun the request has been made and this screen has nothing
+    // left to do with a press, so it declines it rather than consuming it --
+    // exactly the two phases that can still act on input are the two that
+    // accept it (client decision, 20 August 2026).
     Keys.onPressed: function(event) {
-        if (root.proceeded) {
+        if (root.phase !== "fadingIn" && root.phase !== "holding") {
             return
         }
-        root.proceed()
+        root.requestExit()
         event.accepted = true
     }
 
+    // The sequence begins when this screen owns the display, not when the
+    // component happens to be constructed: an item built off the stack, or
+    // ahead of its push, must not spend its fade-in somewhere the player cannot
+    // see it. Guarded rather than unconditional so a second activation can
+    // neither restart a running fade nor rewind one already past.
     StackView.onActivated: {
         root.forceActiveFocus()
         root.recomputePaired()
+        if (root.phase === "fadingIn" && !fadeIn.running && logo.opacity === 0) {
+            fadeIn.start()
+        }
     }
 
     // Deliberately does NOT wire up HostCarousel's reclaimFocus() dance: no
@@ -158,15 +258,18 @@ FocusScope {
     // strand focus the way a torn-down panel does there.
     readonly property bool bulanScreen: true
 
+    // No Atmosphere here. The window owns the one persistent atmosphere and it
+    // is already drawn, behind this and behind whatever replaces it, which is
+    // what lets the logo dissolve away over a ground that does not move.
     Item {
         anchors.fill: parent
 
-        Atmosphere {
-            anchors.fill: parent
-        }
-
         Image {
+            id: logo
             anchors.centerIn: parent
+            // The only animated property on this screen. Starts at nothing;
+            // fadeIn takes it up.
+            opacity: 0
             source: "qrc:/res/bulan_logo_vert.svg"
             // Mirrors HostCarousel's wordmark: bind height to a token
             // multiple of sizeDisplay rather than a fresh raw number, and
@@ -177,9 +280,11 @@ FocusScope {
             smooth: true
         }
 
+        // The same request-exit path as a key or a controller button, so a
+        // click dissolves the logo out rather than cutting it.
         MouseArea {
             anchors.fill: parent
-            onClicked: root.proceed()
+            onClicked: root.requestExit()
         }
     }
 }

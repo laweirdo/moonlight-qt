@@ -519,6 +519,20 @@ QtObject {
     // deliberate beat rather than flash past unseen.
     readonly property int onboardingSplashHoldMs: 1200
 
+    // How long the splash logo takes to dissolve in, and to dissolve out again
+    // once the hold is over. Opacity only -- the logo never moves, scales or
+    // blurs (client decision, 20 August 2026).
+    //
+    // Deliberately NOT motionTransitionMs. That token is the clock a screen
+    // travels on once the app is running, and its 220ms is tuned to feel
+    // instant under an input the player just made. This is a startup beat under
+    // no input at all, where the same speed reads as a flicker; 300 is slow
+    // enough to be seen as a dissolve and short enough that it disappears into
+    // the hold either side of it. Two different clocks because they answer two
+    // different questions, and tying one to the other would mean a future
+    // change to navigation speed silently retimed the launch.
+    readonly property int motionSplashFadeMs: 300
+
     // How long the carousel stays out of sight at launch while it waits for the
     // remembered host to come online, before giving up and showing itself.
     //
