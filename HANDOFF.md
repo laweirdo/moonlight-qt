@@ -4,12 +4,12 @@ authority: repository-state
 read_when:
   - session-start
 history_policy: replace-not-append
-last_verified_commit: f314ae84
+last_verified_commit: ea46a661
 ---
 
 # Bulan — current state
 
-**Verified 17 August 2026.** A snapshot — inspect Git before relying on it.
+**Verified 20 August 2026.** A snapshot — inspect Git before relying on it.
 Replaced, never appended to; past states are in Git history, past evidence in
 `docs/validation/`.
 
@@ -17,71 +17,66 @@ Replaced, never appended to; past states are in Git history, past evidence in
 
 | Item | State |
 |---|---|
-| `master` | At `f314ae84`, **pushed and level with `origin/master`** |
-| Task branch | None. `polish-input-startup` merged fast-forward 17 August 2026 on client sign-off, then deleted; never pushed |
-| Remote | `origin` only — `laweirdo/bulan-qt`. Pushed 17 August 2026 on client authorization |
-| Working tree | Clean apart from this file |
-| Active task | **None.** The brief was deleted on acceptance of all three fixes |
+| `master` | At `ea46a661`, level with `origin/master`. Untouched by this work |
+| Task branch | **`fix/persistent-atmosphere-splash-motion`**, cut from `master` at `ea46a661`. **No commits yet** |
+| Working tree | **Dirty on that branch — the whole change is uncommitted, awaiting client sign-off** |
+| Remote | `origin` only. **Nothing pushed, nothing merged** |
+| Active task | `TASK-BRIEF.md`; plan in `docs/superpowers/plans/2026-08-20-persistent-atmosphere-splash-motion.md` |
 | Other branches | `bulan` at `177a58bd`; `codex/rework-core-shell` excluded by client decision, 15 August 2026 |
 
 ## Where the product is
 
-**Alpha v0.0.1**; `ROADMAP.md` owns scope and phase.
+**Alpha v0.0.1**; `ROADMAP.md` owns scope and phase. Everything merged on 16 and
+17 August still stands — see those days' commits and their validation reports.
 
-Everything in the 16 August merge still stands — see that day's commits and
-`docs/validation/2026-08-16-windows-responsive-polish.md`.
+Uncommitted on the task branch, 13 QML files and one C++ comment:
 
-Merged 17 August 2026, fixing three defects reported after that merge:
+- One persistent atmosphere, owned by the window, behind every screen. Routes no
+  longer paint their own, so navigation moves the screens over a world that
+  holds still.
+- Two blur scopes: navigation blurs the screens alone; a modal blurs the whole
+  scene — atmosphere, screens, crescent, launch proxy and hint bar — and stands
+  the navigation blur down so nothing is blurred twice. Only the five window
+  modals moved out, into a new `overlayFrame`, where they stay sharp.
+- The startup logo fades in over the new `motionSplashFadeMs` (300), holds, and
+  fades out; the destination appears only after it reaches nothing. A skip
+  reverses the fade from wherever it is instead of cutting. The splash accepts
+  input only in the two phases that can act on it.
 
-- `7a0123c4` — d-pad, stick and keyboard share one hold contract: move, pause,
-  repeat, release. Timing lives in a testable helper with no SDL or Qt in it;
-  the stick gained hysteresis; held directions are tracked per controller; and
-  screen or mode changes release what is held, refusing input until the hardware
-  returns to neutral.
-- `462699ec` — the hint bar drops "Switch tab"; the tab labels already carry the
-  shoulder glyphs.
-- `207894c7` — a remembered host's library is pushed without a transition and
-  the carousel reveals underneath it. `FLOW.md` records the route semantics.
-- `1b5fe61b` — defects found reviewing the three above. Chiefly: losing focus
-  mid-hold could kill controller navigation outright, the release arriving on
-  the next poll being discarded as stale input. Introduced by `7a0123c4`.
+`DESIGN-SYSTEM.md` owns the rules; `FLOW.md` needed no change, as the routes
+themselves are unchanged.
 
 ## Validation status
 
-Full evidence: `docs/validation/2026-08-16-controller-startup-polish.md`.
+Full evidence: `docs/validation/2026-08-20-persistent-atmosphere-splash-motion.md`.
 
-**Passed.** Release build; 12 repeat-clock unit tests; `qmllint` exit 0 on both
-changed QML files, categories unchanged against `master`; the hint bar captured
-on Recent and Library; a real launch reaching `Steambox`'s actual library, which
-also settles real box art at a scaled resolution.
+**Passed.** Release build, exit 0. `qmllint` exit 0 on all thirteen files,
+categories compared against `master` in a clean worktree. Six settled screens
+and one route popup captured and inspected. Gradient and vignette preference
+toggles verified against the persistent instance. A real launch, no review
+hooks, still runs the whole splash sequence and lands on first run.
 
-**Passed on hardware.** The client walked the hold-navigation matrix across the
-carousel, Recent, Library and Settings on both the d-pad and the stick, plus the
-Settings-hold and disconnect-while-held regressions — and, against the merged
-build, the four pre-merge checks: the focus-loss repro for `1b5fe61b`, A after
-Client Settings, A after the Resolution dropdown, and a held direction repeating.
-
-A portable package built from `f314ae84` launched with no Qt on `PATH` and
-exited 0; the certificate and caches that run wrote were deleted.
-
-**Not established.** The stage 3 startup checks were never separately reported.
-**No Deck ran**, in either mode. Two controllers at once was never driven. Three
-of the four startup cases were not run. macOS and the MSI were not built.
+**Not established.** **No in-flight frame was captured** — no splash fade, no
+skip, no mid-transition, no rapid push/back, and nothing about where a press
+during the fade-out goes now that the splash declines it. **The window-modal
+blur was never seen**, and it is the riskiest part of the change. **No Deck
+ran**, in either mode. Grain-off is not judgeable on a desktop grab.
 
 ## Open blockers
 
-None blocking. `BUGS.md` holds three open defects, two waiting on the client;
-none of them is among the three fixed here.
+Client sign-off on the uncommitted change, and the visual checks above, which
+need a person at the machine. `BUGS.md` holds three open defects; none is
+touched here.
 
 ## Next action
 
-1. **A Deck session**, in Desktop and Game Mode. Nothing in this pass, or the
-   two before it, has run on the target device, and Game Mode is where Steam
-   Input sits between the hardware and the application.
-2. **The three unrun startup cases** — remembered host offline, remembered UUID
-   gone, no remembered host. Each needs the review station's stored preferences
-   changed, which no session has been willing to do casually.
-3. **Two controllers at once**, the case the per-controller held-direction
-   tracking exists for and the only part of it never driven by real hardware.
-4. `FLOW.md` sits ~14 tokens below the point where `context-audit.py` fails.
-   Trim it before adding anything.
+1. **Client review of the built change**, especially the four consequences the
+   validation report raises: a route popup no longer blurs the ground behind it;
+   two screens' content overlaps briefly mid-transition; the quit dialog's own
+   hints now render through a blurred bar; and a press during the splash
+   fade-out is no longer consumed by the splash.
+2. **Sign-off, then commit** in the three stages the plan names.
+3. **A Deck session**, Desktop and Game Mode. Nothing in this pass or the three
+   before it has run on the target device.
+4. **The three unrun startup cases** — remembered host offline, remembered UUID
+   gone, no remembered host.
