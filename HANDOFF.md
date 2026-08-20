@@ -4,7 +4,7 @@ authority: repository-state
 read_when:
   - session-start
 history_policy: replace-not-append
-last_verified_commit: ea46a661
+last_verified_commit: e1b5246c
 ---
 
 # Bulan — current state
@@ -18,8 +18,8 @@ Replaced, never appended to; past states are in Git history, past evidence in
 | Item | State |
 |---|---|
 | `master` | At `ea46a661`, level with `origin/master`. Untouched by this work |
-| Task branch | **`fix/persistent-atmosphere-splash-motion`**, cut from `master` at `ea46a661`. **No commits yet** |
-| Working tree | **Dirty on that branch — the whole change is uncommitted, awaiting client sign-off** |
+| Task branch | **`fix/persistent-atmosphere-splash-motion`**, cut from `master` at `ea46a661`. **Three implementation commits plus this correction, awaiting client acceptance.** Inspect Git for its head |
+| Working tree | Clean |
 | Remote | `origin` only. **Nothing pushed, nothing merged** |
 | Active task | `TASK-BRIEF.md`; plan in `docs/superpowers/plans/2026-08-20-persistent-atmosphere-splash-motion.md` |
 | Other branches | `bulan` at `177a58bd`; `codex/rework-core-shell` excluded by client decision, 15 August 2026 |
@@ -29,7 +29,9 @@ Replaced, never appended to; past states are in Git history, past evidence in
 **Alpha v0.0.1**; `ROADMAP.md` owns scope and phase. Everything merged on 16 and
 17 August still stands — see those days' commits and their validation reports.
 
-Uncommitted on the task branch, 13 QML files and one C++ comment:
+On the task branch, in three commits — `bb700d9a` the atmosphere, `2ab9a5f2` the
+splash, `e1b5246c` the documentation — across 13 QML files, one C++ comment and
+five Markdown files:
 
 - One persistent atmosphere, owned by the window, behind every screen. Routes no
   longer paint their own, so navigation moves the screens over a world that
@@ -50,6 +52,8 @@ themselves are unchanged.
 
 Full evidence: `docs/validation/2026-08-20-persistent-atmosphere-splash-motion.md`.
 
+All of it run against `e1b5246c`, the committed tree, not a working copy.
+
 **Passed.** Release build, exit 0. `qmllint` exit 0 on all thirteen files,
 categories compared against `master` in a clean worktree. Six settled screens
 and one route popup captured and inspected. Gradient and vignette preference
@@ -64,9 +68,9 @@ ran**, in either mode. Grain-off is not judgeable on a desktop grab.
 
 ## Open blockers
 
-Client sign-off on the uncommitted change, and the visual checks above, which
-need a person at the machine. `BUGS.md` holds three open defects; none is
-touched here.
+Client acceptance, and the visual checks above, which need a person at the
+machine. Nothing may be pushed or merged until then. `BUGS.md` holds three open
+defects; none is touched here.
 
 ## Next action
 
@@ -75,7 +79,8 @@ touched here.
    two screens' content overlaps briefly mid-transition; the quit dialog's own
    hints now render through a blurred bar; and a press during the splash
    fade-out is no longer consumed by the splash.
-2. **Sign-off, then commit** in the three stages the plan names.
+2. **Acceptance, then merge and delete the branch** — or further changes on it.
+   It has never been pushed, so it can still be rewritten freely.
 3. **A Deck session**, Desktop and Game Mode. Nothing in this pass or the three
    before it has run on the target device.
 4. **The three unrun startup cases** — remembered host offline, remembered UUID
