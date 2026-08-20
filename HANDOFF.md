@@ -4,7 +4,7 @@ authority: repository-state
 read_when:
   - session-start
 history_policy: replace-not-append
-last_verified_commit: e1b5246c
+last_verified_commit: ce98ebc2
 ---
 
 # Bulan — current state
@@ -17,11 +17,11 @@ Replaced, never appended to; past states are in Git history, past evidence in
 
 | Item | State |
 |---|---|
-| `master` | At `ea46a661`, level with `origin/master`. Untouched by this work |
-| Task branch | **`fix/persistent-atmosphere-splash-motion`**, cut from `master` at `ea46a661`. **Three implementation commits plus this correction, awaiting client acceptance.** Inspect Git for its head |
-| Working tree | Clean |
-| Remote | `origin` only. **Nothing pushed, nothing merged** |
-| Active task | `TASK-BRIEF.md`; plan in `docs/superpowers/plans/2026-08-20-persistent-atmosphere-splash-motion.md` |
+| `master` | Carries the atmosphere and splash work, **pushed and level with `origin/master`** |
+| Task branch | None. `fix/persistent-atmosphere-splash-motion` merged fast-forward 20 August 2026 on client acceptance, then deleted; never pushed |
+| Working tree | Clean apart from this file |
+| Active task | **None.** The brief was deleted on acceptance |
+| Remote | `origin` only — `laweirdo/bulan-qt`. Pushed 20 August 2026 on client authorization |
 | Other branches | `bulan` at `177a58bd`; `codex/rework-core-shell` excluded by client decision, 15 August 2026 |
 
 ## Where the product is
@@ -29,59 +29,58 @@ Replaced, never appended to; past states are in Git history, past evidence in
 **Alpha v0.0.1**; `ROADMAP.md` owns scope and phase. Everything merged on 16 and
 17 August still stands — see those days' commits and their validation reports.
 
-On the task branch, in three commits — `bb700d9a` the atmosphere, `2ab9a5f2` the
-splash, `e1b5246c` the documentation — across 13 QML files, one C++ comment and
-five Markdown files:
+Merged 20 August 2026, in three stages:
 
-- One persistent atmosphere, owned by the window, behind every screen. Routes no
-  longer paint their own, so navigation moves the screens over a world that
-  holds still.
-- Two blur scopes: navigation blurs the screens alone; a modal blurs the whole
-  scene — atmosphere, screens, crescent, launch proxy and hint bar — and stands
-  the navigation blur down so nothing is blurred twice. Only the five window
-  modals moved out, into a new `overlayFrame`, where they stay sharp.
-- The startup logo fades in over the new `motionSplashFadeMs` (300), holds, and
-  fades out; the destination appears only after it reaches nothing. A skip
-  reverses the fade from wherever it is instead of cutting. The splash accepts
-  input only in the two phases that can act on it.
+- `bb700d9a` — one persistent atmosphere, owned by the window, behind every
+  screen. Routes are transparent and none paints its own, so navigation moves
+  the screens over a world that holds still. Blur split into its two real
+  scopes: navigation blurs the screens alone, a modal blurs the whole composed
+  scene and stands the navigation blur down so the two can never nest. The five
+  window modals sit in a new `overlayFrame`, outside what they blur.
+- `2ab9a5f2` — the startup logo dissolves in over the new `motionSplashFadeMs`,
+  holds, dissolves out, and only then hands off. A skip reverses the dissolve
+  from wherever it is rather than cutting. The splash accepts input only in the
+  two phases that can act on it.
+- `e1b5246c`, `ce98ebc2` — documentation.
 
-`DESIGN-SYSTEM.md` owns the rules; `FLOW.md` needed no change, as the routes
-themselves are unchanged.
+`DESIGN-SYSTEM.md` owns the rules. `FLOW.md` needed no change: the routes
+themselves are unchanged. The plan and its orchestration handoff are in
+`docs/superpowers/plans/`.
 
 ## Validation status
 
 Full evidence: `docs/validation/2026-08-20-persistent-atmosphere-splash-motion.md`.
 
-All of it run against `e1b5246c`, the committed tree, not a working copy.
+**Passed**, against the committed tree. Release build exit 0; `qmllint` exit 0 on
+all thirteen changed QML files, categories compared against `master` in a clean
+worktree; six settled screens and one route popup captured and inspected; the
+gradient and vignette preference toggles verified against the persistent
+instance; a real launch with no review hooks running the whole splash sequence
+and landing on first run.
 
-**Passed.** Release build, exit 0. `qmllint` exit 0 on all thirteen files,
-categories compared against `master` in a clean worktree. Six settled screens
-and one route popup captured and inspected. Gradient and vignette preference
-toggles verified against the persistent instance. A real launch, no review
-hooks, still runs the whole splash sequence and lands on first run.
-
-**Not established.** **No in-flight frame was captured** — no splash fade, no
-skip, no mid-transition, no rapid push/back, and nothing about where a press
-during the fade-out goes now that the splash declines it. **The window-modal
-blur was never seen**, and it is the riskiest part of the change. **No Deck
-ran**, in either mode. Grain-off is not judgeable on a desktop grab.
+**Not established.** **No in-flight frame was ever captured** — no splash fade,
+no skip during fade-in or hold, no mid-transition, no rapid push/back, and
+nothing about where a press during the fade-out goes now that the splash
+declines it. **The window-modal blur was never seen**, and it is the riskiest
+part of the change; it is also where the quit dialog's now-blurred hints would
+show. **No Deck ran**, in either mode. Grain is not judgeable on a desktop grab.
 
 ## Open blockers
 
-Client acceptance, and the visual checks above, which need a person at the
-machine. Nothing may be pushed or merged until then. `BUGS.md` holds three open
-defects; none is touched here.
+None blocking. `BUGS.md` holds three open defects, two waiting on the client;
+none of them is touched here.
 
 ## Next action
 
-1. **Client review of the built change**, especially the four consequences the
-   validation report raises: a route popup no longer blurs the ground behind it;
-   two screens' content overlaps briefly mid-transition; the quit dialog's own
-   hints now render through a blurred bar; and a press during the splash
-   fade-out is no longer consumed by the splash.
-2. **Acceptance, then merge and delete the branch** — or further changes on it.
-   It has never been pushed, so it can still be rewritten freely.
-3. **A Deck session**, Desktop and Game Mode. Nothing in this pass or the three
-   before it has run on the target device.
-4. **The three unrun startup cases** — remembered host offline, remembered UUID
+1. **A Deck session**, in Desktop and Game Mode. Nothing in this pass, or the
+   three before it, has run on the target device, and Game Mode is where Steam
+   Input sits between the hardware and the application.
+2. **The visual checks no screenshot could reach** — the splash dissolve and its
+   skip, a window modal over a settled screen, and rapid push/back. All four
+   need a person watching, and all four are consequences the client accepted
+   without seeing.
+3. **The three unrun startup cases** — remembered host offline, remembered UUID
    gone, no remembered host.
+4. **Two controllers at once**, still never driven by real hardware.
+5. `HANDOFF.md` and `DESIGN-SYSTEM.md` both sit close to their context budgets.
+   Trim before adding.
